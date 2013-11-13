@@ -1,0 +1,37 @@
+g++ -c -ansi -O3  -m64 -funroll-loops -fomit-frame-pointer -ffast-math -mfpmath=sse -msse2  -fPIC DonutEngine.cc -I/afs/slac/g/ki/software/cfitsio/3.29/include -I/afs/slac/g/ki/software/fftw/3.3/include -I/afs/slac/g/ki/software/python/2.7.3/include/python2.7  -I/afs/slac/g/ki/software/python/2.7.3/lib/python2.7/site-packages/numpy/core/include -o DonutEngine.o
+g++ -c -ansi -O3  -m64 -funroll-loops -fomit-frame-pointer -ffast-math -mfpmath=sse -msse2  -fPIC Zernike.cc -I/afs/slac/g/ki/software/cfitsio/3.29/include -I/afs/slac/g/ki/software/fftw/3.3/include -I/afs/slac/g/ki/software/python/2.7.3/include/python2.7  -I/afs/slac/g/ki/software/python/2.7.3/lib/python2.7/site-packages/numpy/core/include -o Zernike.o
+g++ -c -ansi -O3  -m64 -funroll-loops -fomit-frame-pointer -ffast-math -mfpmath=sse -msse2  -fPIC FFTWClass.cc -I/afs/slac/g/ki/software/cfitsio/3.29/include -I/afs/slac/g/ki/software/fftw/3.3/include -I/afs/slac/g/ki/software/python/2.7.3/include/python2.7  -I/afs/slac/g/ki/software/python/2.7.3/lib/python2.7/site-packages/numpy/core/include -o FFTWClass.o
+g++  -ansi -O3  -m64 -funroll-loops -fomit-frame-pointer -ffast-math -mfpmath=sse -msse2  -fPIC -I/afs/slac/g/ki/software/cfitsio/3.29/include -I/afs/slac/g/ki/software/fftw/3.3/include -I/afs/slac/g/ki/software/python/2.7.3/include/python2.7  -I/afs/slac/g/ki/software/python/2.7.3/lib/python2.7/site-packages/numpy/core/include -c -o DonutEngineWrap.o DonutEngineWrap.cxx 
+g++ -shared -export-dynamic -o _donutengine.so  DonutEngineWrap.o DonutEngine.o Zernike.o FFTWClass.o  -L/afs/slac/g/ki/software/cfitsio/3.29/lib -L/afs/slac/g/ki/software/fftw/3.3/lib  -L/usr/lib64 -L/afs/slac/g/ki/software/python/2.7.3/lib -lcfitsio -lfftw3 -lm
+
+------------------------------------------------------------
+Sender: LSF System <lsf@dole0027>
+Subject: Job 981534: <make> Done
+
+Job <make> was submitted from host <ki-ls03> by user <roodman>.
+Job was executed on host(s) <dole0027>, in queue <short>, as user <roodman>.
+</u/ec/roodman> was used as the home directory.
+</u/ec/roodman/Astrophysics/Code/donutlib> was used as the working directory.
+Started at Tue Jul  9 09:00:36 2013
+Results reported at Tue Jul  9 09:00:56 2013
+
+Your job looked like:
+
+------------------------------------------------------------
+# LSBATCH: User input
+make
+------------------------------------------------------------
+
+Successfully completed.
+
+Resource usage summary:
+
+    CPU time   :     15.52 sec.
+    Max Memory :         2 MB
+    Max Swap   :        22 MB
+
+    Max Processes  :         1
+    Max Threads    :         1
+
+The output (if any) is above this job summary.
+

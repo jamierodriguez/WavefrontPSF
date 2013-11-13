@@ -1,0 +1,9 @@
+# ignore c things
+*.[oa]
+# ignore aaron's svn
+*.svn
+# ignore pyc and things that end in ~
+*.pyc
+*~
+# ignore vim's temp stuff
+*.swp
