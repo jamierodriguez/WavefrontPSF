@@ -188,14 +188,14 @@ class decaminfo(object):
             # first off, the y ones need an extra division to make square boxes
             boundi[1].insert(1, (boundi[1][0] + boundi[1][1])/2)
 
-            for div in range(1, boxdiv):
+            for div in xrange(1, boxdiv):
                 '''
                 put in extra cuts
                 '''
-                for k in range(2):
+                for k in xrange(2):
                     # make the location of each cut
                     cuts = [(boundi[k][j+1] + boundi[k][j])/2. 
-                            for j in range(len(boundi[k])-1)]
+                            for j in xrange(len(boundi[k])-1)]
 
                     # append the cut
                     for j in cuts:
@@ -220,37 +220,40 @@ class decaminfo(object):
             if i == 61:
                 #n30 sucks
                 continue
-            ccdinfo = self.infoDict[self.ccddict[i]]
-            xpixHalfSize = 1024.
-            ypixHalfSize = 2048.
-            mmperpixel = 0.015
-            xmin = ccdinfo["xCenter"] - xpixHalfSize * mmperpixel
-            xmax = ccdinfo["xCenter"] + xpixHalfSize * mmperpixel
-            ymin = ccdinfo["yCenter"] - ypixHalfSize * mmperpixel
-            ymax = ccdinfo["yCenter"] + ypixHalfSize * mmperpixel
-            boundi = [[xmin, xmax], [ymin, ymax]]
+            extname = self.ccddict[i]
+            boundi = self.getBounds(extname, boxdiv)
+            ## ccdinfo = self.infoDict[self.ccddict[i]]
+            ## xpixHalfSize = 1024.
+            ## ypixHalfSize = 2048.
+            ## mmperpixel = 0.015
+            ## xmin = ccdinfo["xCenter"] - xpixHalfSize * mmperpixel
+            ## xmax = ccdinfo["xCenter"] + xpixHalfSize * mmperpixel
+            ## ymin = ccdinfo["yCenter"] - ypixHalfSize * mmperpixel
+            ## ymax = ccdinfo["yCenter"] + ypixHalfSize * mmperpixel
+            ## boundi = [[xmin, xmax], [ymin, ymax]]
 
-            # now you need to blow these up
-            # first off, the y ones need an extra division to make square boxes
-            if boxdiv > 0:
-                boundi[1].insert(1, (boundi[1][0] + boundi[1][1])/2)
+            ## # now you need to blow these up
+            ## # first off, the y ones need an extra division to make square boxes
+            ## if boxdiv > 0:
+            ##     boundi[1].insert(1, (boundi[1][0] + boundi[1][1])/2)
 
-                for div in range(1, boxdiv):
-                    '''
-                    put in extra cuts
-                    '''
-                    for k in range(2):
-                        # make the location of each cut
-                        cuts = [(boundi[k][j+1] + boundi[k][j])/2.
-                                for j in xrange(len(boundi[k])-1)]
+            ##     for div in range(1, boxdiv):
+            ##         '''
+            ##         put in extra cuts
+            ##         '''
+            ##         for k in range(2):
+            ##             # make the location of each cut
+            ##             cuts = [(boundi[k][j+1] + boundi[k][j])/2.
+            ##                     for j in xrange(len(boundi[k])-1)]
 
-                        # append the cut
-                        for j in cuts:
-                            boundi[k].append(j)
-                        # now sort the cuts
-                        boundi[k].sort()
+            ##             # append the cut
+            ##             for j in cuts:
+            ##                 boundi[k].append(j)
+            ##             # now sort the cuts
+            ##             boundi[k].sort()
 
             bounds.append(boundi)
+
 
         # do this for loop and then numpythonic ?
         Pave = []
@@ -258,8 +261,8 @@ class decaminfo(object):
         N = []
 
         for box in bounds:
-            for x in range(len(box[0]) - 1):
-                for y in range(len(box[1]) - 1):
+            for x in xrange(len(box[0]) - 1):
+                for y in xrange(len(box[1]) - 1):
                     choose = (
                              (X > box[0][x]) *
                              (X < box[0][x+1]) *

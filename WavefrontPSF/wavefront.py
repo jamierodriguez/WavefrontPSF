@@ -20,7 +20,7 @@ class Wavefront(object):
 
     Attributes
     ----------
-    nEle
+    number_electrons
         the number of Electrons used in making the stamp (ie the normalization)
 
     background
@@ -29,14 +29,14 @@ class Wavefront(object):
     input_dict
         a dictionary containing the parameters for aaron's makedonut routine
 
-    md
+    make_donut
         aaron's makedonut object
 
     Methods
     -------
     save
-        save this whole object, sans md. Should inherit OK -- I ought to double
-        check that #TODO.
+        save this whole object, sans make_donut. Should inherit OK -- I ought
+        to double check that #TODO.
 
     stamp
         takes the zernike polynomials and creates a 2d image array
@@ -50,10 +50,10 @@ class Wavefront(object):
 
     """
 
-    def __init__(self, nEle=1e6, background=1000, randomFlag=0,
+    def __init__(self, number_electrons=1e6, background=1000, randomFlag=0,
                  nbin=64, nPixels=16, pixelOverSample=4, scaleFactor=2.):
 
-        self.nEle = nEle
+        self.number_electrons = number_electrons
         self.background = background
         self.input_dict = {
             "nbin": nbin,  # 64,  # 256,  # 128,
@@ -62,7 +62,7 @@ class Wavefront(object):
             "scaleFactor": scaleFactor,  # 2.,  # 1.,  # 2.,
             "randomFlag": randomFlag,
             }
-        self.md = makedonut(**self.input_dict)
+        self.make_donut = makedonut(**self.input_dict)
 
     def save(self, out_path):
         """Take the data and save it!
@@ -74,18 +74,18 @@ class Wavefront(object):
 
         Notes
         -----
-        in order to save as a pickleable object, I need to set md (which is a
+        in order to save as a pickleable object, I need to set make_donut (which is a
         pyswig object) to none. So when you reload this object, it can have
-        everything else /except/ the md property.
+        everything else /except/ the make_donut property.
         """
 
         if not path.exists(path.dirname(out_path)):
             makedirs(path.dirname(out_path))
-        self.md = None  # this is the offender!
-        with open(out_path, 'wb') as f:
-            pickle.dump(self, f)
-        # give FP back its md
-        self.md = makedonut(**self.input_dict)
+        self.make_donut = None  # this is the offender!
+        with open(out_path, 'wb') as out_file:
+            pickle.dump(self, out_file)
+        # give FP back its make_donut
+        self.make_donut = makedonut(**self.input_dict)
 
     def stamp(self, zernike, rzero, coord):
         """Create a stamp from list of zernike parameters
@@ -99,7 +99,7 @@ class Wavefront(object):
             Kolmogorov spectrum parameter. Basically, larger means smaller PSF.
 
         coord : list
-            [xDECam, yDECam] in mm and Aaron's coordinate convention.
+            [x_decam, y_decam] in mm and Aaron's coordinate convention.
 
         Returns
         -------
@@ -109,14 +109,14 @@ class Wavefront(object):
 
         """
 
-        xDECam, yDECam = coord
+        x_decam, y_decam = coord
 
-        stamp = self.md.make(inputZernikeArray=zernike,
-                             rzero=rzero,
-                             nEle=self.nEle,
-                             background=self.background,
-                             xDECam=xDECam,
-                             yDECam=yDECam).astype(np.float64)
+        stamp = self.make_donut.make(inputZernikeArray=zernike,
+                                     rzero=rzero,
+                                     nEle=self.number_electrons,
+                                     background=self.background,
+                                     xDECam=x_decam,
+                                     yDECam=y_decam).astype(np.float64)
 
         return stamp
 
@@ -189,7 +189,7 @@ class Wavefront(object):
 
     def moment_dictionary(
             self, zernikes, coords, rzero,
-            verbosity=0, windowed=True,
+            verbosity={}, windowed=True,
             order_dict={'x2': {'p': 2, 'q': 0},
                         'y2': {'p': 0, 'q': 2},
                         'xy': {'p': 1, 'q': 1}}):
@@ -208,18 +208,18 @@ class Wavefront(object):
         Notes
         -----
         By default the moment dictionary will have fwhm and the xDECam and
-        yDECam positions in them, and stamp for high verbosity, as
+        yDECam positions in them, and stamp for verbosity dictionary with 'stamp', as
         well as every entry in order_dict
 
         """
 
         # temporary fix for a list creation problem
-        Yi, Xi = np.indices((self.input_dict["nPixels"],
+        y_indices, x_indices = np.indices((self.input_dict["nPixels"],
                              self.input_dict["nPixels"]))
         # create return_dict
-        return_dict = dict(x=[], y=[], fwhm=[],
-                           zernikes=zernikes)
-        if verbosity >= 4:
+        return_dict = dict(x=[], y=[], fwhm=[])#,
+                           #zernikes=zernikes)
+        if 'stamp' in verbosity:
             return_dict.update(dict(stamp=[]))
         # add terms from order_dict
         for order in order_dict:
@@ -234,7 +234,7 @@ class Wavefront(object):
                                  coord=coord[:2])
             # get moments
             moment_dict = self.moments(
-                stamp_i, indices=[Yi, Xi],
+                stamp_i, indices=[y_indices, x_indices],
                 windowed=windowed, order_dict=order_dict)
             fwhm_i = moment_dict['fwhm']
 
@@ -246,7 +246,7 @@ class Wavefront(object):
             return_dict['fwhm'].append(fwhm_i * 0.27)
 
             # append the stamp if verbosity is high enough
-            if verbosity >= 4:
+            if 'stamp' in verbosity:
                 return_dict['stamp'].append(stamp_i)
 
             # now append things from order_dict

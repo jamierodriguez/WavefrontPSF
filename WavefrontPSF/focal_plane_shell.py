@@ -6,8 +6,7 @@ from wavefront import Wavefront
 from hexapodtoZernike_cpd import hexapodtoZernike
 from donutana_cpd import donutana
 from decamutil_cpd import decaminfo
-from focal_plane_routines import fwhm_to_rzero, second_moment_to_ellipticity, \
-    third_moments_to_octupoles
+from focal_plane_routines import fwhm_to_rzero
 
 
 class FocalPlaneShell(Wavefront):
@@ -21,12 +20,16 @@ class FocalPlaneShell(Wavefront):
 
     mesh_name
         name of the specific types of meshes we want
+        we have reference corrections for "Science20120915seq1_134239"
+        but not for the latest "Science20130325s1v2_190406"
 
     da
         aaron's donutana object
 
     verbosity
-        generic integer setting for how much data is kept at any given time
+        a dictionary with strings indicating what should be saved.
+        the only two currently implemented are 'stamp' for returning the stamp
+        when making moments, and 'history' for updating the history
 
     reference_correction
         an array containing the reference corrections between the focus chips
@@ -43,7 +46,7 @@ class FocalPlaneShell(Wavefront):
     -------
     plane
         from a dictionary of zernike corrections and coordinates, generate a
-        focal plane of moments. if the verbosity is greater than or equal to 4,
+        focal plane of moments. if the 'stamp' is in verbosity,
         the stamps of the stars are also saved.
 
     init_da
@@ -65,8 +68,8 @@ class FocalPlaneShell(Wavefront):
 
     def __init__(self,
                  path_mesh='/u/ec/roodman/Astrophysics/Donuts/Meshes/',
-                 mesh_name="Science20130325s1v2_190406",
-                 verbosity=2):
+                 mesh_name="Science20120915s1v3_134239",
+                 verbosity=['history']):
 
         # do the old init for Wavefront
         super(FocalPlaneShell, self).__init__()  # could put in nEle etc here
@@ -76,6 +79,7 @@ class FocalPlaneShell(Wavefront):
         self.da = self.init_da(path_mesh=path_mesh, mesh_name=mesh_name)
 
         self.verbosity = verbosity
+        self.history = []
 
         # TODO: incorporate some way of varying the mesh correction
         # NOTE: THIS DEPENDS ON THE MESH YOU CHOOSE TO USE.
@@ -119,7 +123,7 @@ class FocalPlaneShell(Wavefront):
         sensorSet = "ScienceOnly"
         method = "idw"
 
-        inDict = {"zPointsFile": path_mesh + "z4Mesh_" +
+        in_dict = {"zPointsFile": path_mesh + "z4Mesh_" +
                                  mesh_name + ".dat",
                   "sensorSet": sensorSet,
                   "doTrefoil": True,
@@ -130,11 +134,14 @@ class FocalPlaneShell(Wavefront):
                   "donutCutString": ""}
 
         for zi in range(5, 12):
-            inDict.update({'z{0}PointsFile'.format(zi):
-                           path_mesh + 'z{0}Mesh_'.format(zi) +
-                           mesh_name + '.dat'})
+            try:
+                in_dict.update({'z{0}PointsFile'.format(zi):
+                               path_mesh + 'z{0}Mesh_'.format(zi) +
+                               mesh_name + '.dat'})
+            except IOError:
+                continue
 
-        da = donutana(**inDict)
+        da = donutana(**in_dict)
         return da
 
     def zernike_corrections_from_hexapod(self, hexapod):
@@ -298,7 +305,7 @@ class FocalPlaneShell(Wavefront):
 
         """
 
-        if self.verbosity >= 3:
+        if 'history' in self.verbosity:
             self.history.append(in_dict.copy())
 
         if 'rzero' in in_dict.keys():
@@ -311,15 +318,6 @@ class FocalPlaneShell(Wavefront):
         zernike_corrections = self.zernike_corrections_from_dictionary(
             in_dict)
 
-        if 'e1' in in_dict.keys():
-            e1_add = in_dict['e1']
-        else:
-            e1_add = 0
-
-        if 'e2' in in_dict.keys():
-            e2_add = in_dict['e2']
-        else:
-            e2_add = 0
         zernikes = self.zernikes(coords, zernike_corrections)
 
         # make moments
@@ -328,37 +326,6 @@ class FocalPlaneShell(Wavefront):
                                          verbosity=self.verbosity,
                                          windowed=windowed,
                                          order_dict=order_dict)
-
-        # add ellipticities if the right moments are present
-        if ('x2' in moments.keys()) * \
-           ('y2' in moments.keys()) * \
-           ('xy' in moments.keys()):
-
-            e0, e0prime, e1, e2 = second_moment_to_ellipticity(
-                moments['x2'],
-                moments['y2'],
-                moments['xy'])
-            moments.update({'e0': e0, 'e0prime': e0prime, 'e1': e1, 'e2': e2})
-
-        # add octupoles if the right moments are present
-        if ('x3' in moments.keys()) * \
-           ('x2y' in moments.keys()) * \
-           ('xy2' in moments.keys()) * \
-           ('y3' in moments.keys()):
-
-            zeta1, zeta2, delta1, delta2 = third_moments_to_octupoles(
-                moments['x3'],
-                moments['x2y'],
-                moments['xy2'],
-                moments['y3'])
-            moments.update({'zeta1': zeta1, 'zeta2': zeta2,
-                            'delta1': delta1, 'delta2': delta2})
-
-        # add ellipticity corrections
-        if 'e1' in moments.keys():
-            moments['e1'] = moments['e1'] + e1_add
-        if 'e2' in moments.keys():
-            moments['e2'] = moments['e2'] + e2_add
 
         return moments
 

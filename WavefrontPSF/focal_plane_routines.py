@@ -10,14 +10,17 @@ from decamutil_cpd import decaminfo
 set of useful routines done on focal plane objects
 """
 
+
 def rzero_to_fwhm(rzero):
     # from fitting tests...
     fwhm = 0.13425711 / rzero + 0.25449468
     return fwhm
 
+
 def fwhm_to_rzero(fwhm):
     rzero = 0.13425711 / (fwhm - 0.25449468)
     return rzero
+
 
 def e0_to_fwhm(e0, windowed=True):
     '''
@@ -30,12 +33,14 @@ def e0_to_fwhm(e0, windowed=True):
         fwhm = 3.56246781 * np.sqrt(e0) - 2.72639134
     return fwhm
 
+
 def fwhm_to_e0(fwhm, windowed=True):
     if windowed:
         e0 = np.square((fwhm - 0.03406004) / 2.2122823)
     else:
         e0 = np.square((fwhm + 2.72639134) / 3.56246781)
     return e0
+
 
 def second_moment_to_ellipticity(x2, y2, xy):
 
@@ -76,6 +81,7 @@ def second_moment_to_ellipticity(x2, y2, xy):
 
     return e0, e0prime, e1, e2
 
+
 def third_moments_to_octupoles(x3, x2y, xy2, y3):
 
     """Take moments and convert to unnormalized octupole basis
@@ -103,6 +109,7 @@ def third_moments_to_octupoles(x3, x2y, xy2, y3):
     delta2 = (-y3 + 3 * x2y) * 0.27 ** 3
 
     return zeta1, zeta2, delta1, delta2
+
 
 def ellipticity_to_whisker(e1, e2):
 
@@ -145,6 +152,29 @@ def ellipticity_to_whisker(e1, e2):
     return u, v
 
 
+def second_moment_variance_to_ellipticity_variance(x2_var, y2_var, xy_var):
+
+    """Convert variance in moments to ellipticity variances
+
+    Parameters
+    ----------
+    x2_var, y2_var, xy_var : array
+        Array of second moments variances
+
+    Returns
+    -------
+    e0_var, e1_var, e2_var : array
+        Arrays converted to unnormalized ellipticity basis.
+
+    """
+    alpha = 0.27 ** 2  # pixel to arcsec
+    e0_var = alpha ** 2 * (x2_var + y2_var)
+    e1_var = alpha ** 2 * (x2_var + y2_var)
+    e2_var = alpha ** 2 * 4 * xy_var
+
+    return e0_var, e1_var, e2_var
+
+
 def ellipticity_variance_to_whisker_variance(e1, e2, e1_var, e2_var):
 
     """Convert error in ellipticity to error in cartesian whisker parameters
@@ -180,6 +210,7 @@ def ellipticity_variance_to_whisker_variance(e1, e2, e1_var, e2_var):
     v_var = dvde1 ** 2 * e1_var + dvde2 ** 2 * e2_var
 
     return u_var, v_var
+
 
 def average_dictionary(
         data, average,
@@ -221,6 +252,7 @@ def average_dictionary(
 
     return returndict
 
+
 def variance_dictionary(data, keys, var_type=0):
     var_dict = {}
     for key in keys:
@@ -243,6 +275,7 @@ def variance_dictionary(data, keys, var_type=0):
         var_dict.update({key: var})
 
     return var_dict
+
 
 def chi2(data_a, data_b, chi_weights, var_dict):
     '''
@@ -280,16 +313,18 @@ def chi2(data_a, data_b, chi_weights, var_dict):
 
     return chi_dict
 
+
 def average_function(data, average, average_type):
     if average_type == 'scalar_whisker':
         a_i = average(np.sqrt(np.sqrt(data['e1'] ** 2 +
-                                           data['e2'] ** 2)))
+                                      data['e2'] ** 2)))
     elif average_type == 'vector_whisker':
         a_i = np.sqrt(np.sqrt(average(data['e1']) ** 2 +
                               average(data['e2']) ** 2))
     else:
         a_i = average(data[average_type])
     return a_i
+
 
 def minuit_dictionary(keys):
     # based on what params you want to fit to, create a minuit dictionary
@@ -363,4 +398,3 @@ def in_dict_from_minuit_dict(minuit_dict):
     for pari in par_names:
         in_dict.update({pari: minuit_dict[pari]})
     return in_dict
-

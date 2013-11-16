@@ -3,12 +3,12 @@
 from __future__ import print_function, division
 import numpy as np
 from focal_plane_shell import FocalPlaneShell
-from make_coord_file import make_coord_file
 import pyfits
 
 # TODO: DOCS!!
 # TODO: update attributes and methods
 # TODO: update __init__
+
 
 class FocalPlane(FocalPlaneShell):
     """FocalPlaneShell tied to a specific image. Comparisons and such possible.
@@ -26,11 +26,12 @@ class FocalPlane(FocalPlaneShell):
 
     def __init__(self, image_data,
                  list_catalogs, list_fits_extension, list_chip,
-                 max_stars=750,
+                 max_samples=750,
+                 max_samples_box=10, boxdiv=0,
                  path_mesh='/u/ec/roodman/Astrophysics/Donuts/Meshes/',
-                 mesh_name="Science20130325s1v2_190406",
-                 verbosity=2,
-                 external_conds=None):
+                 mesh_name="Science20120915s1v3_134239",
+                 verbosity=['history'],
+                 conds=None):
 
         # do the old init for Wavefront
         super(FocalPlane, self).__init__(path_mesh, mesh_name, verbosity)
@@ -41,31 +42,34 @@ class FocalPlane(FocalPlaneShell):
 
         self.average = np.mean
 
-        # generate comparisons with max_stars per chip
+        # generate comparisons with max_samples per chip
         self.comparison_data_unfiltered, \
             self.comparison_extension_unfiltered = \
             self.comparison(list_catalogs, list_fits_extension, list_chip)
         self.comparison_dict_all, self.comparison_data_all, \
             self.comparison_extension_all, self.coords_all \
-                = self.coordinates(
+                = self.comparison_coordinates(
                     self.comparison_data_unfiltered,
                     self.comparison_extension_unfiltered,
-                    10000000, external_conds)
+                    10000000, conds)
         self.comparison_dict, self.comparison_data, \
-            self.comparison_extension, self.coords \
-                = self.coordinates(
+            self.comparison_extension, self.coords_comparison \
+                = self.comparison_coordinates(
                     self.comparison_data_unfiltered,
                     self.comparison_extension_unfiltered,
-                    max_stars, external_conds)
+                    max_samples, conds)
+        self.coords_random = self.random_coordinates(max_samples_box,
+                                                     boxdiv=boxdiv)
 
-    def coordinates_regularized(self, max_stars_chip=5, boxdiv=0):
+
+    def random_coordinates(self, max_samples_box=5, boxdiv=0):
         """A method for generating coordinates by sampling over boxes
 
         Parameters
         ----------
-        max_stars_chip : int, optional
-            Integer for the maximum number of stars per chip that we sample
-            from. Default is 5 stars per chip.
+        max_samples_box : int, optional
+            Integer for the maximum number of stars per box that we sample
+            from. Default is 5 stars per box.
 
         boxdiv : int, optional
             How many divisions we will put into the chip. Default is zero
@@ -80,18 +84,38 @@ class FocalPlane(FocalPlaneShell):
             the extension number
 
         """
+
         # sample over [a,b) is
-        # (b - a ) * np.random.random_sample(max_stars_chip) + a
+        # (b - a ) * np.random.random_sample(max_samples_box) + a
+        coords_final = []
         for ext_num in range(1, 63):
             ext_name = self.decaminfo.ccddict[ext_num]
             if ext_name == 'N31':
                 # N31 is bad
                 continue
             boundaries = self.decaminfo.getBounds(ext_name, boxdiv=boxdiv)
-            # TODO: build up the coordinates here by random sampling over the
-            # allowed boxes
+            for x in xrange(len(boundaries[0]) - 1):
+                for y in xrange(len(boundaries[1]) - 1):
+                    # get the bounds
+                    x_lower = boundaries[0][x]
+                    x_upper = boundaries[0][x + 1]
+                    y_lower = boundaries[1][y]
+                    y_upper = boundaries[1][y + 1]
 
-    def coordinates(self, data, extension, max_stars=750, conds=None):
+                    # make the uniform sample
+                    x_samples = (x_upper - x_lower) * np.random.random_sample(
+                        max_samples_box) + x_lower
+                    y_samples = (y_upper - y_lower) * np.random.random_sample(
+                        max_samples_box) + y_lower
+                    for i in xrange(max_samples_box):
+                        coord = [x_samples[i], y_samples[i], ext_num]
+                        coords_final.append(coord)
+        coords_final = np.array(coords_final)
+
+        return coords_final
+
+    def comparison_coordinates(
+            self, data, extension, max_samples=10000000, conds=None):
         """A method for generating coordinates from actual images
 
         Parameters
@@ -99,14 +123,14 @@ class FocalPlane(FocalPlaneShell):
         data : recarray
             recarray with all the data
 
-        external_conds : string, optional
+        conds : string, optional
             List of conditions for filtering 'data'.  The borders are 30
             pixels. These basic cuts are always used.
 
             If no cut is specified, one is estimated from the fwhm of the
             image.
 
-        max_stars : int, optional
+        max_samples : int, optional
             Maximum number of stars per chip that we will consider.
             If not specified, then use all the stars
 
@@ -132,32 +156,37 @@ class FocalPlane(FocalPlaneShell):
 
             pixel_border = 30
 
+            # TODO: consider cuts on flux radius instead of fwhm world?
             conds = (
                 (data['CLASS_STAR'] > 0.9) *
                 (data['MAG_AUTO'] < 16) *
                 (data['MAG_AUTO'] > 13) *
                 (data['FWHM_WORLD'] > 0) *
                 (data['FWHM_WORLD'] * 60 ** 2 < 2 * fwhm) *
-                (data['FLAGS'] == 0) *
+                (data['FLAGS'] <= 0) *
                 (data['XWIN_IMAGE'] > pixel_border) *
                 (data['XWIN_IMAGE'] < 2048 - pixel_border) *
                 (data['YWIN_IMAGE'] > pixel_border) *
                 (data['YWIN_IMAGE'] < 4096 - pixel_border))
+        else:
+            # evaluate the string
+            conds = eval(conds)
 
         data_use = data[conds]
         extension_use = extension[conds]
-        if (data_use.size > max_stars) * (max_stars > 0):
+        if (data_use.size > max_samples) * (max_samples > 0):
             chooselist = np.arange(data_use.size)
             np.random.shuffle(chooselist)
-            data_use = data_use[chooselist[:max_stars]]
-            extension_use = extension_use[chooselist[:max_stars]]
+            data_use = data_use[chooselist[:max_samples]]
+            extension_use = extension_use[chooselist[:max_samples]]
 
         coords = np.array([self.decaminfo.getPosition(
             extension_use[i],
             data_use['XWIN_IMAGE'][i],
             data_use['YWIN_IMAGE'][i])
-                           for i in xrange(len(extension_use))])
-        extNumbers = [self.decaminfo.infoDict[i]['CCDNUM'] for i in extension_use]
+                            for i in xrange(len(extension_use))])
+        extNumbers = [self.decaminfo.infoDict[i]['CCDNUM']
+                      for i in extension_use]
 
         coords_final = np.append(coords.T, [extNumbers], axis=0).T
 
@@ -166,15 +195,7 @@ class FocalPlane(FocalPlaneShell):
                 x2=data_use['X2WIN_IMAGE'].astype(np.float64),
                 y2=data_use['Y2WIN_IMAGE'].astype(np.float64),
                 xy=data_use['XYWIN_IMAGE'].astype(np.float64),
-                fwhm=data_use['FWHM_WORLD'].astype(np.float64) * 3600,
-                e1=(data_use['X2WIN_IMAGE'].astype(np.float64) -
-                    data_use['Y2WIN_IMAGE'].astype(np.float64)) *
-                    0.27**2,
-                e2=2 * data_use['XYWIN_IMAGE'].astype(np.float64) *
-                    0.27**2,
-                e0=(data_use['X2WIN_IMAGE'].astype(np.float64) +
-                    data_use['Y2WIN_IMAGE'].astype(np.float64)) *
-                    0.27**2,)
+                fwhm=data_use['FWHM_WORLD'].astype(np.float64) * 3600,)
 
 
         return comparison_dict, data_use, extension_use, coords_final
@@ -269,10 +290,10 @@ class FocalPlane(FocalPlaneShell):
 
         Returns
         -------
-        dataAll : recarray
+        data_all : recarray
             The entire contents of all the fits extensions combined
 
-        extAll : list
+        ext_all : list
             Array of all the extension names
 
         """
@@ -294,20 +315,20 @@ class FocalPlane(FocalPlaneShell):
                 data = hdu[fits_extension_i[fits_extension_ij]].data
 
                 try:
-                    dataAll = np.append(dataAll, data)
-                    extAll = np.append(extAll,
+                    data_all = np.append(data_all, data)
+                    ext_all = np.append(ext_all,
                                        [ext_name] * data.size)
 
                 except NameError:
-                    # haven't made dataCombined yet!
-                    dataAll = data.copy()
-                    extAll = np.array([ext_name] * data.size)
+                    # haven't made data_combined yet!
+                    data_all = data.copy()
+                    ext_all = np.array([ext_name] * data.size)
 
             hdu.close()
 
-        return dataAll, extAll
+        return data_all, ext_all
 
-    def comparison_filter(self, coords, dataAll, extAll):
+    def comparison_filter(self, coords, data_all, ext_all):
         # do combining here (not sure why I was doing it earlier before)
         # probably because you are now comparing with about 63x data more
         # than you need to.
@@ -326,29 +347,30 @@ class FocalPlane(FocalPlaneShell):
                 continue
 
             coords_used_indices = np.nonzero(coords[:, 2] == ext_num)[0]
-            dataAll_used_indices = np.nonzero(extAll == ext_name)[0]
-            xc, x = np.meshgrid(
+            data_all_used_indices = np.nonzero(ext_all == ext_name)[0]
+            x_compare, x_star = np.meshgrid(
                 coords_image[:, 0][coords_used_indices],
-                dataAll['XWIN_IMAGE'][dataAll_used_indices])
-            yc, y = np.meshgrid(
+                data_all['XWIN_IMAGE'][data_all_used_indices])
+            y_compare, y_star = np.meshgrid(
                 coords_image[:, 1][coords_used_indices],
-                dataAll['YWIN_IMAGE'][dataAll_used_indices])
-            TS = np.square(x - xc) + np.square(y - yc)
-            chosen_i = np.argmin(TS, axis=0)
+                data_all['YWIN_IMAGE'][data_all_used_indices])
+            test_statistic = np.square(x_star - x_compare) + \
+                             np.square(y_star - y_compare)
+            chosen_i = np.argmin(test_statistic, axis=0)
 
             for chosen_ii in chosen_i:
-                chosen.append(dataAll_used_indices[chosen_ii])
+                chosen.append(data_all_used_indices[chosen_ii])
             for chosen_coords_ii in coords_used_indices:
                 chosen_coords.append(chosen_coords_ii)
 
-            ## data_chosen_by_extension = np.where(extAll == ext_name)
-            ## xc, x = np.meshgrid(
+            ## data_chosen_by_extension = np.where(ext_all == ext_name)
+            ## x_compare, x = np.meshgrid(
             ##     coords_image[:, 0][coords[:, 2] == ext_num],
-            ##     dataAll['XWIN_IMAGE'][extAll == ext_name])
-            ## yc, y = np.meshgrid(coords_image[:, 1][
+            ##     data_all['XWIN_IMAGE'][ext_all == ext_name])
+            ## y_compare, y = np.meshgrid(coords_image[:, 1][
             ##     coords[:, 2] == ext_num],
-            ##     dataAll['YWIN_IMAGE'][extAll == ext_name])
-            ## TS = np.square(x - xc) + np.square(y - yc)
+            ##     data_all['YWIN_IMAGE'][ext_all == ext_name])
+            ## TS = np.square(x - x_compare) + np.square(y - y_compare)
 
             ## chosen_i = np.argmin(TS, axis=0)
 
@@ -366,53 +388,53 @@ class FocalPlane(FocalPlaneShell):
             ##     chosen.append(i +
             ##                   data_chosen_by_extension[0][0])
         coords_reordered = coords[chosen_coords]
-        dataCombined = dataAll[chosen]
-        extCombined = np.array([self.decaminfo.ccddict[int(ext_num)]
+        data_combined = data_all[chosen]
+        ext_combined = np.array([self.decaminfo.ccddict[int(ext_num)]
                                 for ext_num in coords_reordered[:, 2]])
 
         # convert window positions and extension numbers to mm positions
-        X_All, Y_All = [[], []]
-        for i in range(len(extCombined)):
-            Xi, Yi = self.decaminfo.getPosition(
-                extCombined[i],
-                dataCombined['XWIN_IMAGE'][i],
-                dataCombined['YWIN_IMAGE'][i])
-            X_All.append(Xi)
-            Y_All.append(Yi)
-        X_All = np.array(X_All, dtype=np.float64)
-        Y_All = np.array(Y_All, dtype=np.float64)
+        x_all, y_all = [[], []]
+        for i in range(len(ext_combined)):
+            x_all_i, y_all_i = self.decaminfo.getPosition(
+                ext_combined[i],
+                data_combined['XWIN_IMAGE'][i],
+                data_combined['YWIN_IMAGE'][i])
+            x_all.append(x_all_i)
+            y_all.append(y_all_i)
+        x_all = np.array(x_all, dtype=np.float64)
+        y_all = np.array(y_all, dtype=np.float64)
 
         # now make the dictionary
         try:
             comparison_dict = dict(
-                x=X_All, y=Y_All,
-                x2=dataCombined['X2WIN_IMAGE'].astype(np.float64),
-                y2=dataCombined['Y2WIN_IMAGE'].astype(np.float64),
-                xy=dataCombined['XYWIN_IMAGE'].astype(np.float64),
-                fwhm=dataCombined['FWHM_WORLD'].astype(np.float64) * 3600,
-                e1=(dataCombined['X2WIN_IMAGE'].astype(np.float64) -
-                    dataCombined['Y2WIN_IMAGE'].astype(np.float64)) *
+                x=x_all, y=y_all,
+                x2=data_combined['X2WIN_IMAGE'].astype(np.float64),
+                y2=data_combined['Y2WIN_IMAGE'].astype(np.float64),
+                xy=data_combined['XYWIN_IMAGE'].astype(np.float64),
+                fwhm=data_combined['FWHM_WORLD'].astype(np.float64) * 3600,
+                e1=(data_combined['X2WIN_IMAGE'].astype(np.float64) -
+                    data_combined['Y2WIN_IMAGE'].astype(np.float64)) *
                     0.27**2,
-                e2=2 * dataCombined['XYWIN_IMAGE'].astype(np.float64) *
+                e2=2 * data_combined['XYWIN_IMAGE'].astype(np.float64) *
                     0.27**2,
-                e0=(dataCombined['X2WIN_IMAGE'].astype(np.float64) +
-                    dataCombined['Y2WIN_IMAGE'].astype(np.float64)) *
+                e0=(data_combined['X2WIN_IMAGE'].astype(np.float64) +
+                    data_combined['Y2WIN_IMAGE'].astype(np.float64)) *
                     0.27**2,)
         except ValueError:
             # probably doesn't have the win values, so try unwindowed
             comparison_dict = dict(
-                x=X_All, y=Y_All,
-                x2=dataCombined['X2_IMAGE'].astype(np.float64),
-                y2=dataCombined['Y2_IMAGE'].astype(np.float64),
-                xy=dataCombined['XY_IMAGE'].astype(np.float64),
-                fwhm=dataCombined['FWHM_WORLD'].astype(np.float64) * 3600,
-                e1=(dataCombined['X2_IMAGE'].astype(np.float64) -
-                    dataCombined['Y2_IMAGE'].astype(np.float64)) *
+                x=x_all, y=y_all,
+                x2=data_combined['X2_IMAGE'].astype(np.float64),
+                y2=data_combined['Y2_IMAGE'].astype(np.float64),
+                xy=data_combined['XY_IMAGE'].astype(np.float64),
+                fwhm=data_combined['FWHM_WORLD'].astype(np.float64) * 3600,
+                e1=(data_combined['X2_IMAGE'].astype(np.float64) -
+                    data_combined['Y2_IMAGE'].astype(np.float64)) *
                     0.27**2,
-                e2=2 * dataCombined['XY_IMAGE'].astype(np.float64) *
+                e2=2 * data_combined['XY_IMAGE'].astype(np.float64) *
                     0.27**2,
-                e0=(dataCombined['X2_IMAGE'].astype(np.float64) +
-                    dataCombined['Y2_IMAGE'].astype(np.float64)) *
+                e0=(data_combined['X2_IMAGE'].astype(np.float64) +
+                    data_combined['Y2_IMAGE'].astype(np.float64)) *
                     0.27**2,)
 
-        return comparison_dict, dataCombined, extCombined, coords_reordered
+        return comparison_dict, data_combined, ext_combined, coords_reordered

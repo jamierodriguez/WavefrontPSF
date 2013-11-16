@@ -246,8 +246,8 @@ def focal_plane_plot(x, y,
 def collect_images(
         file_list,
         output_directory,
-        graphs_list=['comparison_E1E2', 'comparison_whisker', 
-                     'comparison_whisker_rotated'],
+        graphs_list=['ellipticity', 'whisker',
+                     'whisker_rotated'],
         rate=0):
 
     """collect the images made into big files

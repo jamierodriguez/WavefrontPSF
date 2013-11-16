@@ -29,39 +29,35 @@ class FocalPlaneSextractor(FocalPlaneShell):
         coords are in pixel coordinates!
         '''
 
-        DECam_x_size = 2048
-        DECam_y_size = 4096
-        # you can also specify where in relation to the grid the "xDECam" etc
+        decam_x_size = 2048
+        decam_y_size = 4096
+        # you can also specify where in relation to the grid the "xdecam" etc
         # references
-        DECam_x_center = DECam_x_size/2
-        DECam_y_center = DECam_y_size/2
-        DECam_dict = {'x_size': DECam_x_size, 'y_size': DECam_y_size,
-                      'x_center': DECam_x_center, 'y_center': DECam_y_center}
+        decam_x_center = decam_x_size/2
+        decam_y_center = decam_y_size/2
+        decam_dict = {'x_size': decam_x_size, 'y_size': decam_y_size,
+                      'x_center': decam_x_center, 'y_center': decam_y_center}
 
         # the array goes f[y,x]!!
-        DECam_grid = np.zeros((DECam_dict['y_size'], DECam_dict['x_size']))
+        decam_grid = np.zeros((decam_dict['y_size'], decam_dict['x_size']))
 
-        # make a new instance of makedonuts with the randomFlag off
-        if self.input_dict['randomFlag']:
-            self.input_dict['randomFlag'] = False
-            md = self.make_md()
         self.background = 0
         for i in range(len(coords)):
             coord = coords[i]
             zernike = zernikes[i]
-            stampData = self.stamp(zernike, rzero, coord)
+            stamp_data = self.stamp(zernike, rzero, coord)
             # add to grid; account for edge
-            xpix_lower = np.int(coord[0] - stampData.shape[1] / 2)
-            xpix_upper = xpix_lower + stampData.shape[1]
-            ypix_lower = np.int(coord[1] - stampData.shape[0] / 2)
-            ypix_upper = ypix_lower + stampData.shape[0]
-            xstamp_upper = min(stampData.shape[1],
-                               stampData.shape[1] -
-                               (xpix_upper - DECam_x_size))
+            xpix_lower = np.int(coord[0] - stamp_data.shape[1] / 2)
+            xpix_upper = xpix_lower + stamp_data.shape[1]
+            ypix_lower = np.int(coord[1] - stamp_data.shape[0] / 2)
+            ypix_upper = ypix_lower + stamp_data.shape[0]
+            xstamp_upper = min(stamp_data.shape[1],
+                               stamp_data.shape[1] -
+                               (xpix_upper - decam_x_size))
             xstamp_lower = max(0, - xpix_lower)
-            ystamp_upper = min(stampData.shape[0],
-                               stampData.shape[0] -
-                               (ypix_upper - DECam_y_size))
+            ystamp_upper = min(stamp_data.shape[0],
+                               stamp_data.shape[0] -
+                               (ypix_upper - decam_y_size))
             ystamp_lower = max(0, - ypix_lower)
 
             ypix_lower = max(0, ypix_lower)
@@ -70,8 +66,8 @@ class FocalPlaneSextractor(FocalPlaneShell):
                 # data goes [y,x]!!!
                 #print(ypix_lower, ypix_upper, xpix_lower, xpix_upper,
                 #        ystamp_lower, ystamp_upper, xstamp_lower, xstamp_upper)
-                DECam_grid[ypix_lower:ypix_upper, xpix_lower:xpix_upper] += \
-                    stampData[
+                decam_grid[ypix_lower:ypix_upper, xpix_lower:xpix_upper] += \
+                    stamp_data[
                         ystamp_lower:ystamp_upper,
                         xstamp_lower:xstamp_upper]
             except ValueError as err:
@@ -79,24 +75,24 @@ class FocalPlaneSextractor(FocalPlaneShell):
                 print('I believe we have an empty array (how?!) for image at ' +
                       'location ', coord)
                 print(err)
-            del stampData
+            del stamp_data
 
         # add a non-zero background level
-        DECam_grid = DECam_grid + self.background
+        decam_grid = decam_grid + self.background
 
         # smear by photo-statistics
-        nranval = np.random.normal(0.0, 1.0, DECam_grid.shape)
-        DECam_grid = DECam_grid + nranval * np.sqrt(DECam_grid)
+        nranval = np.random.normal(0.0, 1.0, decam_grid.shape)
+        decam_grid = decam_grid + nranval * np.sqrt(decam_grid)
 
         # save file?
         if output_directory:
-            HDUCorr = pyfits.ImageHDU(data=DECam_grid)
+            hdu_corr = pyfits.ImageHDU(data=decam_grid)
             if not path.exists(path.dirname(output_directory)):
                 makedirs(path.dirname(output_directory))
-            HDUCorr.writeto(output_directory, clobber=True)
-            del HDUCorr
+            hdu_corr.writeto(output_directory, clobber=True)
+            del hdu_corr
 
-        return DECam_grid
+        return decam_grid
 
     def analyze_sextractor(self, in_dict,
             coords_in, path_out,
@@ -131,9 +127,10 @@ class FocalPlaneSextractor(FocalPlaneShell):
 
             # make the grid
             # get the coords in pixels
-            coords = [self.decaminfo.getPixel(self.ccddict[coordmmj[2]],
-                                                  coordmmj[0], coordmmj[1])
-                          for coordmmj in coordmm]  # pixel coordinates
+            coords = [
+                self.decaminfo.getPixel(self.decaminfo.ccddict[coordmmj[2]],
+                                        coordmmj[0], coordmmj[1])
+                for coordmmj in coordmm]  # pixel coordinates
             self.image(zernikes=zernikes, rzero=rzero, coords=coords,
                     output_directory=temp_fits)
 
@@ -149,7 +146,7 @@ class FocalPlaneSextractor(FocalPlaneShell):
 
             # filter out bad data
             #data = data[data.field("FLUX_AUTO") > 1e4]
-            header['EXTNAME'] = self.ccddict[ext_num]
+            header['EXTNAME'] = self.decaminfo.ccddict[ext_num]
 
             pyfits.append(final_cat, data, header=header)
 

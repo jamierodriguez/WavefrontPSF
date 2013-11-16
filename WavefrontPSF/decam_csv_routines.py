@@ -7,6 +7,7 @@ from decamutil_cpd import decaminfo
 
 """A set of common routines that I need for csv generation."""
 
+
 def extract_image_data(expids, path_image_data, path_out):
     """The big csv is huge; let's make a smaller one
 
@@ -76,8 +77,83 @@ def extract_image_data(expids, path_image_data, path_out):
 
     return data_pruned
 
+
+def collect_dictionary_results(path_results, path_out, items=[],
+                               user_dict={}):
+
+    """Collect the results into one big csv file.
+
+    Parameters
+    ----------
+    path_results : list of strings
+        A list of the paths to the results we want to collect.
+
+    path_out : string
+        The path where we want to output.
+
+    user_dict : dictionary, optional
+        Any extra tags you want to put into the csv file, under the heading
+        'user_'. Each entry of the dictionary must be a list of the same length
+        as the results list.
+        Example dictionary: {'expid'
+
+    items : list, optional
+        List of the names of the items in the dictionary we are extracting
+
+    Returns
+    -------
+    Nothing
+
+    Notes
+    -----
+    status_migrad_erflg = 0 indicates migrad converged. 4 means it failed.
+
+    """
+
+    # if no items given, take the tags in the first entry
+    if len(items) == 0:
+        path_result = path_results[0]
+        result_dict = np.load(path_result).item()
+        items = list(np.sort(result_dict.keys()))
+
+    if not path.exists(path_out):
+        # create header
+        names_string = ''
+        for item in items:
+            names_string += item + ','
+        for user_name in user_dict:
+            names_string += 'user_' + user_name + ','
+        names_string = names_string[:-1] + '\n'
+
+        f = open(path_out, 'w')
+        f.write(names_string)
+    else:
+        # I hope you have the same header!
+        f = open(path_out, 'a')
+
+    for path_result_i in xrange(len(path_results)):
+        path_result = path_results[path_result_i]
+        result_dict = np.load(path_result).item()
+        result_string = ''
+        # sub_dictionary
+        for item in items:
+            if item in result_dict.keys():
+                result_string += np.str(result_dict[item])
+            result_string += ','
+        # user features
+        for user_name in user_dict:
+            result_string += user_dict[user_name][path_result_i]
+            result_string += ','
+
+        result_string = result_string[:-1] + '\n'
+        f.write(result_string)
+    f.close()
+
+    return
+
+
 def collect_fit_results(path_results, path_out,
-                        user_dict = {},
+                        user_dict={},
                         sub_dictionary=dict(
                             args=['rzero', 'dz', 'dx', 'dy', 'xt', 'yt',
                                   'e1', 'e2', 'z05d', 'z06d',
@@ -107,6 +183,7 @@ def collect_fit_results(path_results, path_out,
         Any extra tags you want to put into the csv file, under the heading
         'user_'. Each entry of the dictionary must be a list of the same length
         as the results list.
+        Example dictionary: {'expid'
 
     sub_dictionary : dictionary, optional
         A dictionary whose entries are the names of the sub dictionaries in the
@@ -126,18 +203,23 @@ def collect_fit_results(path_results, path_out,
 
     """
 
-    names_string = ''
-    for sub_name in sub_dictionary:
-        for sub_item in sub_dictionary[sub_name]:
-            names_string += sub_name + '_' + sub_item + ','
-    for user_name in user_dict:
-        names_string += 'user_' + user_name + ','
-    names_string = names_string[:-1] + '\n'
+    if not path.exists(path_out):
+        # create header
+        names_string = ''
+        for sub_name in sub_dictionary:
+            for sub_item in sub_dictionary[sub_name]:
+                names_string += sub_name + '_' + sub_item + ','
+        for user_name in user_dict:
+            names_string += 'user_' + user_name + ','
+        names_string = names_string[:-1] + '\n'
 
-    f = open(path_out, 'w')
-    f.write(names_string)
+        f = open(path_out, 'w')
+        f.write(names_string)
+    else:
+        # I hope you have the same header!
+        f = open(path_out, 'a')
 
-    for path_result_i in range(len(path_results)):
+    for path_result_i in xrange(len(path_results)):
         path_result = path_results[path_result_i]
         fit_dict = np.load(path_result).item()
         fit_string = ''
@@ -157,6 +239,7 @@ def collect_fit_results(path_results, path_out,
     f.close()
 
     return
+
 
 def generate_path_results(expids, path_base):
     """convenience function to get my path_results
@@ -183,12 +266,13 @@ def generate_path_results(expids, path_base):
     path_results = []
     expids_used = []
     for expid in expids:
-        result = path_base + '{0:08d}/minuit_results.npy'.format(expid)
+        result = path_base + '{0:08d}_minuit_results.npy'.format(expid)
         if path.exists(path.dirname(result)):
             path_results.append(result)
             expids_used.append('{0:08d}'.format(expid))
 
     return path_results, expids_used
+
 
 def generate_hdu_lists(expid, path_base):
     """quick and dirty way of getting the hdu list format I am now using
@@ -218,11 +302,10 @@ def generate_hdu_lists(expid, path_base):
 
     """
 
-
     list_catalogs_base = \
         path_base + '{0:08d}/DECam_{0:08d}_'.format(expid)
     list_catalogs = [list_catalogs_base + '{0:02d}_cat.fits'.format(i)
-        for i in xrange(1, 63)]
+                     for i in xrange(1, 63)]
     list_catalogs.pop(60)
 
     list_chip = [[decaminfo().ccddict[i]] for i in xrange(1, 63)]
