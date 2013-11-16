@@ -6,7 +6,7 @@
 import numpy
 import scipy
 import time
-import pyfits
+import astropy.fits.io as pyfits
 from donutlib.PointMesh import PointMesh
 from donutlib.decamutil import decaminfo 
 from donutlib.decamutil import mosaicinfo

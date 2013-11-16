@@ -3,7 +3,7 @@
 from __future__ import print_function, division
 import numpy as np
 from focal_plane_shell import FocalPlaneShell
-import pyfits
+import astropy.fits.io as pyfits
 
 # TODO: DOCS!!
 # TODO: update attributes and methods

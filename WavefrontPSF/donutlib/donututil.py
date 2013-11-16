@@ -12,7 +12,7 @@ import scipy.fftpack as theFFT
 import numpy.lib.index_tricks as itricks
 import re
 import os
-import pyfits
+import astropy.fits.io as pyfits
 import pdb
 
 #

@@ -30,7 +30,7 @@ for image_number in numbers:
     command = ['bsub',
                '-q', 'xlong',
                '-o', output_directory +
-                     '/logs/{0:08d}.log'.format(image_number),
+                     'logs/{0:08d}.log'.format(image_number),
                '-R', 'rhel60&&linux64',
                'python', 'batch_fit.py',
                '-c', '/nfs/slac/g/ki/ki18/cpd/focus/september_27/image_data.csv',  # csv

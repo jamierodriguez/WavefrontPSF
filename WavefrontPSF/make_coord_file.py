@@ -3,7 +3,7 @@
 from __future__ import print_function, division
 import numpy as np
 from os import path, makedirs
-import pyfits
+import astropy.fits.io as pyfits
 from donutlib.decamutil import decaminfo
 #TODO: PEP8 compliant; comments
 #TODO: use focal_plane method for comparison to make data array here.
