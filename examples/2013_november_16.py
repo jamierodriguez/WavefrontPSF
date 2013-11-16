@@ -44,6 +44,6 @@ for image_number in numbers:
                '-b', str(1),  # boxdiv
                '-a', str(0),  # subav
                ]
-    print_command(command)
-    #call(command)
+    #print_command(command)
+    call(command)
 

@@ -9,7 +9,7 @@ import numpy
 import sys
 # OrderedDict is a feature of 2.7 and beyond only
 from collections import OrderedDict
-import astropy.fits.io as pyfits
+import astropy.io.fits as pyfits
 from array import array
 import pdb
 

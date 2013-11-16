@@ -7,7 +7,7 @@
 # or from Zemax WFM file
 #
 import numpy
-import astropy.fits.io as pyfits
+import astropy.io.fits as pyfits
 import sys
 from donutlib.donutengine import donutengine
 

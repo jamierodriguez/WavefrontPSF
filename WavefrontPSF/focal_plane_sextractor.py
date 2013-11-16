@@ -3,7 +3,7 @@
 from __future__ import print_function, division
 import numpy as np
 from focal_plane_shell import FocalPlaneShell
-import astropy.fits.io as pyfits
+import astropy.io.fits as pyfits
 from os import path, makedirs
 from subprocess import call
 # TODO: DOCS!!
