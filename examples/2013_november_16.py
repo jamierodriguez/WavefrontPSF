@@ -18,8 +18,6 @@ numbers = np.append(numbers, range(231089, 231096))
 numbers = np.append(numbers, range(232608, 232849))
 numbers = np.append(numbers, range(233377, 233642))
 
-numbers = [231046]
-
 output_directory = "/nfs/slac/g/ki/ki18/cpd/focus/november_16/"
 
 if not path.exists(output_directory):
