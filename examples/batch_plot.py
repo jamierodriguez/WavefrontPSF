@@ -1,19 +1,24 @@
 #!/usr/bin/env python
 # batch_plot.py
 from __future__ import print_function, division
+import matplotlib
+matplotlib.use('Agg')
 import argparse
 import numpy as np
 from plot_wavefront import focal_plane_plot, collect_images
 from decam_csv_routines import collect_dictionary_results, collect_fit_results
-from focal_plane_routines import average_function, \
+from focal_plane_routines import \
     ellipticity_variance_to_whisker_variance, ellipticity_to_whisker
 from matplotlib.pyplot import close
+from os import path, makedirs
 
 """
 Include the locations of the moments (both fitted and comparison)
 
 This file will take the results and plot them as well as collate everything
 together into csv files. Those can also be plotted?
+
+TODO: split the plotting and collating
 """
 
 # take as give that we have list_fitted_plane list_comparison_plane,
@@ -48,8 +53,6 @@ args_dict['input_directory'] = eval(args_dict['input_directory'])
 
 # go through all the inputs
 
-file_list = []
-
 print(len(args_dict['expid']))
 for iterator in xrange(len(args_dict['expid'])):
     directory = args_dict['input_directory'][iterator]
@@ -61,60 +64,19 @@ for iterator in xrange(len(args_dict['expid'])):
     path_comparison_out = args_dict['output_directory'] + 'image_plane.csv'
     # get the items from the dictionary
     comparison_dict = np.load(path_comparison).item()
-    comparison_dict.update({'expid': [expid] * len(comparison_dict['n'])})
-    collect_dictionary_results(path_comparison_out, item_dict=comparison_dict)
-
-    vector_whisker_image = average_function(
-        comparison_dict, np.mean, 'vector_whisker')
-    scalar_whisker_image = average_function(
-        comparison_dict, np.mean, 'scalar_whisker')
-    fwhm_image = average_function(
-        comparison_dict, np.mean, 'fwhm')
 
     # fitted
     path_fitted = directory + '{0:08d}_fitted_plane.npy'.format(expid)
     path_fitted_out = args_dict['output_directory'] + 'fitted_plane.csv'
     # get the items from the dictionary
     fitted_dict = np.load(path_fitted).item()
-    fitted_dict.update({'expid': [expid] * len(fitted_dict['n'])})
-    collect_dictionary_results(path_fitted_out, item_dict=fitted_dict)
-
-    vector_whisker_fitted = average_function(
-        fitted_dict, np.mean, 'vector_whisker')
-    scalar_whisker_fitted = average_function(
-        fitted_dict, np.mean, 'scalar_whisker')
-    fwhm_fitted = average_function(
-        fitted_dict, np.mean, 'fwhm')
-
-    # argparse
-    path_args = directory + '{0:08d}_args_dict.npy'.format(expid)
-    path_args_out = args_dict['output_directory'] + 'args_dict.csv'
-    # get the items from the dictionary
-    argparse_dict = np.load(path_args).item()
-    argparse_dict = {args_key: [argparse_dict[args_key]]
-        for args_key in argparse_dict}
-    argparse_dict.update({'expid': [expid]})
-    collect_dictionary_results(path_args_out, item_dict=argparse_dict)
-
-    # minuit results
-    path_minuit = [directory + '{0:08d}_minuit_results.npy'.format(expid)]
-    path_minuit_out = args_dict['output_directory'] + 'minuit_results.csv'
-    user_dict = {'expid': [expid],
-                 'vector_whisker_image': [vector_whisker_image],
-                 'vector_whisker_fitted': [vector_whisker_fitted],
-                 'scalar_whisker_image': [scalar_whisker_image],
-                 'scalar_whisker_fitted': [scalar_whisker_fitted],
-                 'fwhm_image': [fwhm_image],
-                 'fwhm_fitted': [fwhm_fitted]}
-
-    collect_fit_results(path_minuit, path_minuit_out,
-                        user_dict)
 
     # plots
-    file_list.append(args_dict['output_directory'] + '{0:08d}_'.format(expid))
+    out_plots = args_dict['output_directory'] + '{0:08d}/'.format(expid)
+    if not path.exists(out_plots):
+        makedirs(out_plots)
     # e0
-    path_e0_plot = args_dict['output_directory'] + \
-        '{0:08d}_e0.pdf'.format(expid)
+    path_e0_plot = out_plots + 'e0.pdf'
     # do the comparison first
     x_comparison = comparison_dict['x_box'] - 5
     y_comparison = comparison_dict['y_box']
@@ -159,8 +121,7 @@ for iterator in xrange(len(args_dict['expid'])):
     close()
 
     # ellipticity
-    path_ellipticity_plot = args_dict['output_directory'] + \
-        '{0:08d}_ellipticity.pdf'.format(expid)
+    path_ellipticity_plot = out_plots + 'ellipticity.pdf'
     # do the comparison first
     x_comparison = comparison_dict['x_box']
     y_comparison = comparison_dict['y_box']
@@ -205,8 +166,7 @@ for iterator in xrange(len(args_dict['expid'])):
     close()
 
     # whisker
-    path_whisker_plot = args_dict['output_directory'] + \
-        '{0:08d}_whisker.pdf'.format(expid)
+    path_whisker_plot = out_plots + 'whisker.pdf'
     # convert ellipticity to whisker
     u_var_comparison, v_var_comparison = \
         ellipticity_variance_to_whisker_variance(
@@ -243,8 +203,7 @@ for iterator in xrange(len(args_dict['expid'])):
     close()
 
     # whisker rotated
-    path_whisker_rotated_plot = args_dict['output_directory'] + \
-        '{0:08d}_whisker_rotated.pdf'.format(expid)
+    path_whisker_rotated_plot = out_plots + 'whisker_rotated.pdf'
     # do the comparison first
     x_comparison = comparison_dict['x_box'] - 5
     y_comparison = comparison_dict['y_box']
@@ -293,10 +252,3 @@ for iterator in xrange(len(args_dict['expid'])):
         artpatch=2)
     figure_whisker_rotated.savefig(path_whisker_rotated_plot)
     close('all')
-
-# file_list.append(args_dict['output_directory'] + '{0:08d}_'.format(expid))
-# combine all the graphs
-collect_images(file_list,
-               args_dict['output_directory'],
-               graphs_list=['e0', 'ellipticity', 'whisker', 'whisker_rotated'],
-               rate=0)

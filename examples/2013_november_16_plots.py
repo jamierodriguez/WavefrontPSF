@@ -37,10 +37,16 @@ numbers = [item for item in numbers if item not in finished_numbers]
 
 input_directories = [output_directory] * len(numbers)
 
-command = ['python', 'batch_plot.py',
-           '-i', str(input_directories),
-           '-e', str(numbers),  # expid
-           '-o', output_directory + 'results/',  # output_directory
-           ]
-#print_command(command)
-call(command)
+for iterator in xrange(len(numbers)):
+    command = ['bsub',
+               '-q', 'short',
+               '-o', output_directory +
+                     'logs/{0:08d}_plot.log'.format(image_number),
+               '-R', 'rhel60&&linux64',
+               'python', 'batch_plot.py',
+               '-i', str(input_directories[iterator]),
+               '-e', str(numbers[iterator]),  # expid
+               '-o', output_directory + 'results/',  # output_directory
+               ]
+    print_command(command)
+    call(command)
