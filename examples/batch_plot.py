@@ -65,7 +65,7 @@ for iterator in xrange(len(args_dict['expid'])):
     expid = args_dict['expid'][iterator]
 
     # comparison
-    path_comparison = [directory + '{0:08d}_image_plane.npy'.format(expid)]
+    path_comparison = directory + '{0:08d}_image_plane.npy'.format(expid)
     path_comparison_out = args_dict['output_directory'] + 'image_plane.csv'
     # get the items from the dictionary
     comparison_dict = np.load(path_comparison).item()
@@ -84,7 +84,7 @@ for iterator in xrange(len(args_dict['expid'])):
             comparison_all[key].append(comparison_dict[key][key_i])
 
     # fitted
-    path_fitted = [directory + '{0:08d}_fitted_plane.npy'.format(expid)]
+    path_fitted = directory + '{0:08d}_fitted_plane.npy'.format(expid)
     path_fitted_out = args_dict['output_directory'] + 'fitted_plane.csv'
     # get the items from the dictionary
     fitted_dict = np.load(path_fitted).item()
@@ -103,7 +103,7 @@ for iterator in xrange(len(args_dict['expid'])):
             fitted_all[key].append(fitted_dict[key][key_i])
 
     # argparse
-    path_args = [directory + '{0:08d}_args_dict.npy'.format(expid)]
+    path_args = directory + '{0:08d}_args_dict.npy'.format(expid)
     path_args_out = args_dict['output_directory'] + 'args_dict.csv'
     # get the items from the dictionary
     args_dict = np.load(path_args).item()
@@ -121,6 +121,9 @@ for iterator in xrange(len(args_dict['expid'])):
                  'scalar_whisker_fitted': [scalar_whisker_fitted],
                  'fwhm_image': [fwhm_image],
                  'fwhm_fitted': [fwhm_fitted]}
+
+    collect_fit_results(path_minuit, path_minuit_out,
+                        user_dict)
 
     # plots
     file_list.append(args_dict['output_directory'] + '{0:08d}_'.format(expid))
