@@ -1,7 +1,7 @@
 import numpy as np
 from subprocess import call
 from os import path, makedirs, listdir
-
+import fnmatch
 
 def print_command(command):
     string = ''
@@ -33,7 +33,7 @@ if not path.exists(output_directory):
 
 # now go to output and filter by what is already present
 results = listdir(output_directory)
-if 'logs' in results: results.remove('logs')
+results = fnmatch.filter(results, '00*')
 results_numbers = []
 for result in results:
     results_numbers.append(int(result[:8]))
