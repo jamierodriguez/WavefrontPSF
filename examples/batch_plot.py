@@ -134,7 +134,7 @@ for iterator in xrange(len(args_dict['expid'])):
     # do the comparison first
     x_comparison = comparison_dict['x_box'] - 5
     y_comparison = comparison_dict['y_box']
-    u_comparison = [0] * len(x_comparison)
+    u_comparison = np.array([0] * len(x_comparison))
     v_comparison = comparison_dict['e0']
     u_var_comparison = comparison_dict['var_e0']  # this is hackish
     v_var_comparison = comparison_dict['var_e0']
@@ -153,7 +153,7 @@ for iterator in xrange(len(args_dict['expid'])):
     # do the fitted
     x_fitted = fitted_dict['x_box'] + 5
     y_fitted = fitted_dict['y_box']
-    u_fitted = [0] * len(x_fitted)
+    u_fitted = np.array([0] * len(x_fitted))
     v_fitted = fitted_dict['e0']
     u_var_fitted = fitted_dict['var_e0']  # this is hackish
     v_var_fitted = fitted_dict['var_e0']
@@ -263,7 +263,8 @@ for iterator in xrange(len(args_dict['expid'])):
     y_comparison = comparison_dict['y_box']
     figure_whisker_rotated, axis_whisker_rotated = focal_plane_plot(
         x=x_comparison, y=y_comparison,
-        u=[0] * len(x_comparison), v=[1] * len(x_comparison),
+        u=np.array([0] * len(x_comparison)),
+        v=np.array([1] * len(x_comparison)),
         u_ave=0, v_ave=1,
         u_var=[], v_var=[],
         color='r',
