@@ -78,75 +78,48 @@ def extract_image_data(expids, path_image_data, path_out):
     return data_pruned
 
 
-def collect_dictionary_results(path_results, path_out, items=[],
-                               user_dict={}):
+def collect_dictionary_results(path_out, item_dict={}):
 
     """Collect the results into one big csv file.
 
     Parameters
     ----------
-    path_results : list of strings
-        A list of the paths to the results we want to collect.
-
     path_out : string
         The path where we want to output.
 
-    user_dict : dictionary, optional
-        Any extra tags you want to put into the csv file, under the heading
-        'user_'. Each entry of the dictionary must be a list of the same length
-        as the results list.
-        Example dictionary: {'expid'
-
-    items : list, optional
-        List of the names of the items in the dictionary we are extracting
+    item_dict : dictionary, optional
+        Each key is a key that goes into the csv file. Each item for each key
+        is a list of all the values for that key to be put in.
 
     Returns
     -------
     Nothing
 
-    Notes
-    -----
-    status_migrad_erflg = 0 indicates migrad converged. 4 means it failed.
-
     """
-
-    # if no items given, take the tags in the first entry
-    if len(items) == 0:
-        path_result = path_results[0]
-        result_dict = np.load(path_result).item()
-        items = list(np.sort(result_dict.keys()))
 
     if not path.exists(path_out):
         # create header
         names_string = ''
-        for item in items:
-            names_string += item + ','
-        for user_name in user_dict:
-            names_string += 'user_' + user_name + ','
+        for item_name in item_dict:
+            names_string += item_name + ','
         names_string = names_string[:-1] + '\n'
-
         f = open(path_out, 'w')
         f.write(names_string)
     else:
         # I hope you have the same header!
         f = open(path_out, 'a')
 
-    for path_result_i in xrange(len(path_results)):
-        path_result = path_results[path_result_i]
-        result_dict = np.load(path_result).item()
-        result_string = ''
-        # sub_dictionary
-        for item in items:
-            if item in result_dict.keys():
-                result_string += np.str(result_dict[item])
-            result_string += ','
-        # user features
-        for user_name in user_dict:
-            result_string += user_dict[user_name][path_result_i]
+    result_string = ''
+    # item features
+    length = len(item_dict[item_dict.keys()[0]])
+    for item_iter in xrange(length):
+        for item_name in item_dict:
+            result_string += str(item_dict[item_name][item_iter])
             result_string += ','
 
         result_string = result_string[:-1] + '\n'
         f.write(result_string)
+
     f.close()
 
     return

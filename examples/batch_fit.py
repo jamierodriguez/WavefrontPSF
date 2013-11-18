@@ -105,11 +105,6 @@ FP = FocalPlane(image_data=image_data,
                                     len(list_chip)),
                 )
 
-if args_dict['random']:
-    coords_used = FP.coords_random
-else:
-    coords_used = FP.coords_comparison
-
 # convert comparison dict to ellipticities
 e0_comparison, e0prime_comparison, e1_comparison, e2_comparison = \
     second_moment_to_ellipticity(FP.comparison_dict_all['x2'],
@@ -120,6 +115,18 @@ FP.comparison_dict_all.update(dict(
     e1=e1_comparison, e2=e2_comparison))
 comparison_average = average_dictionary(FP.comparison_dict_all, FP.average,
     boxdiv=args_dict['boxdiv'], subav=args_dict['subav'])
+
+if args_dict['random']:
+    coords_used = FP.coords_random
+else:
+    coords_used = FP.coords_comparison
+
+# check our variables are the right length
+check_average = average_dictionary(FP.comparison_dict, FP.average,
+    boxdiv=args_dict['boxdiv'], subav=args_dict['subav'])
+if len(check_average['x']) != len(comparison_average['x']):
+    # if they are not, use the random coords
+    coords_used = FP.coords_random
 
 # create var_dict from comparison_average
 var_dict = variance_dictionary(
@@ -204,7 +211,7 @@ force_derivatives = 1
 grad_dict = dict(h_base=1e-1)
 strategy = 1
 tolerance = 40
-max_iterations = len(par_names) * 10
+max_iterations = len(par_names) * 1000
 
 # set up initial guesses
 minuit_dict = minuit_dictionary(par_names)

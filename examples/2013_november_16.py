@@ -1,6 +1,6 @@
 import numpy as np
 from subprocess import call
-from os import path, makedirs
+from os import path, makedirs, listdir
 
 
 def print_command(command):
@@ -18,11 +18,26 @@ numbers = np.append(numbers, range(231089, 231096))
 numbers = np.append(numbers, range(232608, 232849))
 numbers = np.append(numbers, range(233377, 233642))
 
+# pop the ones that don't exist
+entries = listdir('/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript/')
+# pop logs
+if 'logs' in entries: entries.remove('logs')
+entries = [int(entry) for entry in entries]
+numbers = [item for item in numbers if item in entries]
+
 output_directory = "/nfs/slac/g/ki/ki18/cpd/focus/november_16/"
 
 if not path.exists(output_directory):
     makedirs(output_directory)
     makedirs(output_directory + 'logs')
+
+# now go to output and filter by what is already present
+results = listdir(output_directory)
+if 'logs' in results: results.remove('logs')
+results_numbers = []
+for result in results:
+    results_numbers.append(int(result[:8]))
+numbers = [item for item in numbers if item not in results_numbers]
 
 for image_number in numbers:
     command = ['bsub',

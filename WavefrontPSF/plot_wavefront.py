@@ -103,7 +103,7 @@ def focal_plane_plot(x, y,
                      u_ave, v_ave,
                      u_var=[], v_var=[],
                      focal_figure=None, focal_axis=None,
-                     quiverkey_dict=None,
+                     quiverkey_dict={},
                      color='k',
                      scale=10 / 0.04, artpatch=2,
                      whisker_width=2.5):
@@ -125,9 +125,6 @@ def focal_plane_plot(x, y,
     u_var, v_var : array, optional
         Variance for each of the parameters.  You don't need to include these;
         if they are not included, then no wedges are made.
-
-    average : function, optional
-        The function we will use to average our whiskers. Default is mean.
 
     scale : float, optional
         Scale your whisker size. The scale is directly proportional to whisker
@@ -183,9 +180,10 @@ def focal_plane_plot(x, y,
 
     # the factor of 2 is because of my method for plotting whiskers goes from
     # the tail and then adds another one on the other side 180 degrees away
-    quiverkey_dict = {'value': 0.08,
-                      'title': r'$0.04$ arcsec',
-                      'color': color}
+    quiverkey_dict_use = {'value': 2 * 10 / scale,
+                          'title': r'${0:.2e}$ arcsec'.format(10 / scale),
+                          'color': color}
+    quiverkey_dict_use.update(quiverkey_dict)
 
     # make the figure
     if not focal_figure:
@@ -224,8 +222,9 @@ def focal_plane_plot(x, y,
                           **quiver_dict)
         # add quiverkey in lower left
         focal_axis.quiverkey(Q, 0.1, 0.1,
-                             quiverkey_dict['value'], quiverkey_dict['title'],
-                             color=quiverkey_dict['color'])
+                             quiverkey_dict_use['value'],
+                             quiverkey_dict_use['title'],
+                             color=quiverkey_dict_use['color'])
 
         # update angles
         delta_theta = 2 * np.pi / artpatch
