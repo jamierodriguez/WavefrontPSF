@@ -12,9 +12,7 @@ def print_command(command):
 
 output_directory = "/nfs/slac/g/ki/ki18/cpd/focus/november_16/"
 
-if not path.exists(output_directory):
-    makedirs(output_directory)
-    makedirs(output_directory + 'logs/')
+if not path.exists(output_directory + 'plots/'):
     makedirs(output_directory + 'plots/')
 
 # find the ones done by the fitter
@@ -50,3 +48,15 @@ for iterator in xrange(len(numbers)):
                ]
     print_command(command)
     call(command)
+
+"""
+file_list = []
+for expid in numbers:
+    file_list.append(output_directory + 'plots/' + 'plots/{0:08d}/'.format(expid))
+# combine all the graphs
+print(file_list)
+collect_images(file_list,
+               output_directory + 'results/',
+               graphs_list=['e0', 'ellipticity', 'whisker', 'whisker_rotated'],
+               rate=5)
+"""

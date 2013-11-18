@@ -122,16 +122,3 @@ for iterator in xrange(len(args_dict['expid'])):
 
     collect_fit_results(path_minuit, path_minuit_out,
                         user_dict)
-
-    # plots
-    out_plots = args_dict['output_directory'] + '{0:08d}/'.format(expid)
-    file_list.append(out_plots)
-
-
-# file_list.append(args_dict['output_directory'] + '{0:08d}/'.format(expid))
-# combine all the graphs
-print(file_list)
-collect_images(file_list,
-               args_dict['output_directory'],
-               graphs_list=['e0', 'ellipticity', 'whisker', 'whisker_rotated'],
-               rate=5)

@@ -12,9 +12,7 @@ def print_command(command):
 
 output_directory = "/nfs/slac/g/ki/ki18/cpd/focus/november_16/"
 
-if not path.exists(output_directory):
-    makedirs(output_directory)
-    makedirs(output_directory + 'logs/')
+if not path.exists(output_directory + 'results/'):
     makedirs(output_directory + 'results/')
 
 # find the ones done by the fitter
