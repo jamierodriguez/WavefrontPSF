@@ -47,17 +47,6 @@ args_dict['expid'] = eval(args_dict['expid'])
 args_dict['input_directory'] = eval(args_dict['input_directory'])
 
 # go through all the inputs
-# collect into one big csv, and also collect averages
-comparison_all = {'expid': [], 'n': [],
-                  'x_box': [], 'y_box': [],
-                  'e0': [], 'var_e0': [],
-                  'e1': [], 'var_e1': [],
-                  'e2': [], 'var_e2': []}
-fitted_all = {'expid': [], 'n': [],
-              'x_box': [], 'y_box': [],
-              'e0': [], 'var_e0': [],
-              'e1': [], 'var_e1': [],
-              'e2': [], 'var_e2': []}
 
 file_list = []
 
@@ -82,10 +71,6 @@ for iterator in xrange(len(args_dict['expid'])):
     fwhm_image = average_function(
         comparison_dict, np.mean, 'fwhm')
 
-    for key in comparison_all.keys():
-        for key_i in xrange(len(comparison_dict[key])):
-            comparison_all[key].append(comparison_dict[key][key_i])
-
     # fitted
     path_fitted = directory + '{0:08d}_fitted_plane.npy'.format(expid)
     path_fitted_out = args_dict['output_directory'] + 'fitted_plane.csv'
@@ -100,10 +85,6 @@ for iterator in xrange(len(args_dict['expid'])):
         fitted_dict, np.mean, 'scalar_whisker')
     fwhm_fitted = average_function(
         fitted_dict, np.mean, 'fwhm')
-
-    for key in fitted_all.keys():
-        for key_i in xrange(len(fitted_dict[key])):
-            fitted_all[key].append(fitted_dict[key][key_i])
 
     # argparse
     path_args = directory + '{0:08d}_args_dict.npy'.format(expid)
@@ -319,11 +300,3 @@ collect_images(file_list,
                args_dict['output_directory'],
                graphs_list=['e0', 'ellipticity', 'whisker', 'whisker_rotated'],
                rate=0)
-
-
-# convert the alls into arrays
-for key in comparison_all.keys():
-    comparison_all[key] = np.array(comparison_all[key])
-for key in fitted_all.keys():
-    fitted_all[key] = np.array(fitted_all[key])
-# average plot
