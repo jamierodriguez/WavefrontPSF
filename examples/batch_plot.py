@@ -119,6 +119,7 @@ for iterator in xrange(len(args_dict['expid'])):
                         'value': 2 * 1.2e-1},
         artpatch=2,
         offset_x=2)
+    axis_e0.set_title('{0:08d}'.format(expid))
     figure_e0.savefig(path_e0_plot)
     close()
 
@@ -166,6 +167,7 @@ for iterator in xrange(len(args_dict['expid'])):
                         'value': 2e-3},
         whisker_width=3,
         artpatch=1)
+    axis_ellipticity.set_title('{0:08d}'.format(expid))
     figure_ellipticity.savefig(path_ellipticity_plot)
     close()
 
@@ -212,7 +214,7 @@ for iterator in xrange(len(args_dict['expid'])):
         quiverkey_dict={'title': r'$9 \times 10^{-2}$ arcsec',
                         'value': 2 * 9e-2},
         artpatch=2)
-
+    axis_whisker.set_title('{0:08d}'.format(expid))
     figure_whisker.savefig(path_whisker_plot)
     close()
 
@@ -266,5 +268,6 @@ for iterator in xrange(len(args_dict['expid'])):
                         'value': 2},
         artpatch=2,
         offset_x=2)
+    axis_whisker_rotated.set_title('{0:08d}'.format(expid))
     figure_whisker_rotated.savefig(path_whisker_rotated_plot)
     close('all')
