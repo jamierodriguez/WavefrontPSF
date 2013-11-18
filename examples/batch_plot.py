@@ -60,8 +60,6 @@ fitted_all = {'expid': [], 'n': [],
 
 file_list = []
 
-import ipdb; ipdb.set_trace()
-
 for iterator in xrange(len(args_dict['expid'])):
     directory = args_dict['input_directory'][iterator]
     expid = args_dict['expid'][iterator]
