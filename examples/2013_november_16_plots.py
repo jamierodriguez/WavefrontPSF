@@ -1,5 +1,5 @@
 from subprocess import call
-from os import listdir
+from os import listdir, makedirs
 import fnmatch
 
 def print_command(command):
@@ -10,7 +10,12 @@ def print_command(command):
     print(string)
     return string
 
-output_directory = "/nfs/slac/g/ki/ki18/cpd/focus/november_16/results/"
+output_directory = "/nfs/slac/g/ki/ki18/cpd/focus/november_16/"
+
+if not path.exists(output_directory):
+    makedirs(output_directory)
+    makedirs(output_directory + 'logs/')
+    makedirs(output_directory + 'results/')
 
 # now go to output and filter by what is already present
 results = listdir(output_directory)
@@ -29,7 +34,7 @@ command = ['bsub',
            'python', 'batch_plot.py',
            '-i', str(input_directories),
            '-e', str(numbers),  # expid
-           '-o', output_directory,  # output_directory
+           '-o', output_directory + 'results/',  # output_directory
            ]
 #print_command(command)
 call(command)
