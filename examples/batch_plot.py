@@ -139,7 +139,7 @@ for iterator in xrange(len(args_dict['expid'])):
         u_ave=u_ave_comparison, v_ave=v_ave_comparison,
         u_var=u_var_comparison, v_var=v_var_comparison,
         color='r',
-        scale=10 / 2e-3,
+        scale=2 * 10 / 2e-3,  # 2x here is to make our quiverkey 20 pixels
         quiverkey_dict={'title': r'$2 \times 10^{-3}$ arcsec$^{2}$',
                         'value': 2e-3},
         whisker_width=3,
@@ -161,7 +161,7 @@ for iterator in xrange(len(args_dict['expid'])):
         focal_figure=figure_ellipticity,
         focal_axis=axis_ellipticity,
         color='k',
-        scale=10 / 2e-3,
+        scale=2 * 10 / 2e-3,  # 2x here is to make our quiverkey 20 pixels
         quiverkey_dict={'title': r'$2 \times 10^{-3}$ arcsec$^{2}$',
                         'value': 2e-3},
         whisker_width=3,
@@ -263,7 +263,7 @@ for iterator in xrange(len(args_dict['expid'])):
         color='k',
         scale=10 / 1,
         quiverkey_dict={'title': r'',
-                        'value': 1},
+                        'value': 2},
         artpatch=2,
         offset_x=2)
     figure_whisker_rotated.savefig(path_whisker_rotated_plot)
