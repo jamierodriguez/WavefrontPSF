@@ -134,4 +134,4 @@ print(file_list)
 collect_images(file_list,
                args_dict['output_directory'],
                graphs_list=['e0', 'ellipticity', 'whisker', 'whisker_rotated'],
-               rate=0)
+               rate=5)

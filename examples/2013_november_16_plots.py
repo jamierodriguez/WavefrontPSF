@@ -15,7 +15,7 @@ output_directory = "/nfs/slac/g/ki/ki18/cpd/focus/november_16/"
 if not path.exists(output_directory):
     makedirs(output_directory)
     makedirs(output_directory + 'logs/')
-    makedirs(output_directory + 'results/')
+    makedirs(output_directory + 'plots/')
 
 # find the ones done by the fitter
 results = listdir(output_directory)
@@ -26,7 +26,7 @@ for result in results:
 numbers = list(set(numbers))
 
 # filter the ones already done
-finished = listdir(output_directory + 'results/')
+finished = listdir(output_directory + 'plots/')
 finished = fnmatch.filter(finished, '00*')
 finished_numbers = []
 for finished_i in finished:
@@ -46,7 +46,7 @@ for iterator in xrange(len(numbers)):
                'python', 'batch_plot.py',
                '-i', str([input_directories[iterator]]),
                '-e', str([numbers[iterator]]),  # expid
-               '-o', output_directory + 'results/',  # output_directory
+               '-o', output_directory + 'plots/',  # output_directory
                ]
     print_command(command)
     call(command)

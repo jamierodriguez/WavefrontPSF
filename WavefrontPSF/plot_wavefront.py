@@ -106,7 +106,8 @@ def focal_plane_plot(x, y,
                      quiverkey_dict={},
                      color='k',
                      scale=10 / 0.04, artpatch=2,
-                     whisker_width=4):
+                     whisker_width=4,
+                     offset_x=0):
 
     """Create the figure and axis for the whisker plot
 
@@ -158,6 +159,9 @@ def focal_plane_plot(x, y,
         The axis on which we manipulate. If not given, then the figure and axis
         are created.
 
+    offset_x : float, optional
+        A constant offset to all x coordinates
+
     Returns
     -------
     focal_figure : matplotlib figure
@@ -187,7 +191,7 @@ def focal_plane_plot(x, y,
 
     # make the figure
     if not focal_figure:
-        focal_figure = plt.figure(figsize=(16, 12), dpi=200)
+        focal_figure = plt.figure(figsize=(16, 12), dpi=300)
         focal_axis = focal_figure.add_subplot(111,
                                               aspect='equal')
         focal_axis.set_xlabel('$X$ [mm] (East)')
@@ -214,11 +218,11 @@ def focal_plane_plot(x, y,
 
     for i in range(artpatch):
 
-        Q = focal_axis.quiver(x, y, u, v,
+        Q = focal_axis.quiver(x + offset_x, y, u, v,
                               **quiver_dict)
 
         # add cornervalue in upper right
-        focal_axis.quiver(200, 200,
+        focal_axis.quiver(200 + offset_x, 200,
                           u_ave, v_ave,
                           **quiver_dict)
         # add quiverkey in lower left
@@ -239,7 +243,7 @@ def focal_plane_plot(x, y,
 
     if len(u_var) > 0:
         # add wedges
-        wedges = wedge_collection(x, y, u, v,
+        wedges = wedge_collection(x + offset_x, y, u, v,
                                   u_var, v_var,
                                   scale=quiver_dict['scale'],
                                   artpatch=artpatch)
