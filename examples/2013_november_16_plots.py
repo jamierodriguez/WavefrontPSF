@@ -10,7 +10,7 @@ def print_command(command):
     print(string)
     return string
 
-output_directory = "/nfs/slac/g/ki/ki18/cpd/focus/november_16/"
+output_directory = "/nfs/slac/g/ki/ki18/cpd/focus/november_16/results/"
 
 # now go to output and filter by what is already present
 results = listdir(output_directory)

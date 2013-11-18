@@ -310,7 +310,7 @@ for iterator in xrange(len(args_dict['expid'])):
 collect_images(file_list,
                args_dict['output_directory'],
                graphs_list=['e0', 'ellipticity', 'whisker', 'whisker_rotated'],
-               rate=0)
+               rate=2)
 
 
 # convert the alls into arrays
