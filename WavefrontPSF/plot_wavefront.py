@@ -75,7 +75,7 @@ def wedge_collection(X, Y, U, V,
             if theta_u < theta_l:
                 theta_l, theta_u = theta_u, theta_l
             #TODO: should this be / scale or * scale?
-            RU = (R[i] + sigma_r[i]) / 2. / scale
+            RU = (R[i] + sigma_r[i]) / scale
             wid2 = sigma_r[i] / scale
             if RU - wid2 < 0:
                 wid2 = None
@@ -230,6 +230,10 @@ def focal_plane_plot(x, y,
         delta_theta = 2 * np.pi / artpatch
         u, v = u * np.cos(delta_theta) + v * np.sin(delta_theta), \
             u * np.sin(delta_theta) + v * np.cos(delta_theta)
+
+        u_ave, v_ave = \
+            u_ave * np.cos(delta_theta) + v_ave * np.sin(delta_theta), \
+            u_ave * np.sin(delta_theta) + v_ave * np.cos(delta_theta)
 
 
     if len(u_var) > 0:

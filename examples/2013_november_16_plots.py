@@ -41,11 +41,11 @@ for iterator in xrange(len(numbers)):
     command = ['bsub',
                '-q', 'short',
                '-o', output_directory +
-                     'logs/{0:08d}_plot.log'.format(image_number),
+                     'logs/{0:08d}_plot.log'.format(numbers[iterator]),
                '-R', 'rhel60&&linux64',
                'python', 'batch_plot.py',
-               '-i', str(input_directories[iterator]),
-               '-e', str(numbers[iterator]),  # expid
+               '-i', str([input_directories[iterator]]),
+               '-e', str([numbers[iterator]]),  # expid
                '-o', output_directory + 'results/',  # output_directory
                ]
     print_command(command)

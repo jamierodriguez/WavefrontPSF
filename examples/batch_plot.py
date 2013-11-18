@@ -18,7 +18,7 @@ Include the locations of the moments (both fitted and comparison)
 This file will take the results and plot them as well as collate everything
 together into csv files. Those can also be plotted?
 
-TODO: split the plotting and collating
+TODO: add image number; fix appearance
 """
 
 # take as give that we have list_fitted_plane list_comparison_plane,
@@ -78,7 +78,7 @@ for iterator in xrange(len(args_dict['expid'])):
     # e0
     path_e0_plot = out_plots + 'e0.pdf'
     # do the comparison first
-    x_comparison = comparison_dict['x_box'] - 5
+    x_comparison = comparison_dict['x_box'] - 2
     y_comparison = comparison_dict['y_box']
     u_comparison = np.array([0] * len(x_comparison))
     v_comparison = comparison_dict['e0']
@@ -92,12 +92,12 @@ for iterator in xrange(len(args_dict['expid'])):
         u_ave=u_ave_comparison, v_ave=v_ave_comparison,
         u_var=u_var_comparison, v_var=v_var_comparison,
         color='r',
-        scale=10 / 1e-1,
-        quiverkey_dict={'title': r'$1 \times 10^{-1}$ arcsec$^{2}$',
-                        'value': 2 * 10 / 1e-1},
+        scale=10 / 5e-2,
+        quiverkey_dict={'title': r'$5 \times 10^{-2}$ arcsec$^{2}$',
+                        'value': 2 * 5e-2},
         artpatch=2)
     # do the fitted
-    x_fitted = fitted_dict['x_box'] + 5
+    x_fitted = fitted_dict['x_box'] + 2
     y_fitted = fitted_dict['y_box']
     u_fitted = np.array([0] * len(x_fitted))
     v_fitted = fitted_dict['e0']
@@ -113,9 +113,9 @@ for iterator in xrange(len(args_dict['expid'])):
         focal_figure=figure_e0,
         focal_axis=axis_e0,
         color='k',
-        scale=10 / 1e-1,
-        quiverkey_dict={'title': r'$1 \times 10^{-1}$ arcsec$^{2}$',
-                        'value': 2 * 10 / 1e-1},
+        scale=10 / 5e-2,
+        quiverkey_dict={'title': r'$5 \times 10^{-2}$ arcsec$^{2}$',
+                        'value': 2 * 5e-2},
         artpatch=2)
     figure_e0.savefig(path_e0_plot)
     close()
@@ -137,9 +137,9 @@ for iterator in xrange(len(args_dict['expid'])):
         u_ave=u_ave_comparison, v_ave=v_ave_comparison,
         u_var=u_var_comparison, v_var=v_var_comparison,
         color='r',
-        scale=10 / 5e-3,
-        quiverkey_dict={'title': r'$5 \times 10^{-3}$ arcsec$^{2}$',
-                        'value': 10 / 5e-3},
+        scale=10 / 2e-3,
+        quiverkey_dict={'title': r'$2 \times 10^{-3}$ arcsec$^{2}$',
+                        'value': 2e-3},
         artpatch=1)
     # do the fitted
     x_fitted = fitted_dict['x_box']
@@ -158,9 +158,9 @@ for iterator in xrange(len(args_dict['expid'])):
         focal_figure=figure_ellipticity,
         focal_axis=axis_ellipticity,
         color='k',
-        scale=10 / 5e-3,
-        quiverkey_dict={'title': r'$5 \times 10^{-3}$ arcsec$^{2}$',
-                        'value': 10 / 5e-3},
+        scale=10 / 2e-3,
+        quiverkey_dict={'title': r'$2 \times 10^{-3}$ arcsec$^{2}$',
+                        'value': 2e-3},
         artpatch=1)
     figure_ellipticity.savefig(path_ellipticity_plot)
     close()
@@ -181,7 +181,12 @@ for iterator in xrange(len(args_dict['expid'])):
         u=u_comparison, v=v_comparison,
         u_ave=u_ave_comparison, v_ave=v_ave_comparison,
         u_var=u_var_comparison, v_var=v_var_comparison,
-        color='r')
+        color='r',
+        scale=10 / 9e-2,
+        quiverkey_dict={'title': r'$9 \times 10^{-2}$ arcsec',
+                        'value': 2 * 9e-2},
+        artpatch=2)
+
     # do fitted
     u_var_fitted, v_var_fitted = \
         ellipticity_variance_to_whisker_variance(
@@ -198,14 +203,19 @@ for iterator in xrange(len(args_dict['expid'])):
         u_var=u_var_fitted, v_var=v_var_fitted,
         focal_figure=figure_whisker,
         focal_axis=axis_whisker,
-        color='k')
+        color='k',
+        scale=10 / 9e-2,
+        quiverkey_dict={'title': r'$9 \times 10^{-2}$ arcsec',
+                        'value': 2 * 9e-2},
+        artpatch=2)
+
     figure_whisker.savefig(path_whisker_plot)
     close()
 
     # whisker rotated
     path_whisker_rotated_plot = out_plots + 'whisker_rotated.pdf'
     # do the comparison first
-    x_comparison = comparison_dict['x_box'] - 5
+    x_comparison = comparison_dict['x_box'] - 2
     y_comparison = comparison_dict['y_box']
     figure_whisker_rotated, axis_whisker_rotated = focal_plane_plot(
         x=x_comparison, y=y_comparison,
@@ -216,7 +226,7 @@ for iterator in xrange(len(args_dict['expid'])):
         color='r',
         scale=10 / 1,
         quiverkey_dict={'title': r'',
-                        'value': 0},
+                        'value': 1},
         artpatch=2)
 
     # do the fitted
@@ -236,7 +246,7 @@ for iterator in xrange(len(args_dict['expid'])):
     v_ave_fitted_prime = (np.sin(theta_ave) * u_ave_fitted +
                           np.cos(theta_ave) * v_ave_fitted) / mag_ave
 
-    x_fitted = fitted_dict['x_box'] + 5
+    x_fitted = fitted_dict['x_box'] + 2
     y_fitted = fitted_dict['y_box']
     figure_whisker_rotated, axis_whisker_rotated = focal_plane_plot(
         x=x_fitted, y=y_fitted,
@@ -248,7 +258,7 @@ for iterator in xrange(len(args_dict['expid'])):
         color='k',
         scale=10 / 1,
         quiverkey_dict={'title': r'',
-                        'value': 0},
+                        'value': 1},
         artpatch=2)
     figure_whisker_rotated.savefig(path_whisker_rotated_plot)
     close('all')

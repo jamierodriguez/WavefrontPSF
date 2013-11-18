@@ -27,7 +27,7 @@ numbers = list(set(numbers))
 
 input_directories = [output_directory] * len(numbers)
 
-command = ['python', 'batch_plot.py',
+command = ['python', 'collect_results.py',
            '-i', str(input_directories),
            '-e', str(numbers),  # expid
            '-o', output_directory + 'results/',  # output_directory

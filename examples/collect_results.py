@@ -51,8 +51,8 @@ time = asctime()
 
 file_list = []
 plane_keys = ['x', 'y', 'x_box', 'y_box', 'n', 'fwhm',
-              'e0', 'e1', 'e2', 'e0prime',
-              'var_e0', 'var_e1', 'var_e2', 'var_e0prime']
+              'e0', 'e1', 'e2',
+              'var_e0', 'var_e1', 'var_e2']
 
 print(len(args_dict['expid']))
 for iterator in xrange(len(args_dict['expid'])):
