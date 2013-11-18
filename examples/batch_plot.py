@@ -108,10 +108,11 @@ for iterator in xrange(len(args_dict['expid'])):
     path_args = directory + '{0:08d}_args_dict.npy'.format(expid)
     path_args_out = args_dict['output_directory'] + 'args_dict.csv'
     # get the items from the dictionary
-    args_dict = np.load(path_args).item()
-    args_dict = {args_key: [args_dict[args_key]] for args_key in args_dict}
-    args_dict.update({'expid': [expid]})
-    collect_dictionary_results(path_args_out, item_dict=args_dict)
+    argparse_dict = np.load(path_args).item()
+    argparse_dict = {args_key: [argparse_dict[args_key]]
+        for args_key in argparse_dict}
+    argparse_dict.update({'expid': [expid]})
+    collect_dictionary_results(path_args_out, item_dict=argparse_dict)
 
     # minuit results
     path_minuit = [directory + '{0:08d}_minuit_results.npy'.format(expid)]
