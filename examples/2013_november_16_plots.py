@@ -1,6 +1,6 @@
 from subprocess import call
 from os import listdir
-
+import fnmatch
 
 def print_command(command):
     string = ''
@@ -14,8 +14,7 @@ output_directory = "/nfs/slac/g/ki/ki18/cpd/focus/november_16/"
 
 # now go to output and filter by what is already present
 results = listdir(output_directory)
-if 'logs' in results:
-    results.remove('logs')
+results = fnmatch.filter(results, '00*')
 numbers = []
 for result in results:
     numbers.append(int(result[:8]))

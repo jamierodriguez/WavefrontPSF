@@ -4,7 +4,7 @@ from __future__ import print_function, division
 import argparse
 import numpy as np
 from plot_wavefront import focal_plane_plot, collect_images
-from decam_csv_routines import collect_dictionary_results
+from decam_csv_routines import collect_dictionary_results, collect_fit_results
 from focal_plane_routines import average_function, \
     ellipticity_variance_to_whisker_variance, ellipticity_to_whisker
 
@@ -59,6 +59,8 @@ fitted_all = {'expid': [], 'n': [],
               'e2': [], 'var_e2': []}
 
 file_list = []
+
+import ipdb; ipdb.set_trace()
 
 for iterator in xrange(len(args_dict['expid'])):
     directory = args_dict['input_directory'][iterator]
