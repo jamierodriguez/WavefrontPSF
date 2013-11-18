@@ -7,6 +7,7 @@ from plot_wavefront import focal_plane_plot, collect_images
 from decam_csv_routines import collect_dictionary_results, collect_fit_results
 from focal_plane_routines import average_function, \
     ellipticity_variance_to_whisker_variance, ellipticity_to_whisker
+from matplotlib.pylab import clf
 
 """
 Include the locations of the moments (both fitted and comparison)
@@ -306,7 +307,7 @@ for iterator in xrange(len(args_dict['expid'])):
         artpatch=2)
     figure_whisker_rotated.savefig(path_whisker_rotated_plot)
 
-    plt.clf()
+    clf()
 
 # combine all the graphs
 collect_images(file_list,
