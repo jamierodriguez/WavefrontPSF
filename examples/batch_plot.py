@@ -306,6 +306,8 @@ for iterator in xrange(len(args_dict['expid'])):
         artpatch=2)
     figure_whisker_rotated.savefig(path_whisker_rotated_plot)
 
+    plt.clf()
+
 # combine all the graphs
 collect_images(file_list,
                args_dict['output_directory'],

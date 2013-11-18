@@ -1,5 +1,5 @@
 from subprocess import call
-from os import listdir, makedirs
+from os import path, listdir, makedirs
 import fnmatch
 
 def print_command(command):
@@ -26,12 +26,7 @@ for result in results:
 numbers = list(set(numbers))
 input_directories = [output_directory] * len(numbers)
 
-command = ['bsub',
-           '-q', 'xlong',
-           '-o', output_directory +
-                 'logs/plots.log',
-           '-R', 'rhel60&&linux64',
-           'python', 'batch_plot.py',
+command = ['python', 'batch_plot.py',
            '-i', str(input_directories),
            '-e', str(numbers),  # expid
            '-o', output_directory + 'results/',  # output_directory
