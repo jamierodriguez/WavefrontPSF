@@ -204,7 +204,7 @@ def collect_fit_results(path_results, path_out,
                 fit_string += ','
         # user features
         for user_name in user_dict:
-            fit_string += user_dict[user_name][path_result_i]
+            fit_string += np.str(user_dict[user_name][path_result_i])
             fit_string += ','
 
         fit_string = fit_string[:-1] + '\n'
