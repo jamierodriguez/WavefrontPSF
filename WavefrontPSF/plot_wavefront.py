@@ -106,7 +106,7 @@ def focal_plane_plot(x, y,
                      quiverkey_dict={},
                      color='k',
                      scale=10 / 0.04, artpatch=2,
-                     whisker_width=2.5):
+                     whisker_width=4):
 
     """Create the figure and axis for the whisker plot
 
@@ -208,8 +208,9 @@ def focal_plane_plot(x, y,
                        width=whisker_width)
 
     if artpatch == 1:
-        quiver_dict['headlength'] = 3
-        quiver_dict['headwidth'] = 5
+        quiver_dict['headlength'] = 2
+        quiver_dict['headwidth'] = 3
+        quiver_dict['width'] = 1.5
 
     for i in range(artpatch):
 
