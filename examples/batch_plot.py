@@ -7,7 +7,7 @@ from plot_wavefront import focal_plane_plot, collect_images
 from decam_csv_routines import collect_dictionary_results, collect_fit_results
 from focal_plane_routines import average_function, \
     ellipticity_variance_to_whisker_variance, ellipticity_to_whisker
-from matplotlib.pylab import clf
+from matplotlib.pyplot import close
 
 """
 Include the locations of the moments (both fitted and comparison)
@@ -61,10 +61,11 @@ fitted_all = {'expid': [], 'n': [],
 
 file_list = []
 
+print(len(args_dict['expid']))
 for iterator in xrange(len(args_dict['expid'])):
-    print(iterator)
     directory = args_dict['input_directory'][iterator]
     expid = args_dict['expid'][iterator]
+    print(expid, iterator)
 
     # comparison
     path_comparison = directory + '{0:08d}_image_plane.npy'.format(expid)
@@ -174,7 +175,7 @@ for iterator in xrange(len(args_dict['expid'])):
                         'value': 2 * 10 / 1e-1},
         artpatch=2)
     figure_e0.savefig(path_e0_plot)
-    clf()
+    close()
 
     # ellipticity
     path_ellipticity_plot = args_dict['output_directory'] + \
@@ -220,7 +221,7 @@ for iterator in xrange(len(args_dict['expid'])):
                         'value': 10 / 5e-3},
         artpatch=1)
     figure_ellipticity.savefig(path_ellipticity_plot)
-    clf()
+    close()
 
     # whisker
     path_whisker_plot = args_dict['output_directory'] + \
@@ -258,7 +259,7 @@ for iterator in xrange(len(args_dict['expid'])):
         focal_axis=axis_whisker,
         color='k')
     figure_whisker.savefig(path_whisker_plot)
-    clf()
+    close()
 
     # whisker rotated
     path_whisker_rotated_plot = args_dict['output_directory'] + \
@@ -310,8 +311,7 @@ for iterator in xrange(len(args_dict['expid'])):
                         'value': 0},
         artpatch=2)
     figure_whisker_rotated.savefig(path_whisker_rotated_plot)
-
-    clf()
+    close('all')
 
 # file_list.append(args_dict['output_directory'] + '{0:08d}_'.format(expid))
 # combine all the graphs
