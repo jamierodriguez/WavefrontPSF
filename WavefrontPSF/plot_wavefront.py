@@ -187,7 +187,7 @@ def focal_plane_plot(x, y,
 
     # make the figure
     if not focal_figure:
-        focal_figure = plt.figure(figsize=(16, 12), dpi=100)
+        focal_figure = plt.figure(figsize=(16, 12), dpi=200)
         focal_axis = focal_figure.add_subplot(111,
                                               aspect='equal')
         focal_axis.set_xlabel('$X$ [mm] (East)')
@@ -288,7 +288,7 @@ def collect_images(
                        '-sOutputFile={0}.pdf'.format(merged_file)]
             # append all the files
             for file_i in file_list:
-                command.append(file_i + graph_i + '.pdf')
+                command.append(file_i + graph_i + '.png')
             # call the command
             call(command)
 

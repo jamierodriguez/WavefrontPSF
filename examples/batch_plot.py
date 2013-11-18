@@ -76,7 +76,7 @@ for iterator in xrange(len(args_dict['expid'])):
     if not path.exists(out_plots):
         makedirs(out_plots)
     # e0
-    path_e0_plot = out_plots + 'e0.pdf'
+    path_e0_plot = out_plots + 'e0.png'
     # do the comparison first
     x_comparison = comparison_dict['x_box'] - 2
     y_comparison = comparison_dict['y_box']
@@ -121,7 +121,7 @@ for iterator in xrange(len(args_dict['expid'])):
     close()
 
     # ellipticity
-    path_ellipticity_plot = out_plots + 'ellipticity.pdf'
+    path_ellipticity_plot = out_plots + 'ellipticity.png'
     # do the comparison first
     x_comparison = comparison_dict['x_box']
     y_comparison = comparison_dict['y_box']
@@ -137,9 +137,9 @@ for iterator in xrange(len(args_dict['expid'])):
         u_ave=u_ave_comparison, v_ave=v_ave_comparison,
         u_var=u_var_comparison, v_var=v_var_comparison,
         color='r',
-        scale=10 / 5e-4,
-        quiverkey_dict={'title': r'$5 \times 10^{-4}$ arcsec$^{2}$',
-                        'value': 5e-4},
+        scale=10 / 5e-3,
+        quiverkey_dict={'title': r'$5 \times 10^{-3}$ arcsec$^{2}$',
+                        'value': 5e-3},
         artpatch=1)
     # do the fitted
     x_fitted = fitted_dict['x_box']
@@ -166,7 +166,7 @@ for iterator in xrange(len(args_dict['expid'])):
     close()
 
     # whisker
-    path_whisker_plot = out_plots + 'whisker.pdf'
+    path_whisker_plot = out_plots + 'whisker.png'
     # convert ellipticity to whisker
     u_var_comparison, v_var_comparison = \
         ellipticity_variance_to_whisker_variance(
@@ -213,7 +213,7 @@ for iterator in xrange(len(args_dict['expid'])):
     close()
 
     # whisker rotated
-    path_whisker_rotated_plot = out_plots + 'whisker_rotated.pdf'
+    path_whisker_rotated_plot = out_plots + 'whisker_rotated.png'
     # do the comparison first
     x_comparison = comparison_dict['x_box'] - 2
     y_comparison = comparison_dict['y_box']
@@ -226,7 +226,7 @@ for iterator in xrange(len(args_dict['expid'])):
         color='r',
         scale=10 / 1,
         quiverkey_dict={'title': r'',
-                        'value': 1},
+                        'value': 2},
         artpatch=2)
 
     # do the fitted
