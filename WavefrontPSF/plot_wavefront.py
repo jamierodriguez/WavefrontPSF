@@ -212,8 +212,8 @@ def focal_plane_plot(x, y,
                        width=whisker_width)
 
     if artpatch == 1:
-        quiver_dict['headlength'] = 2
-        quiver_dict['headwidth'] = 3
+        quiver_dict['headlength'] = 1
+        quiver_dict['headwidth'] = 1
 
     for i in range(artpatch):
 
