@@ -222,13 +222,13 @@ for iterator in xrange(len(args_dict['expid'])):
     path_whisker_plot = args_dict['output_directory'] + \
         '{0:08d}_whisker.pdf'.format(expid)
     # convert ellipticity to whisker
-    u_var_comparison, w_var_comparison = \
+    u_var_comparison, v_var_comparison = \
         ellipticity_variance_to_whisker_variance(
             u_comparison, v_comparison, u_var_comparison, v_var_comparison)
-    u_comparison, v_comparison = ellipticity_to_whisker(
+    u_comparison, v_comparison, w, phi = ellipticity_to_whisker(
         u_comparison, v_comparison)
     # vector whisker
-    u_ave_comparison, v_ave_comparison = ellipticity_to_whisker(
+    u_ave_comparison, v_ave_comparison, w, phi = ellipticity_to_whisker(
         u_ave_comparison, v_ave_comparison)
     figure_whisker, axis_whisker = focal_plane_plot(
         x=x_comparison, y=y_comparison,
@@ -237,13 +237,13 @@ for iterator in xrange(len(args_dict['expid'])):
         u_var=u_var_comparison, v_var=v_var_comparison,
         color='r')
     # do fitted
-    u_var_fitted, w_var_fitted = \
+    u_var_fitted, v_var_fitted = \
         ellipticity_variance_to_whisker_variance(
             u_fitted, v_fitted, u_var_fitted, v_var_fitted)
-    u_fitted, v_fitted = ellipticity_to_whisker(
+    u_fitted, v_fitted, w, phi = ellipticity_to_whisker(
         u_fitted, v_fitted)
     # vector whisker
-    u_ave_fitted, v_ave_fitted = ellipticity_to_whisker(
+    u_ave_fitted, v_ave_fitted, w, phi = ellipticity_to_whisker(
         u_ave_fitted, v_ave_fitted)
     figure_whisker, axis_whisker = focal_plane_plot(
         x=x_fitted, y=y_fitted,

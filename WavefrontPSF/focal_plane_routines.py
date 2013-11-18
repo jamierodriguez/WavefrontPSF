@@ -149,7 +149,7 @@ def ellipticity_to_whisker(e1, e2):
     u = w * np.cos(phi)
     v = w * np.sin(phi)
 
-    return u, v
+    return u, v, w, phi
 
 
 def second_moment_variance_to_ellipticity_variance(x2_var, y2_var, xy_var):
