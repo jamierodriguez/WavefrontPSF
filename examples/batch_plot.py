@@ -62,6 +62,7 @@ fitted_all = {'expid': [], 'n': [],
 file_list = []
 
 for iterator in xrange(len(args_dict['expid'])):
+    print(iterator)
     directory = args_dict['input_directory'][iterator]
     expid = args_dict['expid'][iterator]
 
@@ -173,6 +174,7 @@ for iterator in xrange(len(args_dict['expid'])):
                         'value': 2 * 10 / 1e-1},
         artpatch=2)
     figure_e0.savefig(path_e0_plot)
+    clf()
 
     # ellipticity
     path_ellipticity_plot = args_dict['output_directory'] + \
@@ -218,6 +220,7 @@ for iterator in xrange(len(args_dict['expid'])):
                         'value': 10 / 5e-3},
         artpatch=1)
     figure_ellipticity.savefig(path_ellipticity_plot)
+    clf()
 
     # whisker
     path_whisker_plot = args_dict['output_directory'] + \
@@ -255,6 +258,7 @@ for iterator in xrange(len(args_dict['expid'])):
         focal_axis=axis_whisker,
         color='k')
     figure_whisker.savefig(path_whisker_plot)
+    clf()
 
     # whisker rotated
     path_whisker_rotated_plot = args_dict['output_directory'] + \
@@ -309,11 +313,12 @@ for iterator in xrange(len(args_dict['expid'])):
 
     clf()
 
+# file_list.append(args_dict['output_directory'] + '{0:08d}_'.format(expid))
 # combine all the graphs
 collect_images(file_list,
                args_dict['output_directory'],
                graphs_list=['e0', 'ellipticity', 'whisker', 'whisker_rotated'],
-               rate=2)
+               rate=0)
 
 
 # convert the alls into arrays

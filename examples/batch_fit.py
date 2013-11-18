@@ -17,7 +17,6 @@ If you submit this script to the batch queue, you will get fits for a given
 image.
 """
 
-#TODO: output the args parse commands, too
 
 ##############################################################################
 # argparse
