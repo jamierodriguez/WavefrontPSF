@@ -139,9 +139,10 @@ for iterator in xrange(len(args_dict['expid'])):
         u_ave=u_ave_comparison, v_ave=v_ave_comparison,
         u_var=u_var_comparison, v_var=v_var_comparison,
         color='r',
-        scale=10 / 1e-3,
-        quiverkey_dict={'title': r'$1 \times 10^{-3}$ arcsec$^{2}$',
-                        'value': 1e-3},
+        scale=10 / 7e-3,
+        quiverkey_dict={'title': r'$7 \times 10^{-3}$ arcsec$^{2}$',
+                        'value': 7e-3},
+        whisker_width=3,
         artpatch=1)
     # do the fitted
     x_fitted = fitted_dict['x_box']
@@ -160,9 +161,10 @@ for iterator in xrange(len(args_dict['expid'])):
         focal_figure=figure_ellipticity,
         focal_axis=axis_ellipticity,
         color='k',
-        scale=10 / 1e-3,
-        quiverkey_dict={'title': r'$1 \times 10^{-3}$ arcsec$^{2}$',
-                        'value': 1e-3},
+        scale=10 / 7e-3,
+        quiverkey_dict={'title': r'$7 \times 10^{-3}$ arcsec$^{2}$',
+                        'value': 7e-3},
+        whisker_width=3,
         artpatch=1)
     figure_ellipticity.savefig(path_ellipticity_plot)
     close()

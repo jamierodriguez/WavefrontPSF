@@ -214,7 +214,6 @@ def focal_plane_plot(x, y,
     if artpatch == 1:
         quiver_dict['headlength'] = 2
         quiver_dict['headwidth'] = 3
-        quiver_dict['width'] = 1.5
 
     for i in range(artpatch):
 
