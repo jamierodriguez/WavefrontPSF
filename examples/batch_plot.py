@@ -92,9 +92,9 @@ for iterator in xrange(len(args_dict['expid'])):
         u_ave=u_ave_comparison, v_ave=v_ave_comparison,
         u_var=u_var_comparison, v_var=v_var_comparison,
         color='r',
-        scale=10 / 8e-2,
-        quiverkey_dict={'title': r'$8 \times 10^{-2}$ arcsec$^{2}$',
-                        'value': 2 * 8e-2},
+        scale=10 / 1.2e-1,
+        quiverkey_dict={'title': r'$1.2 \times 10^{-1}$ arcsec$^{2}$',
+                        'value': 2 * 1.2e-1},
         artpatch=2,
         offset_x=-2)
     # do the fitted
@@ -114,9 +114,9 @@ for iterator in xrange(len(args_dict['expid'])):
         focal_figure=figure_e0,
         focal_axis=axis_e0,
         color='k',
-        scale=10 / 8e-2,
-        quiverkey_dict={'title': r'$8 \times 10^{-2}$ arcsec$^{2}$',
-                        'value': 2 * 8e-2},
+        scale=10 / 1.2e-1,
+        quiverkey_dict={'title': r'$1.2 \times 10^{-1}$ arcsec$^{2}$',
+                        'value': 2 * 1.2e-1},
         artpatch=2,
         offset_x=2)
     figure_e0.savefig(path_e0_plot)
@@ -139,9 +139,9 @@ for iterator in xrange(len(args_dict['expid'])):
         u_ave=u_ave_comparison, v_ave=v_ave_comparison,
         u_var=u_var_comparison, v_var=v_var_comparison,
         color='r',
-        scale=10 / 1e-4,
-        quiverkey_dict={'title': r'$1 \times 10^{-4}$ arcsec$^{2}$',
-                        'value': 1e-4},
+        scale=10 / 1e-3,
+        quiverkey_dict={'title': r'$1 \times 10^{-3}$ arcsec$^{2}$',
+                        'value': 1e-3},
         artpatch=1)
     # do the fitted
     x_fitted = fitted_dict['x_box']
@@ -160,9 +160,9 @@ for iterator in xrange(len(args_dict['expid'])):
         focal_figure=figure_ellipticity,
         focal_axis=axis_ellipticity,
         color='k',
-        scale=10 / 1e-4,
-        quiverkey_dict={'title': r'$1 \times 10^{-4}$ arcsec$^{2}$',
-                        'value': 1e-4},
+        scale=10 / 1e-3,
+        quiverkey_dict={'title': r'$1 \times 10^{-3}$ arcsec$^{2}$',
+                        'value': 1e-3},
         artpatch=1)
     figure_ellipticity.savefig(path_ellipticity_plot)
     close()
