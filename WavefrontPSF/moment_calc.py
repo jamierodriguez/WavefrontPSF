@@ -218,15 +218,15 @@ def FWHM_(data, centroid=None, indices=None, background=0, thresh=-1):
     data_use = data[conds] - background
     # add additional filter for data_use < 0
     conds_negative = (data_use > 0)
-    data_use = data_use[conds_negative]
-    d2 = d2[conds_negative]
-    if np.sum(conds_negative) != len(conds_negative):
-        print('Error in background calculation. Some points ended up ' +
-              'negative!')
+    data_use = data_use[conds_negative.tolist()]
+    d2 = d2[conds_negative.tolist()]
+    ## if np.sum(conds_negative) != len(conds_negative):
+    ##     print('Error in background calculation. Some points ended up' +
+    ##           'negative!')
 
     lpix = np.log(data_use)  # this is the y parameter
     # in sextractor, inverr2 = data**2, which is weird since the error should
-    # go as err propto 1/sqrt(data), or in other words inverr2 = data maybe
+    # go as err propto 1/sqrt(data), or in other words inverr2 = data. maybe
     # emanuel meant err as in var = std^2 instead of err as std... but then
     # this doesn't fit with the least squares regression.
     inverr2 = data_use   * data_use  # otherwise known as weight w
@@ -246,7 +246,8 @@ def FWHM_(data, centroid=None, indices=None, background=0, thresh=-1):
 
     # undersample correction; this is from the sextractor code and is
     # apparently an empirical correction
-    fwhm -= 1 / (4 * fwhm)
+    if fwhm > 0.5:
+        fwhm -= 1 / (4 * fwhm)
 
     return fwhm
 

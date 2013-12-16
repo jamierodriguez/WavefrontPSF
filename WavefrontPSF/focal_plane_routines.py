@@ -1,15 +1,23 @@
 #!/usr/bin/env python
-# focal_plane_routines.py
+"""
+File: focal_plane_routines.py
+Author: Chris Davis
+Description: set of useful routines for focal plane objects.
+"""
+
 from __future__ import print_function, division
 import numpy as np
 from decamutil_cpd import decaminfo
 
 # TODO: docs!
 
-"""
-set of useful routines done on focal plane objects
-"""
-
+def print_command(command):
+    string = ''
+    for i in command:
+        string += str(i)
+        string += ' '
+    print(string)
+    return string
 
 def rzero_to_fwhm(rzero):
     # from fitting tests...
@@ -378,7 +386,7 @@ def minuit_dictionary(keys):
             # looking at the common mode terms
             minuit_dict.update({key: 0})
             minuit_dict.update({'error_{0}'.format(key): 0.005})
-            minuit_dict.update({'limit_{0}'.format(key): (-0.02, 0.02)})
+            minuit_dict.update({'limit_{0}'.format(key): (-0.05, 0.05)})
         else:
             # hexapod:
             minuit_dict.update({key: 0})
@@ -398,3 +406,76 @@ def in_dict_from_minuit_dict(minuit_dict):
     for pari in par_names:
         in_dict.update({pari: minuit_dict[pari]})
     return in_dict
+
+
+def image_zernike_corrections(image_data):
+    """create image_correction from image data
+
+    Parameters
+    ----------
+    image_data : recarray
+        contains all the telescope information for the specific image.
+
+    Returns
+    -------
+    image_dictionary : dictionary
+        dictionary with all the donut corrections
+
+    Notes
+    -----
+    tries to fit the "do" ones first (which are offline), but if those are
+    not there, then try the online processing. If that is /also/ not
+    present, then nothing gets added!
+
+    """
+
+    # get image_correction
+    # get corrections for an image
+    image_dictionary = {}
+
+    image_correction_keys = ['', '5', '6', '7', '8', '9', '10', '11']
+    row_keys = ['delta', 'thetax', 'thetay']
+    row_keys_alt = ['d', 'x', 'y']
+    for key_i in range(len(image_correction_keys)):
+        key = image_correction_keys[key_i]
+        for row_key_i in range(len(row_keys)):
+            row_key = row_keys[row_key_i]
+            # first try do; the offline processing
+            entry = 'doz' + key + row_key
+            if entry in image_data.dtype.names:
+                if not image_data[entry].mask:
+                    if image_data[entry].data > -2000:
+                        image_dictionary.update({
+                            'z{0:02d}{1}'.format(key_i + 4,
+                                                 row_keys_alt[row_key_i]):
+                            image_data[entry].data})
+                # try online processing
+                else:
+                    entry = 'z' + key + row_key
+                    if entry in image_data.dtype.names:
+                        if not image_data[entry].mask:
+                            image_dictionary.update({
+                                'z{0:02d}{1}'.format(
+                                    key_i + 4,
+                                    row_keys_alt[row_key_i]):
+                                image_data[entry].data})
+    # now do the hexapod parameters
+    hexapod_keys = ['dz', 'dx', 'dy', 'xt', 'yt']
+    # there is a minus sign in the correction because of aaron's
+    # conventions
+    for hexapod_key in hexapod_keys:
+        # first try online
+        entry = 'dodo' + hexapod_key
+        if entry in image_data.dtype.names:
+            if not image_data[entry].mask:
+                if image_data[entry].data > -2000:
+                    image_dictionary.update({
+                        hexapod_key:
+                        -image_data[entry].data})
+            else:
+                if not image_data[entry].mask:
+                    image_dictionary.update({
+                        hexapod_key:
+                        -image_data[entry].data})
+
+    return image_dictionary

@@ -1,5 +1,10 @@
 #!/usr/bin/env python
-# focal_plane_shell.py
+"""
+File: focal_plane_shell.py
+Author: Chris Davis
+Description: Class for creating wavefronts on a generic focal plane.
+"""
+
 from __future__ import print_function, division
 import numpy as np
 from wavefront import Wavefront

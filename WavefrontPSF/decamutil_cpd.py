@@ -206,7 +206,7 @@ class decaminfo(object):
         return boundi
 
     def average_boxdiv(self, X, Y, P, average, boxdiv=1, rejectsize=1,
-            Ntrue=False):
+            Ntrue=False, members=False):
         '''
         give average X, Y, P in boxes as well as P2
 
@@ -259,6 +259,7 @@ class decaminfo(object):
         Pave = []
         Pave2 = []
         N = []
+        members_list = []
 
         for box in bounds:
             for x in xrange(len(box[0]) - 1):
@@ -274,10 +275,15 @@ class decaminfo(object):
                     N.append(np.sum(choose))
                     Pave.append(average(P[choose]))
                     Pave2.append(average(P[choose] ** 2))
+                    if members:
+                        members_list.append(np.where(choose)[0])
         Pave = np.array(Pave)
         Pave2 = np.array(Pave2)
         N = np.array(N)
+        members_list = np.array(members_list)
 
+        if members:
+            return bounds, members_list
         if Ntrue:
             return Pave, Pave2, N, bounds
         else:

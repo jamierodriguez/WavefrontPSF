@@ -1,21 +1,22 @@
 #!/usr/bin/env python
-# batch_fit.py
+"""
+File: batch_fit.py
+Author: Chris Davis
+Description: If you submit this script to the batch queue, you will get fits
+for a given image.
+"""
+
 from __future__ import print_function, division
 import argparse
 import numpy as np
 from minuit_fit import Minuit_Fit
-from iminuit import describe
+#from iminuit import describe
 from os import path, makedirs
 from focal_plane_routines import average_dictionary, variance_dictionary, \
     chi2, minuit_dictionary, fwhm_to_rzero, second_moment_to_ellipticity, \
     second_moment_variance_to_ellipticity_variance
 from decam_csv_routines import generate_hdu_lists
 from focal_plane import FocalPlane
-
-"""
-If you submit this script to the batch queue, you will get fits for a given
-image.
-"""
 
 
 ##############################################################################
@@ -72,9 +73,20 @@ parser.add_argument("-r",
                     help="Do we take random locations on the chip or match to"
                     + "stars? If the former, then the number of stars per"
                     + "chip is taken to be int(max_samples / len(list_chip))")
+parser.add_argument("-d",
+                    dest="seed",
+                    default=np.random.randint(1e9),
+                    type=int,
+                    help="Set the seed we will use for random. This is "
+                    + "apparently not thread safe. oh well.")
 options = parser.parse_args()
 
 args_dict = vars(options)
+
+# seed the random number generator. the goal here is for me to be able to
+# /exactly/ reproduce any run of the program and since I'm using random
+# numbers, I need to save the seed.
+np.random.seed(args_dict['seed'])
 
 ##############################################################################
 # load up image data
@@ -204,7 +216,8 @@ def FP_func(dz, e1, e2, rzero, dx, dy, xt, yt, z05d, z06d,
 # set up minuit fit
 ##############################################################################
 
-par_names = describe(FP_func)
+#par_names = describe(FP_func)
+par_names = ['dz', ' e1', ' e2', ' rzero', ' dx', ' dy', ' xt', ' yt', ' z05d', ' z06d', ' z07x', ' z07y', ' z08x', ' z08y']
 verbosity = 3
 force_derivatives = 1
 grad_dict = dict(h_base=1e-1)
@@ -319,4 +332,3 @@ np.save(
 # save the argsparse commands too
 np.save(output_directory + '{0:08d}_args_dict'.format(
         args_dict['expid']), args_dict)
-

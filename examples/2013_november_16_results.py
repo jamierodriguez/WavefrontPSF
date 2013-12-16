@@ -1,14 +1,15 @@
+#!/usr/bin/env python
+"""
+File: 2013_november_16_results.py
+Author: Chris Davis
+Description: Go into collect_results.py for this specific run. Run second.
+"""
+
+from __future__ import print_function, division
 from subprocess import call
 from os import path, listdir, makedirs
 import fnmatch
-
-def print_command(command):
-    string = ''
-    for i in command:
-        string += str(i)
-        string += ' '
-    print(string)
-    return string
+from focal_plane_routines import print_command
 
 output_directory = "/nfs/slac/g/ki/ki18/cpd/focus/november_16/"
 

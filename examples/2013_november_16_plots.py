@@ -1,14 +1,15 @@
+#!/usr/bin/env python
+"""
+File: 2013_november_16_plots.py
+Author: Chris Davis
+Description: Routine to submit batch jobs for creating plots. Runs third.
+"""
+
+from __future__ import print_function, division
 from subprocess import call
 from os import path, listdir, makedirs
 import fnmatch
-
-def print_command(command):
-    string = ''
-    for i in command:
-        string += str(i)
-        string += ' '
-    print(string)
-    return string
+from focal_plane_routines import print_command
 
 output_directory = "/nfs/slac/g/ki/ki18/cpd/focus/november_16/"
 
@@ -45,18 +46,7 @@ for iterator in xrange(len(numbers)):
                '-i', str([input_directories[iterator]]),
                '-e', str([numbers[iterator]]),  # expid
                '-o', output_directory + 'plots/',  # output_directory
+               '-m', output_directory + 'results/minuit_results.csv'  # minuit_results
                ]
     print_command(command)
     call(command)
-
-"""
-file_list = []
-for expid in numbers:
-    file_list.append(output_directory + 'plots/' + 'plots/{0:08d}/'.format(expid))
-# combine all the graphs
-print(file_list)
-collect_images(file_list,
-               output_directory + 'results/',
-               graphs_list=['e0', 'ellipticity', 'whisker', 'whisker_rotated'],
-               rate=5)
-"""

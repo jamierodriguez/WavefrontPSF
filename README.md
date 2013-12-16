@@ -9,6 +9,10 @@ folks.
 Changelog
 ---------
 
+- 19.11.2013
+
+  Docs updates, example work flow for fitting and analyzing.
+
 - 16.11.2013
 
   Test to run my batch jobs. Should be functional at this point.

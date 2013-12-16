@@ -1,18 +1,15 @@
 #!/usr/bin/env python
-# plot_wavefront.py
+"""
+File: plot_wavefront.py
+Author: Chris Davis
+Description: Methods for plotting various wavefront configurations.
+"""
+
 from __future__ import print_function, division
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.patches import Wedge
 from matplotlib.collections import PatchCollection
-from os import makedirs, path
-from subprocess import call
-
-'''
-File: plot_wavefront.py
-Author: Chris Davis
-Description: Methods for plotting various wavefront configurations.
-'''
 
 
 def wedge_collection(X, Y, U, V,
@@ -234,12 +231,11 @@ def focal_plane_plot(x, y,
         # update angles
         delta_theta = 2 * np.pi / artpatch
         u, v = u * np.cos(delta_theta) - v * np.sin(delta_theta), \
-            u * np.sin(delta_theta) + v * np.cos(delta_theta)
+               u * np.sin(delta_theta) + v * np.cos(delta_theta)
 
         u_ave, v_ave = \
             u_ave * np.cos(delta_theta) - v_ave * np.sin(delta_theta), \
             u_ave * np.sin(delta_theta) + v_ave * np.cos(delta_theta)
-
 
     if len(u_var) > 0:
         # add wedges
@@ -250,6 +246,7 @@ def focal_plane_plot(x, y,
         focal_axis.add_collection(wedges)
 
     return focal_figure, focal_axis
+
 
 def collect_images(
         file_list,
