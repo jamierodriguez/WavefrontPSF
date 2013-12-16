@@ -163,25 +163,34 @@ class Wavefront(object):
         if background == -1:
             background = self.background
         # get windowed centroid
-        y, x = windowed_centroid(stamp, indices=indices,
-                                 background=background, thresh=thresh)
+        # y, x = windowed_centroid(stamp, indices=indices,
+        #                          background=background, thresh=thresh)
         # get fwhm
-        fwhm = FWHM(stamp, centroid=[y, x], indices=indices,
+        # TODO: change the initial guess to be half the nPixels
+        popt = FWHM(stamp, centroid=[stamp.shape[0] / 2, stamp.shape[1] / 2], #[y, x],
+                    indices=indices,
                     background=background, thresh=thresh)
+        background = popt[0]
+        fwhm = popt[2]
+        y = popt[3]
+        x = popt[4]
+
         # get weight for other windowed moments
         if not windowed:
             w = 1
         else:
-            w = gaussian_window(stamp,
+            w = gaussian_window(stamp - background,
                                 centroid=[y, x], indices=indices,
-                                background=background, thresh=thresh)
+                                background=background, thresh=thresh,
+                                sigma2=(fwhm / 2.355) ** 2
+                                )
 
-        return_dict = dict(x=x, y=y, fwhm=fwhm)
-
+        return_dict = dict(x=x, y=y, fwhm=fwhm, w=w)
+        #background=0
         # now go through moment_dict and create the other moments
         for order in order_dict:
             pq = order_dict[order]
-            return_dict.update({order: centered_moment(stamp, w=w,
+            return_dict.update({order: centered_moment((stamp - background) * w,
                                                        centroid=[y, x],
                                                        indices=indices,
                                                        **pq)})

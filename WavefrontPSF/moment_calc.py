@@ -49,7 +49,7 @@ def moments(data, indices=None):
     return x, y
 
 
-def centered_moment(data, w=1, q=0, p=0, centroid=None, indices=None):
+def centered_moment(data, q=0, p=0, centroid=None, indices=None):
     """Calculate the centered moment
     Mpq = sum(w * data * (X - x) ** p * (Y - y) ** q) / sum(w * data)
     where x and y are the centroid locations and X and Y are the indices of the
@@ -59,10 +59,6 @@ def centered_moment(data, w=1, q=0, p=0, centroid=None, indices=None):
     ----------
     data : array
         2d image array
-
-    w : array, optional
-        weight array. Gives the weight at each pixel.
-        Defaults to 1: unweighted
 
     p, q : floats, optional
         The moments we are interested in.
@@ -88,6 +84,8 @@ def centered_moment(data, w=1, q=0, p=0, centroid=None, indices=None):
 
     If you want to /find/ xbar, ybar, just set them to 0 and (p,q)=(1,0) or
     (0,1)
+
+    If you want to include weights, just multiply your data by them.
     """
 
     if not indices:
@@ -95,17 +93,41 @@ def centered_moment(data, w=1, q=0, p=0, centroid=None, indices=None):
     else:
         Y, X = indices
     if not centroid:
-        tot = np.sum(w * data)
+        tot = np.sum(data)
         x = np.sum(X * data) / tot
         y = np.sum(Y * data) / tot
     else:
         y, x = centroid
-    Mpq = np.sum(w * data * (X - x) ** p * (Y - y) ** q) / \
-        np.sum(w * data)
+    Mpq = np.sum(data * (X - x) ** p * (Y - y) ** q) / \
+        np.sum(data)
     return Mpq
 
-
+from scipy.optimize import leastsq
 def FWHM(data, centroid=None, indices=None, background=0, thresh=-1):
+    # now doing parameter model fitting because the other way... sucked
+    # TODO: speed up by incerasing tolerance / setting max runs
+    if not indices:
+        indices = np.indices(data.shape)
+    def model(p):
+        if np.any(p) < 0:
+            return 1e20
+        elif np.any(p[2:5]) > data.shape[0] * 0.75:
+            return 1e20
+        else:
+            return ((data) ** 1 * ((data) - (p[0] + p[1] * np.exp(-0.5 / np.square(p[2] / 2.355) * (np.square(indices[0] - p[3]) + np.square(indices[1] - p[4])))))).flatten()
+    popt, pcov = leastsq(model, x0=[background, 100, 1.3, centroid[0], centroid[1]])
+
+    # correct fwhm with empirical correction
+    popt[2] = np.abs(popt[2])
+    # if popt[2] > 1:
+    #     popt[2] -= 1. / (4 * popt[2])
+
+    #print(popt)
+    #print(pcov)
+
+    return popt
+
+def FWHM_(data, centroid=None, indices=None, background=0, thresh=-1):
     """Calculate the FWHM via least squares fit, weighted by (data value -
     background).
 
@@ -189,21 +211,25 @@ def FWHM(data, centroid=None, indices=None, background=0, thresh=-1):
         databack = np.append(databack, data[:, 0])
         databack = np.append(databack, data[:, -1])
         background = np.median(databack)
+    if np.any(data - background < 0):
+        # set the background so that the worst offender is zero
+        background = 0#np.min(data) - 1
+        print('modifying background mandelbrot')
     data_use = data[conds] - background
     # add additional filter for data_use < 0
     conds_negative = (data_use > 0)
     data_use = data_use[conds_negative]
     d2 = d2[conds_negative]
-    ## if np.sum(conds_negative) != len(conds_negative):
-    ##     print('Error in background calculation. Some points ended up' +
-    ##           'negative!')
+    if np.sum(conds_negative) != len(conds_negative):
+        print('Error in background calculation. Some points ended up ' +
+              'negative!')
 
     lpix = np.log(data_use)  # this is the y parameter
     # in sextractor, inverr2 = data**2, which is weird since the error should
     # go as err propto 1/sqrt(data), or in other words inverr2 = data maybe
     # emanuel meant err as in var = std^2 instead of err as std... but then
     # this doesn't fit with the least squares regression.
-    inverr2 = data_use  # * data_use  # otherwise known as weight w
+    inverr2 = data_use   * data_use  # otherwise known as weight w
 
     s = np.sum(inverr2)
     sx = np.sum(d2 * inverr2)
@@ -226,7 +252,7 @@ def FWHM(data, centroid=None, indices=None, background=0, thresh=-1):
 
 
 def gaussian_window(data, centroid=None, indices=None, background=0,
-                    thresh=-1):
+                    thresh=-1, sigma2=None):
     """Calculate the gaussian window.
 
     Parameters
@@ -250,6 +276,10 @@ def gaussian_window(data, centroid=None, indices=None, background=0,
     thresh : float, optional
         Threshold value in the data array for pixels to consider in this fit.
         If no value is specified, then it is set to be max(data) / 5 .
+
+    sigma2 : float, optional
+        The size of the window.
+        If no value is specified, then find it yourself.
 
     Returns
     -------
@@ -278,11 +308,37 @@ def gaussian_window(data, centroid=None, indices=None, background=0,
         y, x = centroid
 
     # get the scale for the window
-    d502 = np.square(FWHM(data, centroid=[y, x], indices=[Y, X],
-                          background=background, thresh=thresh))
-    swin2 = d502 / (8 * np.log(2))
+    if not sigma2:
+        d502, background = np.square(FWHM(data, centroid=[y, x], indices=[Y, X],
+                              background=background, thresh=thresh))
+        swin2 = d502 / (8 * np.log(2))
+        sigma2 = swin2
     # make the window
-    w = np.exp(-0.5 * (np.square(X - x) + np.square(Y - y)) / swin2)
+    r2 = (X - x) ** 2 + (Y - y) ** 2
+    w = np.exp(-0.5 * r2 / sigma2)
+
+    # oversample some areas
+    WINPOS_NSIG = 4
+    raper = WINPOS_NSIG * np.sqrt(sigma2)
+    WINPOS_OVERSAMP = 3
+    scaley = scalex = 1.0 / WINPOS_OVERSAMP
+
+    rintlim = raper - 0.75
+    if rintlim < 0:
+        rintlim2 = 0
+    else:
+        rintlim2 = rintlim ** 2
+    rextlim2 = (raper + 0.75) ** 2
+    locarea = np.zeros(w.shape)
+    
+
+    # if you are outside the window, set weight to zero
+    xmin = x - raper # + 0.499999
+    xmax = x + raper # + 1.499999
+    ymin = y - raper # + 0.499999
+    ymax = y + raper # + 1.499999
+
+    w = np.where((X > xmin) * (X < xmax) * (Y > ymin) * (Y < ymax), w, 0)
 
     return w
 
@@ -353,8 +409,14 @@ def windowed_centroid(data, centroid=None, indices=None, background=0,
     i = 0
     epsilon = 1e5
 
+
+    d502, background = np.square(FWHM(data, centroid=[y, x], indices=[Y, X],
+                          background=background, thresh=thresh))
+    swin2 = d502 / (8 * np.log(2))
+    sigma2 = swin2
     w = gaussian_window(data, centroid=[y, x], indices=[Y, X],
-                        background=background, thresh=thresh)
+                        background=background, thresh=thresh,
+                        sigma2=sigma2)
     tot = np.sum(w * data)
 
     while (i < maxiter) * (epsilon > minepsilon):
@@ -366,8 +428,13 @@ def windowed_centroid(data, centroid=None, indices=None, background=0,
         x, y = xp, yp
 
         # iterate window
+        # update sigma?
+        sigma2, background = np.square(FWHM(data, centroid=[y, x], indices=[Y, X],
+                                background=background, thresh=thresh))
+        sigma2 /= (8 * np.log(2))
         w = gaussian_window(data, centroid=[y, x], indices=[Y, X],
-                            background=background, thresh=thresh)
+                            background=background, thresh=thresh,
+                            sigma2=sigma2)
         tot = np.sum(w * data)
 
     #print(epsilon, i)

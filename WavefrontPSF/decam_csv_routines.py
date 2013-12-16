@@ -118,7 +118,7 @@ def collect_dictionary_results(path_out, item_dict={}):
             result_string += ','
 
         result_string = result_string[:-1] + '\n'
-        f.write(result_string)
+    f.write(result_string)
 
     f.close()
 

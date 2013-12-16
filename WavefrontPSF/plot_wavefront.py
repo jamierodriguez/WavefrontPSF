@@ -200,7 +200,7 @@ def focal_plane_plot(x, y,
         focal_axis.set_ylim(-250, 250)
 
     # add quiver
-    quiver_dict = dict(alpha=0.75,
+    quiver_dict = dict(alpha=0.5,
                        angles='uv',
                        color=color,
                        headlength=0,
@@ -214,6 +214,7 @@ def focal_plane_plot(x, y,
     if artpatch == 1:
         quiver_dict['headlength'] = 2
         quiver_dict['headwidth'] = 2
+
 
     for i in range(artpatch):
 
@@ -232,11 +233,11 @@ def focal_plane_plot(x, y,
 
         # update angles
         delta_theta = 2 * np.pi / artpatch
-        u, v = u * np.cos(delta_theta) + v * np.sin(delta_theta), \
+        u, v = u * np.cos(delta_theta) - v * np.sin(delta_theta), \
             u * np.sin(delta_theta) + v * np.cos(delta_theta)
 
         u_ave, v_ave = \
-            u_ave * np.cos(delta_theta) + v_ave * np.sin(delta_theta), \
+            u_ave * np.cos(delta_theta) - v_ave * np.sin(delta_theta), \
             u_ave * np.sin(delta_theta) + v_ave * np.cos(delta_theta)
 
 
@@ -286,8 +287,9 @@ def collect_images(
             if not path.exists(path.dirname(merged_file)):
                 makedirs(path.dirname(merged_file))
             command = [#'bsub', '-q', 'short', '-o', path_logs,
-                       'gs', '-sDEVICE=pdfwrite',
-                       '-dNOPAUSE', '-dBATCH', '-dSAFER',
+                       'gs',
+                       '-dNOPAUSE', '-dBATCH', '-dSAFER', '-q',
+                       '-sDEVICE=pdfwrite',
                        '-sOutputFile={0}.pdf'.format(merged_file)]
             # append all the files
             for file_i in file_list:
