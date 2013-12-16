@@ -1,5 +1,10 @@
 #!/usr/bin/env python
-# wavefront.py
+"""
+File: wavefront.py
+Author: Chris Davis
+Description: Module for generating PSF objects and their moments.
+"""
+
 from __future__ import print_function, division
 import numpy as np
 from donutlib.makedonut import makedonut
@@ -7,10 +12,6 @@ from moment_calc import windowed_centroid, FWHM, centered_moment, \
     gaussian_window
 from os import path, makedirs
 import pickle
-
-"""
-Module for generating stars as well as their moments.
-"""
 
 
 class Wavefront(object):

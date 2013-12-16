@@ -1,15 +1,17 @@
+#!/usr/bin/env python
+"""
+File: 2013_november_16_fits.py
+Author: Chris Davis
+Description: Submit these images to the catalog to do the fits. Run first
+(after getting the images.)
+"""
+
+from __future__ import print_function, division
 import numpy as np
 from subprocess import call
 from os import path, makedirs, listdir
 import fnmatch
-
-def print_command(command):
-    string = ''
-    for i in command:
-        string += str(i)
-        string += ' '
-    print(string)
-    return string
+from focal_plane_routines import print_command
 
 
 
@@ -41,7 +43,7 @@ numbers = [item for item in numbers if item not in results_numbers]
 
 for image_number in numbers:
     command = ['bsub',
-               '-q', 'xlong',
+               '-q', 'long',
                '-o', output_directory +
                      'logs/{0:08d}.log'.format(image_number),
                '-R', 'rhel60&&linux64',

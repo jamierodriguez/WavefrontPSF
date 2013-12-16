@@ -1,18 +1,15 @@
 #!/usr/bin/env python
-# plot_wavefront.py
+"""
+File: plot_wavefront.py
+Author: Chris Davis
+Description: Methods for plotting various wavefront configurations.
+"""
+
 from __future__ import print_function, division
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.patches import Wedge
 from matplotlib.collections import PatchCollection
-from os import makedirs, path
-from subprocess import call
-
-'''
-File: plot_wavefront.py
-Author: Chris Davis
-Description: Methods for plotting various wavefront configurations.
-'''
 
 
 def wedge_collection(X, Y, U, V,
@@ -200,7 +197,7 @@ def focal_plane_plot(x, y,
         focal_axis.set_ylim(-250, 250)
 
     # add quiver
-    quiver_dict = dict(alpha=0.75,
+    quiver_dict = dict(alpha=0.5,
                        angles='uv',
                        color=color,
                        headlength=0,
@@ -232,13 +229,12 @@ def focal_plane_plot(x, y,
 
         # update angles
         delta_theta = 2 * np.pi / artpatch
-        u, v = u * np.cos(delta_theta) + v * np.sin(delta_theta), \
-            u * np.sin(delta_theta) + v * np.cos(delta_theta)
+        u, v = u * np.cos(delta_theta) - v * np.sin(delta_theta), \
+               u * np.sin(delta_theta) + v * np.cos(delta_theta)
 
         u_ave, v_ave = \
-            u_ave * np.cos(delta_theta) + v_ave * np.sin(delta_theta), \
+            u_ave * np.cos(delta_theta) - v_ave * np.sin(delta_theta), \
             u_ave * np.sin(delta_theta) + v_ave * np.cos(delta_theta)
-
 
     if len(u_var) > 0:
         # add wedges
@@ -249,85 +245,3 @@ def focal_plane_plot(x, y,
         focal_axis.add_collection(wedges)
 
     return focal_figure, focal_axis
-
-def collect_images(
-        file_list,
-        output_directory,
-        graphs_list=['ellipticity', 'whisker',
-                     'whisker_rotated'],
-        rate=0):
-
-    """collect the images made into big files
-
-    Parameters
-    ----------
-    file_list : list
-        A list of directories containing the graphs we want to merge
-
-    output_directory : string
-        Where we will output the collected images.
-
-    graphs_list : list, optional
-        The names of the files we want to merge. Default finds the comparison
-        E1E2, whisker, and whisker_rotated.
-
-    rate : integer, optional
-        If given and bigger than zero, sets the number of images displayed in a
-        movie per second.
-
-    """
-
-    # graphs_list is a list of all the file names created in the above
-    # graph_routine. We will use this list to merge all the pdfs into one
-    # super pdf and an mp4 as well
-    if len(file_list) > 0:
-        for graph_i in graphs_list:
-            merged_file = output_directory + '{0}'.format(graph_i)
-            if not path.exists(path.dirname(merged_file)):
-                makedirs(path.dirname(merged_file))
-            command = [#'bsub', '-q', 'short', '-o', path_logs,
-                       'gs', '-sDEVICE=pdfwrite',
-                       '-dNOPAUSE', '-dBATCH', '-dSAFER',
-                       '-sOutputFile={0}.pdf'.format(merged_file)]
-            # append all the files
-            for file_i in file_list:
-                command.append(file_i + graph_i + '.png')
-            # call the command
-            call(command)
-
-            if rate > 0:
-                # also do movie stuff
-
-                ''' gs -dBATCH -dNOPAUSE -sDEVICE=jpeg -r300 -dJPEGQ=100
-                -sOutputFile='comparison_focus-%000d.jpg'
-                comparison_focus.pdf . first r gives 2 images per second;
-                ie each image must now last 0.5 seconds next r gives the
-                total rate for the movie (otherwise, modifying that second
-                r won't actually change the real rate of image display)
-                ffmpeg -f image2 -r 10 -i comparison_focus-%d.jpg -r 30 -an
-                -q:v 0 comparison_focus.mp4 find . -name '*.jpg' -delete
-                '''
-
-                # convert the pdf to jpegs
-                command = [#'bsub', '-q', 'short', '-o', path_logs,
-                           'gs', '-sDEVICE=jpeg',
-                           '-dNOPAUSE', '-dBATCH', #'-dSAFER',
-                           '-r300', '-dJPEGQ=100',
-                           "-sOutputFile={0}-%000d.jpg".format(merged_file),
-                           merged_file + '.pdf']
-                call(command, bufsize=-1)
-
-                # now convert the jpegs to a video
-                command = [#'bsub', '-q', 'short', '-o', path_logs,
-                           'ffmpeg', '-f', 'image2',
-                           '-r', '{0}'.format(rate),
-                           '-i', '{0}-%d.jpg'.format(merged_file),
-                           '-r', '30', '-an', '-q:v', '0',
-                           merged_file + '.mp4']
-                call(command, bufsize=0)
-
-                # delete the jpegs
-                command = [#'bsub', '-q', 'short', '-o', path_logs,
-                           'find', output_directory,
-                           '-name', '*.jpg', '-delete']
-                call(command, bufsize=0)

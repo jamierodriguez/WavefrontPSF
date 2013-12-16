@@ -1,22 +1,23 @@
 #!/usr/bin/env python
-# collect_results.py
+"""
+File: collect_results.py
+Author: Chris Davis
+Description: Include the locations of the moments (both fitted and comparison)
+
+This file will take the results and plot them as well as collate everything
+together into csv files. Those can also be plotted?
+
+TODO: using image_zernike_corrections add the priors used
+
+"""
+
 from __future__ import print_function, division
 import argparse
 import numpy as np
 from decam_csv_routines import collect_dictionary_results, collect_fit_results
 from focal_plane_routines import average_function
-from plot_wavefront import collect_images
 from time import asctime
 
-"""
-Include the locations of the moments (both fitted and comparison)
-
-This file will take the results and plot them as well as collate everything
-together into csv files. Those can also be plotted?
-"""
-
-# take as give that we have list_fitted_plane list_comparison_plane,
-# list_minuit_results
 
 ##############################################################################
 # argparse
@@ -49,7 +50,6 @@ time = asctime()
 
 # go through all the inputs
 
-file_list = []
 plane_keys = ['x', 'y', 'x_box', 'y_box', 'n', 'fwhm',
               'e0', 'e1', 'e2',
               'var_e0', 'var_e1', 'var_e2']

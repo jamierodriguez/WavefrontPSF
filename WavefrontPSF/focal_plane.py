@@ -1,13 +1,19 @@
 #!/usr/bin/env python
-# focal_plane.py
+"""
+File: focal_plane.py
+Author: Chris Davis
+Description: Class for focal plane shell tied to specific image.
+
+TODO: DOCS!!
+TODO: update attributes and methods
+TODO: update __init__
+"""
+
 from __future__ import print_function, division
 import numpy as np
 from focal_plane_shell import FocalPlaneShell
+from focal_plane_routines import image_zernike_corrections
 import pyfits
-
-# TODO: DOCS!!
-# TODO: update attributes and methods
-# TODO: update __init__
 
 
 class FocalPlane(FocalPlaneShell):
@@ -38,7 +44,7 @@ class FocalPlane(FocalPlaneShell):
         # could put in nEle etc here
 
         self.image_data = image_data
-        self.image_correction = self.image_zernike_corrections(image_data)
+        self.image_correction = image_zernike_corrections(image_data)
 
         self.average = np.mean
 
@@ -58,8 +64,73 @@ class FocalPlane(FocalPlaneShell):
                     self.comparison_data_unfiltered,
                     self.comparison_extension_unfiltered,
                     max_samples, conds)
+        # double check that coords_comparison hits all the boxes with a minimum
+        # number of entries
+        success = self.check_full_bounds(self.comparison_dict, boxdiv)
+        while not success:
+            self.comparison_dict, self.comparison_data, \
+                self.comparison_extension, self.coords_comparison \
+                    = self.comparison_coordinates(
+                        self.comparison_data_unfiltered,
+                        self.comparison_extension_unfiltered,
+                        max_samples, conds)
+            success = self.check_full_bounds(self.comparison_dict, boxdiv,
+                                             minimum_number=5)
+
+
+
         self.coords_random = self.random_coordinates(max_samples_box,
                                                      boxdiv=boxdiv)
+
+    def check_full_bounds(self, data, boxdiv, minimum_number):
+        """Convenience method for checking whether my random sampling hits all
+        possible divisions over the chip.
+
+        Parameters
+        ----------
+        data : dictionary
+            contains the example sampling.
+
+        boxdiv : int
+            How many divisions we will put into the chip. Default is zero
+            divisions on each chip.
+
+        minimum_number : int
+            The number that should be in each box.
+
+        Returns
+        -------
+
+        success : bool
+            True / False for whether the lengths match.
+
+        """
+
+        bounds = []
+        for i in range(1, 63):
+            if i == 61:
+                #n30 sucks
+                continue
+            extname = self.decaminfo.ccddict[i]
+            boundi = self.decaminfo.getBounds(extname, boxdiv)
+            bounds.append(boundi)
+        # get the midpoints of each box
+        x_box = []
+        for box in bounds:
+            for x in range(len(box[0]) - 1):
+                for y in range(len(box[1]) - 1):
+                    x_box.append((box[0][x] + box[0][x + 1]) / 2.)
+        # average x coord
+        x = data['x']
+        y = data['y']
+        x_av, x_av2, N, _ = self.decaminfo.average_boxdiv(x, y, x, self.average
+                                                          boxdiv=boxdiv,
+                                                          Ntrue=True)
+        # check that all N >= minimum_number
+
+        success = (len(x_av) == len(x_box)) * np.all(N >= minimum_number)
+
+        return success
 
 
     def random_coordinates(self, max_samples_box=5, boxdiv=0):
@@ -200,74 +271,6 @@ class FocalPlane(FocalPlaneShell):
 
         return comparison_dict, data_use, extension_use, coords_final
 
-    def image_zernike_corrections(self, image_data):
-        """create image_correction from image data
-
-        Parameters
-        ----------
-        image_data : recarray
-            contains all the telescope information for the specific image.
-
-        Returns
-        -------
-        image_correction : array
-            array with all the donut corrections
-
-        Notes
-        -----
-        tries to fit the "do" ones first (which are offline), but if those are
-        not there, then try the online processing. If that is /also/ not
-        present, then nothing gets added!
-
-        """
-
-        # get image_correction
-        # get corrections for an image
-        image_dictionary = {}
-
-        image_correction_keys = ['', '5', '6', '7', '8', '9', '10', '11']
-        row_keys = ['delta', 'thetax', 'thetay']
-        row_keys_alt = ['d', 'x', 'y']
-        for key_i in range(len(image_correction_keys)):
-            key = image_correction_keys[key_i]
-            for row_key_i in range(len(row_keys)):
-                row_key = row_keys[row_key_i]
-                # first try do; the offline processing
-                entry = 'doz' + key + row_key
-                if entry in image_data.dtype.names:
-                    if not image_data[entry].mask:
-                        if image_data[entry].data > -2000:
-                            image_dictionary.update({
-                                'z{0:02d}{1}'.format(key_i + 4,
-                                                     row_keys_alt[row_key_i]):
-                                image_data[entry].data})
-                    # try online processing
-                    else:
-                        entry = 'z' + key + row_key
-                        if entry in image_data.dtype.names:
-                            if not image_data[entry].mask:
-                                image_dictionary.update({
-                                    'z{0:02d}{1}'.format(key_i + 4,
-                                        row_keys_alt[row_key_i]):
-                                    image_data[entry].data})
-        # now do the hexapod parameters
-        hexapod_keys = ['dz', 'dx', 'dy', 'xt', 'yt']
-        # there is a minus sign in the correction because of aaron's
-        # conventions
-        for hexapod_key in hexapod_keys:
-            # first try online
-            entry = 'dodo' + hexapod_key
-            if entry in image_data.dtype.names:
-                if not image_data[entry].mask:
-                    if image_data[entry].data > -2000:
-                        image_dictionary.update({hexapod_key:
-                            -image_data[entry].data})
-                else:
-                    if not image_data[entry].mask:
-                        image_dictionary.update({hexapod_key:
-                            -image_data[entry].data})
-
-        return image_dictionary
 
     def comparison(self, list_catalogs, list_fits_extension,
                    list_chip):

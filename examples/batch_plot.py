@@ -1,7 +1,19 @@
 #!/usr/bin/env python
-# batch_plot.py
+"""
+File: batch_plot.py
+Author: Chris Davis
+Description: Include the locations of the moments (both fitted and comparison)
+
+This file will take the results and plot them as well as collate everything
+together into csv files. Those can also be plotted?
+
+TODO: ellipticity plot is a mess
+TODO: make wrappers for easily plotting whisker
+"""
+
 from __future__ import print_function, division
 import matplotlib
+# the agg is so I can submit for batch jobs.
 matplotlib.use('Agg')
 import argparse
 import numpy as np
@@ -11,15 +23,6 @@ from focal_plane_routines import \
     ellipticity_variance_to_whisker_variance, ellipticity_to_whisker
 from matplotlib.pyplot import close
 from os import path, makedirs
-
-"""
-Include the locations of the moments (both fitted and comparison)
-
-This file will take the results and plot them as well as collate everything
-together into csv files. Those can also be plotted?
-
-TODO: add image number; fix appearance
-"""
 
 # take as give that we have list_fitted_plane list_comparison_plane,
 # list_minuit_results
@@ -41,6 +44,9 @@ parser.add_argument("-i",
                     help="in what directories are my results located?" +
                     " Format is ['/path/to/directory1/', " +
                     "'/path/to/directory2/']")
+parser.add_argument("-m",
+                    dest="minuit_results",
+                    help="Where are the minuit results located?")
 parser.add_argument("-o",
                     dest="output_directory",
                     default="/nfs/slac/g/ki/ki18/cpd/focus/november_8/",
@@ -51,13 +57,18 @@ args_dict = vars(options)
 args_dict['expid'] = eval(args_dict['expid'])
 args_dict['input_directory'] = eval(args_dict['input_directory'])
 
+minuit_dict = np.recfromcsv(args_dict['minuit_results'])
+
 # go through all the inputs
 
 print(len(args_dict['expid']))
 for iterator in xrange(len(args_dict['expid'])):
     directory = args_dict['input_directory'][iterator]
     expid = args_dict['expid'][iterator]
-    print(expid, iterator)
+    minuit_dict_i = minuit_dict[minuit_dict['user_expid'] == expid]
+    ierflg = np.float64(minuit_dict_i['status_migrad_ierflg'])
+    amin = np.float64(minuit_dict_i['mnstat_amin'])
+    print(expid, iterator, ierflg, amin)
 
     # comparison
     path_comparison = directory + '{0:08d}_image_plane.npy'.format(expid)
@@ -93,7 +104,7 @@ for iterator in xrange(len(args_dict['expid'])):
         u_var=u_var_comparison, v_var=v_var_comparison,
         color='r',
         scale=10 / 1.2e-1,
-        quiverkey_dict={'title': r'$1.2 \times 10^{-1}$ arcsec$^{2}$',
+        quiverkey_dict={'title': '',
                         'value': 2 * 1.2e-1},
         artpatch=2,
         offset_x=-2)
@@ -119,7 +130,8 @@ for iterator in xrange(len(args_dict['expid'])):
                         'value': 2 * 1.2e-1},
         artpatch=2,
         offset_x=2)
-    axis_e0.set_title('{0:08d}'.format(expid))
+    axis_e0.set_title('{0:08d}, {1}, {2:.2e}'.format(
+        expid, ierflg, amin))
     figure_e0.savefig(path_e0_plot)
     close()
 
@@ -141,7 +153,7 @@ for iterator in xrange(len(args_dict['expid'])):
         u_var=u_var_comparison, v_var=v_var_comparison,
         color='r',
         scale=2 * 10 / 2e-3,  # 2x here is to make our quiverkey 20 pixels
-        quiverkey_dict={'title': r'$2 \times 10^{-3}$ arcsec$^{2}$',
+        quiverkey_dict={'title': '',
                         'value': 2e-3},
         whisker_width=3,
         artpatch=1)
@@ -167,7 +179,8 @@ for iterator in xrange(len(args_dict['expid'])):
                         'value': 2e-3},
         whisker_width=3,
         artpatch=1)
-    axis_ellipticity.set_title('{0:08d}'.format(expid))
+    axis_ellipticity.set_title('{0:08d}, {1}, {2:.2e}'.format(
+        expid, ierflg, amin))
     figure_ellipticity.savefig(path_ellipticity_plot)
     close()
 
@@ -188,9 +201,9 @@ for iterator in xrange(len(args_dict['expid'])):
         u_ave=u_ave_comparison, v_ave=v_ave_comparison,
         u_var=u_var_comparison, v_var=v_var_comparison,
         color='r',
-        scale=10 / 9e-2,
-        quiverkey_dict={'title': r'$9 \times 10^{-2}$ arcsec',
-                        'value': 2 * 9e-2},
+        scale=10 / 5e-2,
+        quiverkey_dict={'title': '',
+                        'value': 2 * 5e-2},
         artpatch=2)
 
     # do fitted
@@ -210,11 +223,12 @@ for iterator in xrange(len(args_dict['expid'])):
         focal_figure=figure_whisker,
         focal_axis=axis_whisker,
         color='k',
-        scale=10 / 9e-2,
-        quiverkey_dict={'title': r'$9 \times 10^{-2}$ arcsec',
-                        'value': 2 * 9e-2},
+        scale=10 / 5e-2,
+        quiverkey_dict={'title': r'$5 \times 10^{-2}$ arcsec',
+                        'value': 2 * 5e-2},
         artpatch=2)
-    axis_whisker.set_title('{0:08d}'.format(expid))
+    axis_whisker.set_title('{0:08d}, {1}, {2:.2e}'.format(
+        expid, ierflg, amin))
     figure_whisker.savefig(path_whisker_plot)
     close()
 
@@ -230,11 +244,11 @@ for iterator in xrange(len(args_dict['expid'])):
         u_ave=0, v_ave=1,
         u_var=[], v_var=[],
         color='r',
-        scale=10 / 1,
+        scale=13 / 1,
         quiverkey_dict={'title': r'',
                         'value': 2},
         artpatch=2,
-        offset_x=-2)
+        offset_x=0)
 
     # do the fitted
 
@@ -263,11 +277,12 @@ for iterator in xrange(len(args_dict['expid'])):
         focal_figure=figure_whisker_rotated,
         focal_axis=axis_whisker_rotated,
         color='k',
-        scale=10 / 1,
+        scale=13 / 1,
         quiverkey_dict={'title': r'',
                         'value': 2},
         artpatch=2,
-        offset_x=2)
-    axis_whisker_rotated.set_title('{0:08d}'.format(expid))
+        offset_x=0)
+    axis_whisker_rotated.set_title('{0:08d}, {1}, {2:.2e}'.format(
+        expid, ierflg, amin))
     figure_whisker_rotated.savefig(path_whisker_rotated_plot)
     close('all')

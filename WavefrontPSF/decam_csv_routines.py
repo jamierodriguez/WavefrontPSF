@@ -1,11 +1,14 @@
 #!/usr/bin/env python
-# decam_csv_routines.py
+"""
+File: decam_csv_routines.py
+Author: Chris Davis
+Description: A set of common routines for csv generation and creation.
+"""
+
 from __future__ import print_function, division
 import numpy as np
 from os import path, makedirs
 from decamutil_cpd import decaminfo
-
-"""A set of common routines that I need for csv generation."""
 
 
 def extract_image_data(expids, path_image_data, path_out):
@@ -118,7 +121,7 @@ def collect_dictionary_results(path_out, item_dict={}):
             result_string += ','
 
         result_string = result_string[:-1] + '\n'
-        f.write(result_string)
+    f.write(result_string)
 
     f.close()
 
