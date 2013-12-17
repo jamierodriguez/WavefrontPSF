@@ -37,7 +37,7 @@ def centroid(data, indices=None):
 
     tot = np.sum(data)
     if not indices:
-        Y, X = np.indices(data.shape)  # data is Y,X!!
+        Y, X = np.indices(data.shape) + 0.5  # data is Y,X!!
     else:
         Y, X = indices
     x = np.sum(X * data) / tot
@@ -85,7 +85,7 @@ def centered_moment(data, q=0, p=0, centroid=None, indices=None):
     """
 
     if not indices:
-        Y, X = np.indices(data.shape)  # data is Y,X!!
+        Y, X = np.indices(data.shape) + 0.5  # data is Y,X!!
     else:
         Y, X = indices
     if not centroid:
@@ -120,7 +120,7 @@ def fit_gaussian(data, indices=None):
     # TODO: incorporate jacobian
     shape = data.shape
     if not indices:
-        indices = np.indices(data.shape)
+        indices = np.indices(data.shape) + 0.5
     centroid = [shape_i / 2 for shape_i in shape]
     maxval2 = (shape[0] * 0.75) ** 2
     def model(p):
@@ -169,8 +169,8 @@ def fit_gaussian(data, indices=None):
                        Dfun=dmodel,
                        maxfev=35,
                        full_output=True)
-    print(popt)
-    print(ier)
+    # print(popt)
+    # print(ier)
     # correct fwhm with empirical correction
     # if popt[2] > 1:
     #     popt[2] -= 1. / (4 * popt[2])
@@ -184,8 +184,8 @@ def fit_gaussian(data, indices=None):
     if (ier > 4) + (not np.any(np.isfinite(popt))) + (np.any(popt < 0)):
         y, x, fwhm = windowed_centroid(data)
         popt = [0, 1, np.square(fwhm) / (8 * np.log(2)), y, x]
-        print('p prime')
-        print(popt)
+        # print('p prime')
+        # print(popt)
 
 
     return popt
@@ -244,7 +244,7 @@ def FWHM(data, centroid=None, indices=None, background=0, thresh=-1):
     """
 
     if not indices:
-        Y, X = np.indices(data.shape)  # data is Y,X!!
+        Y, X = np.indices(data.shape) + 0.5  # data is Y,X!!
     else:
         Y, X = indices
     # calculate centroids if not given
@@ -263,8 +263,8 @@ def FWHM(data, centroid=None, indices=None, background=0, thresh=-1):
         databack = np.append(databack, data[:, 0])
         databack = np.append(databack, data[:, -1])
         background_median = np.median(databack)
-        background_mean = np.mean(background)
-
+        background_mean = np.mean(databack)
+        background = background_median
 
 
     #print(background)
@@ -354,7 +354,7 @@ def gaussian_window(data, centroid=None, indices=None, background=0,
     """
 
     if not indices:
-        Y, X = np.indices(data.shape)  # data is Y,X!!
+        Y, X = np.indices(data.shape) + 0.5  # data is Y,X!!
     else:
         Y, X = indices
     centroid_guess = [data_shape_i / 2 for data_shape_i in data.shape]
@@ -464,7 +464,7 @@ def windowed_centroid(data, centroid=None, indices=None, background=0,
 
     # get unwindowed moments and indices
     if not indices:
-        Y, X = np.indices(data.shape)  # data is Y,X!!
+        Y, X = np.indices(data.shape) + 0.5  # data is Y,X!!
     else:
         Y, X = indices
     # calculate centroids if not given

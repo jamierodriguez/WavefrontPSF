@@ -214,7 +214,7 @@ class Wavefront(object):
 
         # temporary fix for a list creation problem
         y_indices, x_indices = np.indices((self.input_dict["nPixels"],
-                             self.input_dict["nPixels"]))
+                             self.input_dict["nPixels"])) + 0.5
         # create return_dict
         return_dict = dict(x=[], y=[], fwhm=[])#,
                            #zernikes=zernikes)
