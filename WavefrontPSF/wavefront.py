@@ -8,7 +8,7 @@ Description: Module for generating PSF objects and their moments.
 from __future__ import print_function, division
 import numpy as np
 from donutlib.makedonut import makedonut
-from moment_calc import windowed_centroid, FWHM, centered_moment, \
+from moment_calc import fit_gaussian, centered_moment, \
     gaussian_window
 from os import path, makedirs
 import pickle
@@ -122,7 +122,6 @@ class Wavefront(object):
         return stamp
 
     def moments(self, stamp, indices=None, windowed=True,
-                background=-1, thresh=-1,
                 order_dict={'x2': {'p': 2, 'q': 0},
                             'y2': {'p': 0, 'q': 2},
                             'xy': {'p': 1, 'q': 1}}):
@@ -132,15 +131,6 @@ class Wavefront(object):
         ----------
         stamp : array
             2d image array
-
-        indices : length 2 list, optional
-            length 2 list of 2d arrays Y and X such that Y and X indicate the
-            index values (ie indices[0][i,j] = i, indices[1][i,j] = j) Default
-            is None; constructs the indices with each call.
-
-        background : float, optional
-            Background data value. This is subtracted out.
-            If not given, estimate by an annulus around the edge of the image.
 
         thresh : float, optional
             Threshold value in the data array for pixels to consider in this
@@ -161,18 +151,17 @@ class Wavefront(object):
 
         """
 
-        if background == -1:
-            background = self.background
         # get windowed centroid
         # y, x = windowed_centroid(stamp, indices=indices,
         #                          background=background, thresh=thresh)
         # get fwhm
-        # TODO: change the initial guess to be half the nPixels
-        popt = FWHM(stamp, centroid=[stamp.shape[0] / 2, stamp.shape[1] / 2], #[y, x],
-                    indices=indices,
-                    background=background, thresh=thresh)
+        ## popt = FWHM(stamp, centroid=[stamp.shape[0] / 2, stamp.shape[1] / 2], #[y, x],
+        ##             indices=indices,
+        ##             background=background, thresh=thresh)
+        popt = fit_gaussian(stamp, indices)
         background = popt[0]
-        fwhm = popt[2]
+        sigma2 = popt[2]
+        fwhm = np.sqrt(sigma2) * 2.355
         y = popt[3]
         x = popt[4]
 
@@ -180,13 +169,13 @@ class Wavefront(object):
         if not windowed:
             w = 1
         else:
-            w = gaussian_window(stamp - background,
+            w = gaussian_window(stamp,
                                 centroid=[y, x], indices=indices,
-                                background=background, thresh=thresh,
-                                sigma2=(fwhm / 2.355) ** 2
+                                background=background,
+                                sigma2=sigma2
                                 )
 
-        return_dict = dict(x=x, y=y, fwhm=fwhm, w=w)
+        return_dict = dict(x=x, y=y, fwhm=fwhm, background=background, w=w)
         #background=0
         # now go through moment_dict and create the other moments
         for order in order_dict:
@@ -252,7 +241,7 @@ class Wavefront(object):
             return_dict['x'].append(coord[0])
             return_dict['y'].append(coord[1])
 
-            # append the arcsecond things
+            # append the fwhm
             return_dict['fwhm'].append(fwhm_i * 0.27)
 
             # append the stamp if verbosity is high enough
