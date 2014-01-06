@@ -10,6 +10,7 @@ TODO: update __init__
 
 TODO: add functionality to extract stamps and measure the moments that way
       instead of taking from a catalog....
+TODO: when adding filter, also filter by flux radius by default.
 """
 
 from __future__ import print_function, division

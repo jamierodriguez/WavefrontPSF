@@ -306,6 +306,11 @@ def FWHM(data, centroid=None, indices=None, background=0, thresh=-1):
     ## if fwhm > 0.5:
     ##     fwhm -= 1 / (4 * fwhm)
 
+    # check for nan's from pathological cases
+    if not np.isfinite(fwhm):
+        print('Warning! non-fininite fwhm calculated!')
+        fwhm = 4.  # some number; any number!
+
     return fwhm
 
 
@@ -353,11 +358,9 @@ def gaussian_window(data, centroid=None, indices=None, background=0,
         Y, X = indices
     centroid_guess = [data_shape_i / 2 for data_shape_i in data.shape]
     if not sigma2:
-        fit_out = fit_gaussian(data, centroid=centroid_guess, indices=indices,
-                               background=background)
-        sigma2 = fit_out[2]
-        centroid_guess = [fit_out[3], fit_out[4]]
-        background = fit_out[0]
+        fwhm = FWHM(data, centroid=centroid_guess, indices=indices,
+                    background=background)
+        sigma2 = np.square(fwhm) / (8 * np.log(2))
     if not centroid:
         y, x = centroid_guess
     else:
