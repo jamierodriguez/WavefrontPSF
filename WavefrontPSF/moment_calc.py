@@ -127,7 +127,7 @@ def fit_gaussian(data, indices=None):
             w = gaussian_window(data, centroid=[p[3], p[4]],
                                 indices=[indices[0], indices[1]],
                                 background=p[0],
-                                sigma2=np.square(p[2]) / (8 * np.log(2)))
+                                sigma2=p[2])#np.square(p[2]) / (8 * np.log(2)))
 
             y = data
             fx = p[0] + p[1] * np.exp(-0.5 / p[2] * (np.square(indices[0] -
@@ -144,7 +144,7 @@ def fit_gaussian(data, indices=None):
         w = gaussian_window(data, centroid=[p[3], p[4]],
                             indices=[indices[0], indices[1]],
                             background=p[0],
-                            sigma2=np.square(p[2]) / (8 * np.log(2)))
+                            sigma2=p[2])#np.square(p[2]) / (8 * np.log(2)))
 
         dmdp0 = (w * 1).flatten()
         dmdp1 = (w * expterm).flatten()
@@ -153,13 +153,15 @@ def fit_gaussian(data, indices=None):
         dmdp4 = (w * expterm * p[1] * (indices[1] - p[4]) / p[2]).flatten()
         return [dmdp0, dmdp1, dmdp2, dmdp3, dmdp4]
 
+    mindata = np.min(data)
     #popt, ier = \
     popt,cov,infodict,mesg,ier = \
-        leastsq(model, x0=[0, 100, 4.,
+        leastsq(model, x0=[mindata, 2 * mindata, 1.,
                            centroid[0], centroid[1]],
                        col_deriv=1,
                        Dfun=dmodel,
                        maxfev=35,
+                       xtol=1e-3,
                        full_output=True)
     # print(popt)
     # print(ier)
@@ -174,8 +176,8 @@ def fit_gaussian(data, indices=None):
     # basically, if you hit the cap in function calls, just move on and
     # calculate the old-fashioned way:
     if (ier > 4) + (not np.any(np.isfinite(popt))) + (np.any(popt < 0)):
-        y, x, fwhm = windowed_centroid(data)
-        popt = [0, 1, np.square(fwhm) / (8 * np.log(2)), y, x]
+        y, x, fwhm = windowed_centroid(data - mindata)
+        popt = [mindata, 2 * mindata, np.square(fwhm) / (8 * np.log(2)), y, x]
         # print('p prime')
         # print(popt)
 
@@ -479,8 +481,7 @@ def windowed_centroid(data, centroid=None, indices=None, background=0,
 
     d502 = np.square(FWHM(data, centroid=[y, x], indices=[Y, X],
                           background=background, thresh=thresh))
-    swin2 = d502 / (8 * np.log(2))
-    sigma2 = swin2
+    sigma2 = d502 / (8 * np.log(2))
     w = gaussian_window(data, centroid=[y, x], indices=[Y, X],
                         background=background,
                         sigma2=sigma2)
@@ -503,7 +504,7 @@ def windowed_centroid(data, centroid=None, indices=None, background=0,
                             background=background,
                             sigma2=sigma2)
 
-    fwhm = np.sqrt(sigma2 * 8 * np.log(2))
+    #fwhm = np.sqrt(sigma2 * 8 * np.log(2))
     # make final fwhm calculation
     fwhm = FWHM(data, centroid=[y, x], indices=[Y, X],
                 background=background, thresh=thresh)

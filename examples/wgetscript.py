@@ -61,11 +61,11 @@ for run in imageList:
     for i in range(1, 63):
 
         # get cat
-        command = "wget --no-check-certificate --http-user=cpd --http-password=cpd70chips -nc -nd -nH -r -k -p -np  --cut-dirs=3 https://desar2.cosmology.illinois.edu:7443/DESFiles/desardata/OPS/red/{0}_{3}/red/DECam_{1:08d}/DECam_{1:08d}_{2:02d}_cat.fits".format(options.runid, run, i, options.date)
+        command = "wget --no-check-certificate --http-user=cpd --http-password=cpd70chips -nc -nd -nH -r -k -p -np  --cut-dirs=3 https://desar2.cosmology.illinois.edu/DESFiles/desardata/OPS/red/{0}_{3}/red/DECam_{1:08d}/DECam_{1:08d}_{2:02d}_cat.fits".format(options.runid, run, i, options.date)
         os.system(command)
-        if options.getImage:
+        if (options.getImage) + (i == 1):
             # get image
-            command = "wget --no-check-certificate --http-user=cpd --http-password=cpd70chips -nc -nd -nH -r -k -p -np  --cut-dirs=3 https://desar2.cosmology.illinois.edu:7443/DESFiles/desardata/OPS/red/{0}_{3}/red/DECam_{1:08d}/DECam_{1:08d}_{2:02d}.fits.fz".format(options.runid, run, i, options.date)
+            command = "wget --no-check-certificate --http-user=cpd --http-password=cpd70chips -nc -nd -nH -r -k -p -np  --cut-dirs=3 https://desar2.cosmology.illinois.edu/DESFiles/desardata/OPS/red/{0}_{3}/red/DECam_{1:08d}/DECam_{1:08d}_{2:02d}.fits.fz".format(options.runid, run, i, options.date)
             os.system(command)
             # decompress image
             command = "funpack DECam_{0:08d}_{1:02d}.fits.fz".format(run, i)
@@ -74,14 +74,4 @@ for run in imageList:
             os.remove("DECam_{0:08d}_{1:02d}.fits.fz".format(run, i))
             ###  old command using anon ftp
             ###command = "wget ftp://desar.cosmology.illinois.edu/DESFiles/desardata/%s/src/%d/src/DECam_00%d.fits.fz" % (dtsName,options.date,run)
-        else:
-            if i == 1:
-                # get the first image anyways
-                command = "wget --no-check-certificate --http-user=cpd --http-password=cpd70chips -nc -nd -nH -r -k -p -np  --cut-dirs=3 https://desar2.cosmology.illinois.edu:7443/DESFiles/desardata/OPS/red/{0}_{3}/red/DECam_{1:08d}/DECam_{1:08d}_{2:02d}.fits.fz".format(options.runid, run, i, options.date)
-                os.system(command)
-                # decompress image
-                command = "funpack DECam_{0:08d}_{1:02d}.fits.fz".format(run, i)
-                os.system(command)
-                # remove old compressed image
-                os.remove("DECam_{0:08d}_{1:02d}.fits.fz".format(run, i))
 

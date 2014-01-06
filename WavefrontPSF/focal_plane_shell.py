@@ -662,7 +662,7 @@ class FocalPlaneShell(Wavefront):
         # average x coord
         x = data['x']
         y = data['y']
-        x_av, x_av2, N, _ = self.decaminfo.average_boxdiv(x, y, x, self.average
+        x_av, x_av2, N, _ = self.decaminfo.average_boxdiv(x, y, x, self.average,
                                                           boxdiv=boxdiv,
                                                           Ntrue=True)
         # check that all N >= minimum_number
