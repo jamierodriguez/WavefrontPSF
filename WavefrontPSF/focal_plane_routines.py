@@ -230,7 +230,7 @@ def average_dictionary(
         zin = data[name]
         # subtract average if desired
         if subav:
-            zin -= average(zin)
+            zin = zin - average(zin)
         z, z2 = decaminfo().average_boxdiv(x, y, zin, average,
                                            boxdiv=boxdiv)
         returndict.update({name: z, '{0}_2'.format(name): z2})

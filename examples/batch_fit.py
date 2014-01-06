@@ -66,16 +66,16 @@ parser.add_argument("-b",
                     default=0,
                     type=int,
                     help="Division of chips. 0 is full, 1 is one division...")
-parser.add_argument("-r",
-                    dest="random",
-                    default=0,
-                    type=int,
-                    help="Do we take random locations on the chip or match to"
-                    + "stars? If the former, then the number of stars per"
-                    + "chip is taken to be int(max_samples / len(list_chip))")
+## parser.add_argument("-r",
+##                     dest="random",
+##                     default=0,
+##                     type=int,
+##                     help="Do we take random locations on the chip or match to"
+##                     + "stars? If the former, then the number of stars per"
+##                     + "chip is taken to be int(max_samples / len(list_chip))")
 parser.add_argument("-d",
                     dest="seed",
-                    default=np.random.randint(1e9),
+                    default=0,#np.random.randint(1e9),
                     type=int,
                     help="Set the seed we will use for random. This is "
                     + "apparently not thread safe. oh well.")
@@ -118,26 +118,23 @@ FP = FocalPlane(image_data=image_data,
 
 # convert comparison dict to ellipticities
 e0_comparison, e0prime_comparison, e1_comparison, e2_comparison = \
-    second_moment_to_ellipticity(FP.comparison_dict_all['x2'],
-                                 FP.comparison_dict_all['y2'],
-                                 FP.comparison_dict_all['xy'])
-FP.comparison_dict_all.update(dict(
+    second_moment_to_ellipticity(FP.data['x2'],
+                                 FP.data['y2'],
+                                 FP.data['xy'])
+FP.data.update(dict(
     e0=e0_comparison, e0prime=e0prime_comparison,
     e1=e1_comparison, e2=e2_comparison))
-comparison_average = average_dictionary(FP.comparison_dict_all, FP.average,
+comparison_average = average_dictionary(FP.data, FP.average,
     boxdiv=args_dict['boxdiv'], subav=args_dict['subav'])
 
-if args_dict['random']:
-    coords_used = FP.coords_random
-else:
-    coords_used = FP.coords_comparison
+coords_used = FP.coords
 
-# check our variables are the right length
-check_average = average_dictionary(FP.comparison_dict, FP.average,
-    boxdiv=args_dict['boxdiv'], subav=args_dict['subav'])
-if len(check_average['x']) != len(comparison_average['x']):
-    # if they are not, use the random coords
-    coords_used = FP.coords_random
+## # check our variables are the right length
+## check_average = average_dictionary(FP.comparison_dict, FP.average,
+##     boxdiv=args_dict['boxdiv'], subav=args_dict['subav'])
+## if len(check_average['x']) != len(comparison_average['x']):
+##     # if they are not, use the random coords
+##     coords_used = FP.coords_random
 
 # create var_dict from comparison_average
 var_dict = variance_dictionary(
@@ -215,9 +212,8 @@ def FP_func(dz, e1, e2, rzero, dx, dy, xt, yt, z05d, z06d,
 ##############################################################################
 # set up minuit fit
 ##############################################################################
-
-#par_names = describe(FP_func)
-par_names = ['dz', ' e1', ' e2', ' rzero', ' dx', ' dy', ' xt', ' yt', ' z05d', ' z06d', ' z07x', ' z07y', ' z08x', ' z08y']
+#par_names = ['dz', ' e1', ' e2', ' rzero', ' dx', ' dy', ' xt', ' yt', ' z05d', ' z06d', ' z07x', ' z07y', ' z08x', ' z08y']
+par_names = list(FP_func.func_code.co_varnames)
 verbosity = 3
 force_derivatives = 1
 grad_dict = dict(h_base=1e-1)

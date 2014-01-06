@@ -54,7 +54,6 @@ for image_number in numbers:
                '-n', "Science20120915s1v3_134239",  # mesh_name
                '-e', '{0}'.format(image_number),  # expid
                '-o', output_directory,  # output_directory
-               '-r', str(0),  # random
                '-s', str(750),  # max_samples
                '-b', str(1),  # boxdiv
                '-a', str(0),  # subav

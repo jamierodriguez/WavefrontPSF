@@ -9,6 +9,7 @@ together into csv files. Those can also be plotted?
 
 TODO: ellipticity plot is a mess
 TODO: make wrappers for easily plotting whisker
+TODO: make comparison plots between filtering by max samples box and not.
 """
 
 from __future__ import print_function, division

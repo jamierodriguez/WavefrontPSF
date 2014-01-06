@@ -112,12 +112,6 @@ def fit_gaussian(data, indices=None):
 
     """
 
-    wpow = 0
-
-
-    # now doing parameter model fitting because the other way... sucked
-    # TODO: speed up by incerasing tolerance / setting max runs
-    # TODO: incorporate jacobian
     shape = data.shape
     if not indices:
         indices = np.indices(data.shape) + 0.5
@@ -129,13 +123,12 @@ def fit_gaussian(data, indices=None):
         elif np.any(np.square(p[2:5])) > maxval2:
             return 1e20
         else:
-            if wpow > 0:
-                w = gaussian_window(data, centroid=[p[3], p[4]],
-                                    indices=[indices[0], indices[1]],
-                                    background=p[0],
-                                    sigma2=np.square(p[2]) / (8 * np.log(2)))
-            else:
-                w = 1
+
+            w = gaussian_window(data, centroid=[p[3], p[4]],
+                                indices=[indices[0], indices[1]],
+                                background=p[0],
+                                sigma2=np.square(p[2]) / (8 * np.log(2)))
+
             y = data
             fx = p[0] + p[1] * np.exp(-0.5 / p[2] * (np.square(indices[0] -
                                                                p[3]) +
@@ -147,13 +140,12 @@ def fit_gaussian(data, indices=None):
                               np.square(indices[1] - p[4]))
         expterm = np.exp(term)
         length = shape[0] * shape[1]
-        if wpow > 0:
-            w = gaussian_window(data, centroid=[p[3], p[4]],
-                                indices=[indices[0], indices[1]],
-                                background=p[0],
-                                sigma2=np.square(p[2]) / (8 * np.log(2)))
-        else:
-            w = np.ones((shape[0], shape[1]))
+
+        w = gaussian_window(data, centroid=[p[3], p[4]],
+                            indices=[indices[0], indices[1]],
+                            background=p[0],
+                            sigma2=np.square(p[2]) / (8 * np.log(2)))
+
         dmdp0 = (w * 1).flatten()
         dmdp1 = (w * expterm).flatten()
         dmdp2 = (w * expterm * p[1] * term * -1 / p[2]).flatten()
@@ -278,7 +270,7 @@ def FWHM(data, centroid=None, indices=None, background=0, thresh=-1):
 
     # filter by threshold
     if thresh == -1:
-        thresh = np.max(data) / 5.0
+        thresh = np.max(data - background) / 5.0
     conds = (data_use > thresh)
     d2 = d2[conds]
     data_use = data_use[conds]
@@ -405,10 +397,10 @@ def gaussian_window(data, centroid=None, indices=None, background=0,
     locarea = np.zeros(w.shape)
 
     # if you are outside the window, set weight to zero
-    xmin = x - raper # + 0.499999
-    xmax = x + raper # + 1.499999
-    ymin = y - raper # + 0.499999
-    ymax = y + raper # + 1.499999
+    xmin = x - raper
+    xmax = x + raper
+    ymin = y - raper
+    ymax = y + raper
 
     w = np.where((X > xmin) * (X < xmax) * (Y > ymin) * (Y < ymax), w, 0)
 

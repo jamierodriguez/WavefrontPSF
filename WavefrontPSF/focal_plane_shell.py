@@ -32,7 +32,7 @@ class FocalPlaneShell(Wavefront):
         aaron's donutana object
 
     verbosity
-        a dictionary with strings indicating what should be saved.
+        a list with strings indicating what should be saved.
         the only two currently implemented are 'stamp' for returning the stamp
         when making moments, and 'history' for updating the history
 
@@ -45,7 +45,7 @@ class FocalPlaneShell(Wavefront):
         plane pixels to positions
 
     history
-        an object with all indicts of the plane
+        an object with all plane creation parameters of the plane
 
     Methods
     -------
@@ -60,14 +60,22 @@ class FocalPlaneShell(Wavefront):
         convert dictionary corrections to the zernike corrections array
 
     zernike_dictionary_from_corrections
+        Convert zernike corrections into a dictionary.
 
     zernikes
         from zernike corrections and coordinates, get a list of zernike
         polynomials
 
     zernike_corrections
-        create a list of functions for getting the zernike polynial
+        create a list of functions for getting the zernike polynomial
         coefficients on the focal plane
+
+    random_coordinates
+        A method for generating coordinates by sampling over boxes
+
+    check_full_bounds
+        Convenience method for checking whether my random sampling hits all
+        possible divisions over the chip.
 
     """
 
@@ -298,9 +306,10 @@ class FocalPlaneShell(Wavefront):
         windowed : bool, optional
             Do we calculate the windowed moments, or unwindowed? Default true.
 
-        order_dict : dictioanry
+        order_dict : dictionary, optional
             A dictionary of dictionaries indicating the name and the powers of
             the moments calculated.
+            Default calculates the second moments.
 
         Returns
         -------
@@ -318,6 +327,7 @@ class FocalPlaneShell(Wavefront):
         elif 'fwhm' in in_dict.keys():
             rzero = fwhm_to_rzero(in_dict['fwhm'])
         else:
+            # set the atmospheric contribution to some nominal level
             rzero = 0.14
 
         zernike_corrections = self.zernike_corrections_from_dictionary(
@@ -558,3 +568,120 @@ class FocalPlaneShell(Wavefront):
                                for i in range(z_length)]
 
         return zernike_corrections
+
+    def random_coordinates(self, max_samples_box=5, boxdiv=0):
+        """A method for generating coordinates by sampling over boxes
+
+        Parameters
+        ----------
+        max_samples_box : int, optional
+            Integer for the maximum number of stars per box that we sample
+            from. Default is 5 stars per box.
+
+        boxdiv : int, optional
+            How many divisions we will put into the chip. Default is zero
+            divisions on each chip.
+
+        Returns
+        -------
+        coords_final : array
+            3 dimensional array of the stars used
+            The first two coordinates correspond to the X and Y locations in
+            the Focal Plane coordinate system (mm), while the third tells you
+            the extension number
+
+        """
+
+        # sample over [a,b) is
+        # (b - a ) * np.random.random_sample(max_samples_box) + a
+        coords_final = []
+        for ext_num in range(1, 63):
+            ext_name = self.decaminfo.ccddict[ext_num]
+            if ext_name == 'N31':
+                # N31 is bad
+                continue
+            boundaries = self.decaminfo.getBounds(ext_name, boxdiv=boxdiv)
+            for x in xrange(len(boundaries[0]) - 1):
+                for y in xrange(len(boundaries[1]) - 1):
+                    # get the bounds
+                    x_lower = boundaries[0][x]
+                    x_upper = boundaries[0][x + 1]
+                    y_lower = boundaries[1][y]
+                    y_upper = boundaries[1][y + 1]
+
+                    # make the uniform sample
+                    x_samples = (x_upper - x_lower) * np.random.random_sample(
+                        max_samples_box) + x_lower
+                    y_samples = (y_upper - y_lower) * np.random.random_sample(
+                        max_samples_box) + y_lower
+                    for i in xrange(max_samples_box):
+                        coord = [x_samples[i], y_samples[i], ext_num]
+                        coords_final.append(coord)
+        coords_final = np.array(coords_final)
+
+        return coords_final
+
+    def check_full_bounds(self, data, boxdiv, minimum_number):
+        """Convenience method for checking whether my sampling hits all
+        possible divisions over the chip.
+
+        Parameters
+        ----------
+        data : dictionary
+            contains the example sampling.
+
+        boxdiv : int
+            How many divisions we will put into the chip. Default is zero
+            divisions on each chip.
+
+        minimum_number : int
+            The number that should be in each box.
+
+        Returns
+        -------
+
+        success : bool
+            True / False for whether the lengths match.
+
+        """
+
+        bounds = []
+        for i in range(1, 63):
+            if i == 61:
+                #n30 sucks
+                continue
+            extname = self.decaminfo.ccddict[i]
+            boundi = self.decaminfo.getBounds(extname, boxdiv)
+            bounds.append(boundi)
+        # get the midpoints of each box
+        x_box = []
+        for box in bounds:
+            for x in range(len(box[0]) - 1):
+                for y in range(len(box[1]) - 1):
+                    x_box.append((box[0][x] + box[0][x + 1]) / 2.)
+        # average x coord
+        x = data['x']
+        y = data['y']
+        x_av, x_av2, N, _ = self.decaminfo.average_boxdiv(x, y, x, self.average
+                                                          boxdiv=boxdiv,
+                                                          Ntrue=True)
+        # check that all N >= minimum_number
+
+        success = (len(x_av) == len(x_box)) * np.all(N >= minimum_number)
+
+        return success
+
+    def __add__(self, other):
+        """Take other's items and append them to this one's data attribute.
+        NOTE: data is NOT defined here!"""
+
+        keys = other.data.keys()
+        # pop the keys that are not in self:
+        self_keys = self.data.keys()
+        keys = [key for key in keys if key in self_keys]
+
+        return_dict = {}
+        for key in keys:
+            return_dict.update({key: np.append(self.data[key],
+                                               other.data[key])})
+        return return_dict

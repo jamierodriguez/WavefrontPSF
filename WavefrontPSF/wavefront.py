@@ -139,10 +139,12 @@ class Wavefront(object):
 
         windowed : bool, optional
             Decide whether to use a gaussian window.
+            Default to True
 
         order_dict : dictionary, optional
             Gives a list of the x and y orders of the moments we want to
             calculate.
+            Defaults to x2 y2 and xy moments.
 
         Returns
         -------
@@ -188,7 +190,7 @@ class Wavefront(object):
 
     def moment_dictionary(
             self, zernikes, coords, rzero,
-            verbosity={}, windowed=True,
+            verbosity=[], windowed=True,
             order_dict={'x2': {'p': 2, 'q': 0},
                         'y2': {'p': 0, 'q': 2},
                         'xy': {'p': 1, 'q': 1}}):
@@ -197,7 +199,30 @@ class Wavefront(object):
 
         Parameters
         ----------
-        TODO: fill me in
+        zernikes : list of lists
+            Each entry in the list corresponds to a coordinate point and
+            contains some number of zernike polynomial coefficients to be used
+            in generating the stamp.
+
+        coords : list of lists
+            Each entry has the coordinates in [X mm, Y mm, Sensor], with the x
+            and y in aaron's coordinate convention.
+
+        rzero : float
+            Kolmogorov spectrum parameter. Basically, larger means smaller PSF.
+
+        verbosity : list, optional
+            If 'stamp' is in verbosity, then the stamps are also saved.
+            Default is that stamps are not saved.
+
+        windowed : bool, optional
+            Decide whether to use a gaussian window.
+            Default to True
+
+        order_dict : dictionary, optional
+            Gives a list of the x and y orders of the moments we want to
+            calculate.
+            Defaults to x2 y2 and xy moments.
 
         Returns
         -------
@@ -207,8 +232,8 @@ class Wavefront(object):
         Notes
         -----
         By default the moment dictionary will have fwhm and the xDECam and
-        yDECam positions in them, and stamp for verbosity dictionary with 'stamp', as
-        well as every entry in order_dict
+        yDECam positions in them, and stamp for verbosity dictionary with
+        'stamp', as well as every entry in order_dict
 
         """
 
