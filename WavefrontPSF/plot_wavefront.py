@@ -10,7 +10,8 @@ import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.patches import Wedge
 from matplotlib.collections import PatchCollection
-
+from subprocess import call
+from os import path, makedirs
 
 def wedge_collection(X, Y, U, V,
                      U_var, V_var,

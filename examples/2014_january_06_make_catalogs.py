@@ -17,6 +17,7 @@ http://decam03.fnal.gov:8080/nightsum/nightsum-2013-09-12/nightsum.html
 from __future__ import print_function, division
 from subprocess import call
 from os import path, makedirs
+import numpy as np
 from focal_plane_routines import print_command
 
 input_list = [
@@ -26,7 +27,6 @@ input_list = [
     [20130913151017, 20130912, 233377, 233571],
     [20130913151017, 20130912, 233584, 233642],
     ]
-
 expids = np.arange(231046, 231053)
 expids = np.append(expids, range(231089, 231096))
 expids = np.append(expids, range(232608, 232849))
@@ -59,17 +59,17 @@ for i in range(len(expids)):
               '/logs/{0:08d}_{1:08d}_cpd.log'.format(minImage, maxImage),
         '-R', 'rhel60&&linux64',
         'python', 'catalog_maker.py',
-        '-e', '{0}'.format(expid)
+        '-e', '{0}'.format(expid),
         '-c', '/nfs/slac/g/ki/ki18/cpd/focus/image_data.csv',  # csv
         '-m', '/u/ec/roodman/Astrophysics/Donuts/Meshes/',  # path_mesh
         '-n', "Science20120915s1v3_134239",  # mesh_name
         '-o', '/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript/' +
-              '{0:08d}/'.format(expid)
+              '{0:08d}/'.format(expid),
         '-t', '/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript/',  # catalog
         '-s', '16',  # stamp size
         '-f', 'all',  # filter conditions
         '-rid', '{0}'.format(rid),
-        '-d', '{0}'.format(date)]
+        '-d', '{0}'.format(date),]
     print_command(command)
     call(command)
 

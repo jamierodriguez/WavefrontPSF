@@ -14,10 +14,9 @@ from minuit_fit import Minuit_Fit
 from os import path, makedirs
 from focal_plane_routines import average_dictionary, variance_dictionary, \
     chi2, minuit_dictionary, fwhm_to_rzero, second_moment_to_ellipticity, \
-    second_moment_variance_to_ellipticity_variance
+    second_moment_variance_to_ellipticity_variance, image_zernike_corrections
 from decam_csv_routines import generate_hdu_lists, generate_hdu_lists_cpd
 from focal_plane import FocalPlane
-
 
 ##############################################################################
 # argparse
@@ -235,7 +234,7 @@ max_iterations = len(par_names) * 1000
 
 # set up initial guesses
 minuit_dict = minuit_dictionary(par_names)
-image_dictionary = FP.image_zernike_corrections(FP.image_data)
+image_dictionary = image_zernike_corrections(FP.image_data)
 for key in par_names:
     if (key == 'e1') + (key == 'e2'):
         continue
