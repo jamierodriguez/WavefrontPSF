@@ -38,7 +38,7 @@ for i in input_list:
                'python', 'wgetscript.py',
                '-min', '{0}'.format(minImage),
                '-max', '{0}'.format(maxImage),
-               '-i', '0',
+               '-i', '1',
                '-rid', '{0}'.format(rid),
                '-d', '{0}'.format(date)]
     print_command(command)

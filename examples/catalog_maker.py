@@ -12,6 +12,7 @@ import numpy as np
 import pyfits
 import argparse
 from subprocess import call
+from os import path, makedirs, chdir, system, remove
 
 from focal_plane import FocalPlane
 from decamutil_cpd import decaminfo
@@ -80,27 +81,53 @@ options = parser.parse_args()
 
 args_dict = vars(options)
 
-# download the image and catalog
-wget_command = ['python',
-                '/u/ki/cpd/secret-adventure/examples/wgetscript.py',
-                '-min', '{0}'.format(args_dict['expid']),
-                '-max', '{0}'.format(args_dict['expid']),
-                '-i', '1',
-                '-rid', '{0}'.format(args_dict['rid']),
-                '-d', '{0}'.format(args_dict['d'])]
-
-call(wget_command)
+## # download the image and catalog
+## wget_command = ['python',
+##                 '/u/ki/cpd/secret-adventure/examples/wgetscript.py',
+##                 '-min', '{0}'.format(args_dict['expid']),
+##                 '-max', '{0}'.format(args_dict['expid']),
+##                 '-i', '1',
+##                 '-rid', '{0}'.format(args_dict['rid']),
+##                 '-d', '{0}'.format(args_dict['d'])]
+## 
+## call(wget_command)
 
 csv = np.recfromcsv(args_dict['csv'], usemask=True)
 image_data = csv[csv['expid'] == args_dict['expid']]
 
 nPixels = args_dict['size']
 
+
+# from wgetscript:
+dataDirectory = "$CPD/catalogs/wgetscript/{0:08d}".format(args_dict['expid'])
+dataDirectoryExp = path.expandvars(dataDirectory)
+
+# make directory if it doesn't exist
+if not path.exists(dataDirectoryExp):
+    makedirs(dataDirectoryExp)
+
+# move there!
+chdir(dataDirectoryExp)
+
+
 # create the new catalogs
 for i in xrange(1, 63):
+
     if i == 61:
         # screw N30
         continue
+
+    # get cat
+    command = "wget --no-check-certificate --http-user=cpd --http-password=cpd70chips -nc -nd -nH -r -k -p -np  --cut-dirs=3 https://desar2.cosmology.illinois.edu/DESFiles/desardata/OPS/red/{0}_{3}/red/DECam_{1:08d}/DECam_{1:08d}_{2:02d}_cat.fits".format(args_dict['rid'], args_dict['expid'], i, args_dict['date'])
+    system(command)
+    # get image
+    command = "wget --no-check-certificate --http-user=cpd --http-password=cpd70chips -nc -nd -nH -r -k -p -np  --cut-dirs=3 https://desar2.cosmology.illinois.edu/DESFiles/desardata/OPS/red/{0}_{3}/red/DECam_{1:08d}/DECam_{1:08d}_{2:02d}.fits.fz".format(args_dict['rid'], args_dict['expid'], i, args_dict['date'])
+    system(command)
+    # decompress image
+    command = "funpack DECam_{0:08d}_{1:02d}.fits.fz".format(args_dict['expid'], i)
+    system(command)
+    # remove old compressed image
+    remove("DECam_{0:08d}_{1:02d}.fits.fz".format(args_dict['expid'], i))
 
     # create an FP object
     path_base = args_dict['catalogs']
@@ -243,3 +270,6 @@ for i in xrange(1, 63):
     tbhdu.writeto(list_catalogs_base + '{0:02d}_cat_cpd.fits'.format(i),
                   clobber=True)
 
+    if i != 1:
+        # remove image
+        remove("DECam_{0:08d}_{1:02d}.fits".format(args_dict['expid'], i))
