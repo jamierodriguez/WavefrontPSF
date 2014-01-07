@@ -65,7 +65,7 @@ for i in range(len(expids)):
               '{0:08d}/'.format(expid),
         '-t', '/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript/',  # catalog
         '-s', '16',  # stamp size
-        '-f', 'all',  # filter conditions
+        '-f', 'minimal',  # filter conditions
         '-rid', '{0}'.format(rid),
         '-d', '{0}'.format(date),
         '-e', '{0}'.format(expid),]
