@@ -66,7 +66,7 @@ parser.add_argument("-rid",
                     dest="rid",
                     help="Run ID")
 parser.add_argument("-d",
-                    dest="d",
+                    dest="date",
                     help="Date")
 parser.add_argument("-s",
                     dest="size",
@@ -88,7 +88,7 @@ args_dict = vars(options)
 ##                 '-max', '{0}'.format(args_dict['expid']),
 ##                 '-i', '1',
 ##                 '-rid', '{0}'.format(args_dict['rid']),
-##                 '-d', '{0}'.format(args_dict['d'])]
+##                 '-d', '{0}'.format(args_dict['date'])]
 ## 
 ## call(wget_command)
 
