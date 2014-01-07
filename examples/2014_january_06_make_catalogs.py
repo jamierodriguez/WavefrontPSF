@@ -58,7 +58,6 @@ for i in range(len(expids)):
               '/logs/{0:08d}_cpd.log'.format(expid),
         '-R', 'rhel60&&linux64',
         'python', 'catalog_maker.py',
-        '-e', '{0}'.format(expid),
         '-c', '/nfs/slac/g/ki/ki18/cpd/focus/image_data.csv',  # csv
         '-m', '/u/ec/roodman/Astrophysics/Donuts/Meshes/',  # path_mesh
         '-n', "Science20120915s1v3_134239",  # mesh_name
@@ -68,6 +67,7 @@ for i in range(len(expids)):
         '-s', '16',  # stamp size
         '-f', 'all',  # filter conditions
         '-rid', '{0}'.format(rid),
-        '-d', '{0}'.format(date),]
+        '-d', '{0}'.format(date),
+        '-e', '{0}'.format(expid),]
     print_command(command)
     call(command)

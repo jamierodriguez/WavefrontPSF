@@ -54,7 +54,6 @@ for image_number in numbers:
                '-t', '/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript/',  # catalogs
                '-m', '/u/ec/roodman/Astrophysics/Donuts/Meshes/',  # path_mesh
                '-n', "Science20120915s1v3_134239",  # mesh_name
-               '-e', '{0}'.format(image_number),  # expid
                '-o', output_directory,  # output_directory
                '-s', str(15),  # max_samples
                '-b', str(1),  # boxdiv
@@ -62,6 +61,7 @@ for image_number in numbers:
                '-d', str(0),  # seed
                '-f', 'eli',  # filtering for conds
                '-cpd', str(1),  # use cpd or sextractor
+               '-e', '{0}'.format(image_number),  # expid
                ]
     #print_command(command)
     call(command)

@@ -44,9 +44,9 @@ for iterator in xrange(len(numbers)):
                '-R', 'rhel60&&linux64',
                'python', 'batch_plot.py',
                '-i', str([input_directories[iterator]]),
-               '-e', str([numbers[iterator]]),  # expid
                '-o', output_directory + 'plots/',  # output_directory
                '-m', output_directory + 'results/minuit_results.csv'  # minuit_results
+               '-e', str([numbers[iterator]]),  # expid
                ]
     print_command(command)
     call(command)

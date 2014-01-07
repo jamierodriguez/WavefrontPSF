@@ -36,9 +36,9 @@ call(command)
 
 command = ['python', 'collect_results_fits.py',
            '-i', str(input_directories),
-           '-e', str(numbers),  # expid
            '-o', output_directory + 'results/',  # output_directory
            '-b', str(1),  # boxdiv
+           '-e', str(numbers),  # expid
            ]
 #print_command(command)
 call(command)
