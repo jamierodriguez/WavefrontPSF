@@ -71,6 +71,10 @@ parser.add_argument("-s",
                     dest="size",
                     default='16',
                     help="Stamp size")
+parser.add_argument("-f",
+                    dest="conds",
+                    default='eli',  # eli's filterings
+                    help="String for filter conditions")
 options = parser.parse_args()
 
 args_dict = vars(options)
@@ -115,6 +119,7 @@ for i in xrange(1, 63):
                     mesh_name=args_dict['mesh_name'],
                     boxdiv=0,
                     max_samples_box=200,
+                    conds=args_dict['conds'],
                     )
 
     # now use the catalog here to make a new catalog
