@@ -103,6 +103,8 @@ def third_moments_to_octupoles(x3, x2y, xy2, y3):
     -------
     zeta1, zeta2, delta1, delta2 : array
         Arrays converted to unnormalized octupole basis.
+        zeta is spin-1, delta is spin-3 (See Okura 2008)
+        these are F and G (roughly and modulo normalization factors)
 
     Notes
     -----

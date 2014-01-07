@@ -15,7 +15,7 @@ from os import path, makedirs
 from focal_plane_routines import average_dictionary, variance_dictionary, \
     chi2, minuit_dictionary, fwhm_to_rzero, second_moment_to_ellipticity, \
     second_moment_variance_to_ellipticity_variance
-from decam_csv_routines import generate_hdu_lists
+from decam_csv_routines import generate_hdu_lists, generate_hdu_lists_cpd
 from focal_plane import FocalPlane
 
 
@@ -48,10 +48,10 @@ parser.add_argument("-o",
                     default="/nfs/slac/g/ki/ki18/cpd/focus/november_8/",
                     help="where will the outputs go (modulo image number)")
 parser.add_argument("-s",
-                    dest="max_samples",
+                    dest="max_samples_box",
                     default=500,
                     type=int,
-                    help="How many stars total?")
+                    help="How many stars per box?")
 parser.add_argument("-a",
                     dest="subav",
                     default=0,
@@ -79,6 +79,15 @@ parser.add_argument("-d",
                     type=int,
                     help="Set the seed we will use for random. This is "
                     + "apparently not thread safe. oh well.")
+parser.add_argument("-f",
+                    dest="conds",
+                    default='eli',  # eli's filterings
+                    help="String for filter conditions")
+parser.add_argument("-cpd",
+                    dest="cpd",
+                    default=1,  # yes use my catalogs
+                    type=int,
+                    help="Use my catalogs or sextractor's?")
 options = parser.parse_args()
 
 args_dict = vars(options)
@@ -97,8 +106,12 @@ image_data = csv[csv['expid'] == args_dict['expid']]
 
 # find the locations of the catalog files
 path_catalogs = args_dict['catalogs']
-list_catalogs, list_fits_extension, list_chip = \
-    generate_hdu_lists(args_dict['expid'], path_catalogs)
+if args_dict['cpd']:
+    list_catalogs, list_fits_extension, list_chip = \
+        generate_hdu_lists_cpd(args_dict['expid'], path_catalogs)
+else:
+    list_catalogs, list_fits_extension, list_chip = \
+        generate_hdu_lists(args_dict['expid'], path_catalogs)
 
 ##############################################################################
 # create the focalplane
@@ -110,10 +123,9 @@ FP = FocalPlane(image_data=image_data,
                 list_chip=list_chip,
                 path_mesh=args_dict['path_mesh'],
                 mesh_name=args_dict['mesh_name'],
-                max_samples=args_dict['max_samples'],
                 boxdiv=args_dict['boxdiv'],
-                max_samples_box=int(args_dict['max_samples'] /
-                                    len(list_chip)),
+                max_samples_box=args_dict['max_samples_box'],
+                conds=args_dict['conds'],
                 )
 
 # convert comparison dict to ellipticities
@@ -168,7 +180,7 @@ def FP_func(dz, e1, e2, rzero, dx, dy, xt, yt, z05d, z06d,
     for key_FP_func in in_dict_FP_func.keys():
         if np.isnan(in_dict_FP_func[key_FP_func]).any():
             # if there is a nan, don't even bother calling, just return a
-            # bigass chi2
+            # big chi2
             return 1e20
 
     # get current iteration

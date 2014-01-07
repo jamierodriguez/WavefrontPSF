@@ -24,8 +24,6 @@ from focal_plane_routines import average_function
 from time import asctime
 import pyfits
 
-number_entries = 122 # this may need to change!
-
 ##############################################################################
 # argparse
 ##############################################################################
@@ -47,11 +45,21 @@ parser.add_argument("-o",
                     dest="output_directory",
                     default="/nfs/slac/g/ki/ki18/cpd/focus/november_8/",
                     help="where will the outputs go (modulo image number)")
+parser.add_argument("-b",
+                    dest="boxdiv",
+                    default=0,
+                    type=int,
+                    help="Division of chips. 0 is full, 1 is one division...")
 options = parser.parse_args()
 
 args_dict = vars(options)
 args_dict['expid'] = eval(args_dict['expid'])
 args_dict['input_directory'] = eval(args_dict['input_directory'])
+
+if args_dict['box_div'] == 0:
+    number_entries = 61
+else:
+    number_entries = 2 ** (2 * args_dict['box_div'] - 1)
 
 time = asctime()
 

@@ -5,9 +5,7 @@ Author: Chris Davis
 Description: Include the locations of the moments (both fitted and comparison)
 
 This file will take the results and plot them as well as collate everything
-together into csv files. Those can also be plotted?
-
-TODO: using image_zernike_corrections add the priors used
+together into csv files.
 
 """
 

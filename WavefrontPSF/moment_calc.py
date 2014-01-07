@@ -308,7 +308,7 @@ def FWHM(data, centroid=None, indices=None, background=0, thresh=-1):
 
     # check for nan's from pathological cases
     if not np.isfinite(fwhm):
-        print('Warning! non-fininite fwhm calculated!')
+        #print('Warning! non-fininite fwhm calculated!')
         fwhm = 4.  # some number; any number!
 
     return fwhm

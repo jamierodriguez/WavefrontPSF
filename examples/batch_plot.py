@@ -10,6 +10,7 @@ together into csv files. Those can also be plotted?
 TODO: ellipticity plot is a mess
 TODO: make wrappers for easily plotting whisker
 TODO: make comparison plots between filtering by max samples box and not.
+TODO: plotting for fwhm / e0...
 """
 
 from __future__ import print_function, division
@@ -135,6 +136,8 @@ for iterator in xrange(len(args_dict['expid'])):
         expid, ierflg, amin))
     figure_e0.savefig(path_e0_plot)
     close()
+
+    #TODO: do a sub_mean version?
 
     # ellipticity
     path_ellipticity_plot = out_plots + 'ellipticity.png'
@@ -286,4 +289,6 @@ for iterator in xrange(len(args_dict['expid'])):
     axis_whisker_rotated.set_title('{0:08d}, {1}, {2:.2e}'.format(
         expid, ierflg, amin))
     figure_whisker_rotated.savefig(path_whisker_rotated_plot)
+    close()
+
     close('all')

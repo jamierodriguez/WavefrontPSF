@@ -290,3 +290,44 @@ def generate_hdu_lists(expid, path_base):
     list_fits_extension = [[2]] * (63-2)
 
     return list_catalogs, list_fits_extension, list_chip
+
+def generate_hdu_lists_cpd(expid, path_base):
+    """quick and dirty way of getting the hdu list format I am now using
+
+    Parameters
+    ----------
+    expid : integer
+        The image number I want to look at
+
+    path_base : string
+        The directory in which the catalogs are located
+
+    Returns
+    -------
+    list_catalogs : list
+        a list pointing to all the catalogs we wish to combine.
+
+    list_fits_extension : list of integers
+        a list pointing which extension on a given fits file we open
+        format: [[2], [3,4]] says for the first in list_catalog, combine
+        the 2nd extension with the 2nd list_catalog's 3rd and 4th
+        extensions.
+
+    list_chip : list of strings
+        a list containing the extension name of the chip. ie [['N1'],
+        ['S29', 'S5']]
+
+    """
+
+    list_catalogs_base = \
+        path_base + '{0:08d}/DECam_{0:08d}_'.format(expid)
+    list_catalogs = [list_catalogs_base + '{0:02d}_cat_cpd.fits'.format(i)
+                     for i in xrange(1, 63)]
+    list_catalogs.pop(60)
+
+    list_chip = [[decaminfo().ccddict[i]] for i in xrange(1, 63)]
+    list_chip.pop(60)
+
+    list_fits_extension = [[2]] * (63-2)
+
+    return list_catalogs, list_fits_extension, list_chip

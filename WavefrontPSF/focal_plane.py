@@ -4,13 +4,9 @@ File: focal_plane.py
 Author: Chris Davis
 Description: Class for focal plane shell tied to specific image.
 
-TODO: DOCS!!
 TODO: update attributes and methods
 TODO: update __init__
 
-TODO: add functionality to extract stamps and measure the moments that way
-      instead of taking from a catalog....
-TODO: when adding filter, also filter by flux radius by default.
 """
 
 from __future__ import print_function, division
@@ -65,12 +61,11 @@ class FocalPlane(FocalPlaneShell):
 
     def __init__(self, image_data,
                  list_catalogs, list_fits_extension, list_chip,
-                 max_samples=750,
-                 max_samples_box=10, boxdiv=0,
+                 max_samples_box=300, boxdiv=0,
                  path_mesh='/u/ec/roodman/Astrophysics/Donuts/Meshes/',
                  mesh_name="Science20120915s1v3_134239",
                  verbosity=['history'],
-                 conds=None):
+                 conds='default'):
 
         # do the old init for Wavefront
         super(FocalPlane, self).__init__(path_mesh, mesh_name, verbosity)
@@ -235,9 +230,10 @@ class FocalPlane(FocalPlaneShell):
             Returns which points satisfy the conditions
 
         """
+        pixel_border = 30
 
         # now do the star selection
-        if not conds:
+        if conds == 'default':
             # set the fwhm from the image recdata; account for mask
             if not np.ma.getmaskarray(self.image_data['fwhm']):
                 fwhm = self.image_data['fwhm'][0]
@@ -246,20 +242,52 @@ class FocalPlane(FocalPlaneShell):
             else:
                 fwhm = 1.0
 
-            pixel_border = 30
-
-            # TODO: consider cuts on flux radius instead of fwhm world?
             conds = (
                 (recdata['CLASS_STAR'] > 0.9) *
                 (recdata['MAG_AUTO'] < 16) *
                 (recdata['MAG_AUTO'] > 13) *
                 (recdata['FWHM_WORLD'] > 0) *
                 (recdata['FWHM_WORLD'] * 60 ** 2 < 2 * fwhm) *
-                (recdata['FLAGS'] <= 0) *
+                (recdata['FLAGS'] <= 3) *
                 (recdata[self.x_coord_name] > pixel_border) *
                 (recdata[self.x_coord_name] < 2048 - pixel_border) *
                 (recdata[self.y_coord_name] > pixel_border) *
                 (recdata[self.y_coord_name] < 4096 - pixel_border))
+        elif conds == 'minimal':
+            # eliminate base on flags and coordnames only
+            conds = (
+                (recdata['FLAGS'] <= 3) *
+                (recdata[self.x_coord_name] > pixel_border) *
+                (recdata[self.x_coord_name] < 2048 - pixel_border) *
+                (recdata[self.y_coord_name] > pixel_border) *
+                (recdata[self.y_coord_name] < 4096 - pixel_border))
+        elif conds == 'all':
+            # take everything
+            conds = np.array([True] * recdata.size)
+        elif conds == 'eli_stars':
+            """
+            A set of cuts taken from:
+            https://cdcvs.fnal.gov/redmine/projects/des-sci-verification/wiki/A_Modest_Proposal_for_Preliminary_StarGalaxy_Separation
+            (FLAGS_I <=3) AND (((CLASS_STAR_I > 0.3) AND (MAG_AUTO_I < 18.0) AND (MAG_PSF_I < 30.0)) OR (((SPREAD_MODEL_I + 3*SPREADERR_MODEL_I) < 0.003) AND ((SPREAD_MODEL_I +3*SPREADERR_MODEL_I) > -0.003)))
+            """
+            conds = (
+                ((recdata['FLAGS'] <= 3)) *
+                (((recdata['CLASS_STAR'] > 0.3) *
+                  (recdata['MAG_AUTO'] < 18.0) *
+                  (recdata['MAG_PSF'] < 30.0)
+                 ) +
+                 ((recdata['SPREAD_MODEL'] +
+                   3 * recdata['SPREADERR_MODEL'] < 0.003) *
+                  (recdata['SPREAD_MODEL'] +
+                   3 * recdata['SPREADERR_MODEL'] > -0.003)
+                 )
+                ) *
+                ((recdata[self.x_coord_name] > pixel_border) *
+                 (recdata[self.x_coord_name] < 2048 - pixel_border) *
+                 (recdata[self.y_coord_name] > pixel_border) *
+                 (recdata[self.y_coord_name] < 4096 - pixel_border)
+                )
+                )
         else:
             # evaluate the string
             conds = eval(conds)
@@ -363,7 +391,8 @@ class FocalPlane(FocalPlaneShell):
                         for i in xrange(len(true_list)):
                             conds[indices[i]] = true_list[i]
 
-                        recdata_return = recdata_return[~conds]  # select the False's
+                        # select the False's
+                        recdata_return = recdata_return[~conds]
                         extension_return = extension_return[~conds]
 
         return recdata_return, extension_return
