@@ -69,7 +69,8 @@ parser.add_argument("-d",
                     help="Date")
 parser.add_argument("-s",
                     dest="size",
-                    default='16',
+                    type=int,
+                    default=16,
                     help="Stamp size")
 parser.add_argument("-f",
                     dest="conds",
@@ -78,8 +79,6 @@ parser.add_argument("-f",
 options = parser.parse_args()
 
 args_dict = vars(options)
-args_dict['size'] = eval(args_dict['size'])
-args_dict['expid'] = eval(args_dict['expid'])
 
 # download the image and catalog
 wget_command = ['python',
