@@ -228,6 +228,17 @@ for i in xrange(1, 63):
         x_start = int(x_center - nPixels / 2)
         x_end = int(x_center + nPixels / 2)
 
+        # ugh it doesn't matter that it is perfectly centered but it DOES
+        # matter that we have 16 x 16
+        if (y_end - y_start) == 15:
+            y_end += 1
+        if (y_end - y_start) == 17:
+            y_end -= 1
+        if (x_end - x_start) == 15:
+            x_end += 1
+        if (x_end - x_start) == 17:
+            x_end -= 1
+
         stamp = image[y_start:y_end, x_start:x_end].astype(np.float64)
 
         order_dict = {'x2': {'p': 2, 'q': 0},
