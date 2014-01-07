@@ -223,10 +223,10 @@ for i in xrange(1, 63):
         y_center = recdata[FP.y_coord_name]
 
         # coords are y,x ordered
-        y_start = y_center - nPixels / 2
-        y_end = y_center + nPixels / 2 + 1
-        x_start = x_center - nPixels / 2
-        x_end = x_center + nPixels / 2 + 1
+        y_start = int(y_center - nPixels / 2)
+        y_end = int(y_center + nPixels / 2)
+        x_start = int(x_center - nPixels / 2)
+        x_end = int(x_center + nPixels / 2)
 
         stamp = image[y_start:y_end, x_start:x_end].astype(np.float64)
 
