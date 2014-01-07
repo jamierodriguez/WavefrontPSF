@@ -46,7 +46,6 @@ dates = [20130905] * (231053 - 231046) + \
         [20130912] * (233642 - 233584)
 
 for i in range(len(expids)):
-    rid, date, minImage, maxImage = i
 
     expid = expids[i]
     rid = rids[i]
