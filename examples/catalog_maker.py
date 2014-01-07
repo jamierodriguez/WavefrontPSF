@@ -224,9 +224,9 @@ for i in xrange(1, 63):
 
         # coords are y,x ordered
         y_start = int(y_center - nPixels / 2)
-        y_end = y_start + int(nPixels / 2)
+        y_end = y_start + nPixels
         x_start = int(x_center - nPixels / 2)
-        x_end = x_start + int(nPixels / 2)
+        x_end = x_start + nPixels
 
         stamp = image[y_start:y_end, x_start:x_end].astype(np.float64)
 
