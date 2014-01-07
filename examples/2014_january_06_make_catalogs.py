@@ -55,7 +55,7 @@ for i in range(len(expids)):
         'bsub',
         '-q', 'medium',
         '-o', '/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript' +
-              '/logs/{0:08d}_{1:08d}_cpd.log'.format(minImage, maxImage),
+              '/logs/{0:08d}_cpd.log'.format(expid),
         '-R', 'rhel60&&linux64',
         'python', 'catalog_maker.py',
         '-e', '{0}'.format(expid),
@@ -71,4 +71,3 @@ for i in range(len(expids)):
         '-d', '{0}'.format(date),]
     print_command(command)
     call(command)
-
