@@ -75,9 +75,9 @@ class Wavefront(object):
 
         Notes
         -----
-        in order to save as a pickleable object, I need to set make_donut (which is a
-        pyswig object) to none. So when you reload this object, it can have
-        everything else /except/ the make_donut property.
+        in order to save as a pickleable object, I need to set make_donut
+        (which is a pyswig object) to none. So when you reload this object, it
+        can have everything else /except/ the make_donut property.
         """
 
         if not path.exists(path.dirname(out_path)):
@@ -87,6 +87,16 @@ class Wavefront(object):
             pickle.dump(self, out_file)
         # give FP back its make_donut
         self.make_donut = makedonut(**self.input_dict)
+
+    def remakedonut(self):
+        """Remake make_donut
+
+        Notes
+        -----
+        No input or return.
+        """
+        self.make_donut = makedonut(**self.input_dict)
+        return
 
     def stamp(self, zernike, rzero, coord):
         """Create a stamp from list of zernike parameters

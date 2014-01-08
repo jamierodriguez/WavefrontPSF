@@ -180,6 +180,7 @@ def FP_func(dz, e1, e2, rzero, dx, dy, xt, yt, z05d, z06d,
         if np.isnan(in_dict_FP_func[key_FP_func]).any():
             # if there is a nan, don't even bother calling, just return a
             # big chi2
+            FP.remakedonut()
             return 1e20
 
     # get current iteration
