@@ -362,13 +362,17 @@ class FocalPlane(FocalPlaneShell):
             extname = self.decaminfo.ccddict[i]
 
             # prescreen by excluding any with nans
-            conds = ((extension_return == extname) *
-                     np.isfinite(recdata_return['Y2WIN_IMAGE']) *
-                     np.isfinite(recdata_return['X2WIN_IMAGE']) *
-                     np.isfinite(recdata_return['XYWIN_IMAGE']) *
-                     (recdata_return['Y2WIN_IMAGE'] > 0) *
-                     (recdata_return['X2WIN_IMAGE'] > 0)
-                     )
+            conds = (extension_return == extname)
+
+            # find out which ones are also nans etc
+            conds2 = ((extension_return == extname) * not
+                     (np.isfinite(recdata_return['Y2WIN_IMAGE']) *
+                      np.isfinite(recdata_return['X2WIN_IMAGE']) *
+                      np.isfinite(recdata_return['XYWIN_IMAGE']) *
+                      (recdata_return['Y2WIN_IMAGE'] > 0) *
+                      (recdata_return['X2WIN_IMAGE'] > 0)
+                     ))
+            import ipdb; ipdb.set_trace()
 
             # This is pretty kludgey.
             # find the number of Trues we need to exclude
