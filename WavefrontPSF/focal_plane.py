@@ -371,7 +371,7 @@ class FocalPlane(FocalPlaneShell):
                     ymax = box[1][y + 1]
                     # convert coordinates to pixel coordinates
                     xmin, ymin = self.decaminfo.getPixel(extname, xmin, ymin)
-                    xmax, ymax = self.decamaxfo.getPixel(extname, xmax, ymax)
+                    xmax, ymax = self.decaminfo.getPixel(extname, xmax, ymax)
 
                     conds = (
                         (recdata_return[self.x_coord_name] > xmin) *
