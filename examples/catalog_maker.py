@@ -231,14 +231,13 @@ for i in xrange(1, 63):
                            array=[],
                            format='1D',
                            unit='pixel**3',),
-
         'FWHM_WORLD': dict(name='FWHM_WORLD',
                            array=[],
                            format='1D',
                            unit='deg',),
         'STAMP':      dict(name='STAMP',
                            array=[],
-                           format='{0}D'.format(nPixels ** 2)
+                           format='{0}D'.format(nPixels ** 2),
                            unit='count')
         })
 
