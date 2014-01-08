@@ -360,41 +360,24 @@ class FocalPlane(FocalPlaneShell):
                 #n30 sucks
                 continue
             extname = self.decaminfo.ccddict[i]
-            box = self.decaminfo.getBounds(extname, boxdiv)
-            bounds.append(box)
 
-            for x in range(len(box[0]) - 1):
-                for y in range(len(box[1]) - 1):
-                    xmin = box[0][x]
-                    xmax = box[0][x + 1]
-                    ymin = box[1][y]
-                    ymax = box[1][y + 1]
-                    # convert coordinates to pixel coordinates
-                    xmin, ymin = self.decaminfo.getPixel(extname, xmin, ymin)
-                    xmax, ymax = self.decaminfo.getPixel(extname, xmax, ymax)
+            conds = (extension_return == extname)
+            # This is pretty kludgey.
 
-                    conds = (
-                        (recdata_return[self.x_coord_name] > xmin) *
-                        (recdata_return[self.x_coord_name] < xmax) *
-                        (recdata_return[self.y_coord_name] > ymin) *
-                        (recdata_return[self.y_coord_name] < ymax))
+            # find the number of Trues we need to exclude
+            N = np.sum(conds) - max_samples_box
+            # we want the False's AND only max_samples (or all, if less
+            # than max_samples) of True's !
+            if N > 0:
+                true_list = [True] * N + [False] * (np.sum(conds) - N)
+                np.random.shuffle(true_list)
+                indices = np.nonzero(conds)[0]
+                for i in xrange(len(true_list)):
+                    conds[indices[i]] = true_list[i]
 
-                    # This is pretty kludgey.
-
-                    # find the number of Trues we need to exclude
-                    N = np.sum(conds) - max_samples_box
-                    # we want the False's AND only max_samples (or all, if less
-                    # than max_samples) of True's !
-                    if N > 0:
-                        true_list = [True] * N + [False] * (np.sum(conds) - N)
-                        np.random.shuffle(true_list)
-                        indices = np.nonzero(conds)[0]
-                        for i in xrange(len(true_list)):
-                            conds[indices[i]] = true_list[i]
-
-                        # select the False's
-                        recdata_return = recdata_return[~conds]
-                        extension_return = extension_return[~conds]
+                # select the False's
+                recdata_return = recdata_return[~conds]
+                extension_return = extension_return[~conds]
 
         return recdata_return, extension_return
 
