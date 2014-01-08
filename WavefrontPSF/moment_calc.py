@@ -176,8 +176,18 @@ def fit_gaussian(data, indices=None):
     # basically, if you hit the cap in function calls, just move on and
     # calculate the old-fashioned way:
     if (ier > 4) + (not np.any(np.isfinite(popt))) + (np.any(popt < 0)):
-        y, x, fwhm = windowed_centroid(data - mindata)
-        popt = [mindata, 2 * mindata, np.square(fwhm) / (8 * np.log(2)), y, x]
+        databack = np.append(data[0, :], data[-1, :])
+        databack = np.append(databack, data[:, 0])
+        databack = np.append(databack, data[:, -1])
+        background = np.median(databack)
+        thresh = np.max(data - background) / 5.0
+        y, x, fwhm = windowed_centroid(data,
+                                       centroid=centroid,
+                                       indices=indices,
+                                       background=background,
+                                       thresh=thresh)
+        popt = [background, 2 * background,
+                np.square(fwhm) / (8 * np.log(2)), y, x]
         # print('p prime')
         # print(popt)
 
@@ -256,10 +266,7 @@ def FWHM(data, centroid=None, indices=None, background=0, thresh=-1):
         databack = np.append(data[0, :], data[-1, :])
         databack = np.append(databack, data[:, 0])
         databack = np.append(databack, data[:, -1])
-        background_median = np.median(databack)
-        background_mean = np.mean(databack)
-        background = background_median
-
+        background = np.median(databack)
 
     #print(background)
 
