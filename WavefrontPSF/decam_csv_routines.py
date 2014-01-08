@@ -328,6 +328,6 @@ def generate_hdu_lists_cpd(expid, path_base):
     list_chip = [[decaminfo().ccddict[i]] for i in xrange(1, 63)]
     list_chip.pop(60)
 
-    list_fits_extension = [[2]] * (63-2)
+    list_fits_extension = [[1]] * (63-2)
 
     return list_catalogs, list_fits_extension, list_chip
