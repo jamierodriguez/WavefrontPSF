@@ -27,7 +27,7 @@ entries = listdir('/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript/')
 # pop logs
 if 'logs' in entries: entries.remove('logs')
 entries = [int(entry) for entry in entries]
-numbers = [item for item in numbers if item in entries]
+expids = [item for item in expids if item in entries]
 
 output_directory = "/nfs/slac/g/ki/ki18/cpd/focus/january_06/"
 
@@ -38,12 +38,12 @@ if not path.exists(output_directory):
 # now go to output and filter by what is already present
 results = listdir(output_directory)
 results = fnmatch.filter(results, '00*')
-results_numbers = []
+results_expids = []
 for result in results:
-    results_numbers.append(int(result[:8]))
-numbers = [item for item in numbers if item not in results_numbers]
+    results_expids.append(int(result[:8]))
+expids = [item for item in expids if item not in results_expids]
 
-for image_number in numbers:
+for image_number in expids:
     command = ['bsub',
                '-q', 'long',
                '-o', output_directory +
