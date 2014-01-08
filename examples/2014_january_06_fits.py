@@ -55,7 +55,7 @@ for image_number in expids:
                '-m', '/u/ec/roodman/Astrophysics/Donuts/Meshes/',  # path_mesh
                '-n', "Science20120915s1v3_134239",  # mesh_name
                '-o', output_directory,  # output_directory
-               '-s', str(15),  # max_samples
+               '-s', str(8),  # max_samples
                '-b', str(1),  # boxdiv
                '-a', str(0),  # subav
                '-d', str(0),  # seed
