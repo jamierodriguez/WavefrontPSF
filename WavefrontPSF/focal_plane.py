@@ -362,8 +362,20 @@ class FocalPlane(FocalPlaneShell):
             extname = self.decaminfo.ccddict[i]
 
             conds = (extension_return == extname)
-            # This is pretty kludgey.
 
+            # prescreen by excluding any with nans
+            keylist = ['Y2WIN_IMAGE', 'X2WIN_IMAGE', 'XYWIN_IMAGE']
+            conds = np.where(
+                conds *
+                np.isfinite(recdata_return['Y2WIN_IMAGE']) *
+                np.isfinite(recdata_return['X2WIN_IMAGE']) *
+                np.isfinite(recdata_return['XYWIN_IMAGE']) *
+                (recdata_return['Y2WIN_IMAGE'] > 0) *
+                (recdata_return['X2WIN_IMAGE'] > 0),
+                True,  # if true
+                False)  # if false
+
+            # This is pretty kludgey.
             # find the number of Trues we need to exclude
             N = np.sum(conds) - max_samples_box
             # we want the False's AND only max_samples (or all, if less
