@@ -44,7 +44,7 @@ parser.add_argument("-e",
                     help="what image number will we fit now?")
 parser.add_argument("-c",
                     dest="csv",
-                    default='/nfs/slac/g/ki/ki18/cpd/focus/september_27/image_data.csv',
+                    default='/nfs/slac/g/ki/ki18/cpd/focus/image_data.csv',
                     help="where is the csv of the image data located")
 parser.add_argument("-m",
                     dest="path_mesh",
@@ -56,8 +56,8 @@ parser.add_argument("-n",
                     help="Name of mesh used.")
 parser.add_argument("-o",
                     dest="output_directory",
-                    default="/nfs/slac/g/ki/ki18/cpd/focus/november_8/",
-                    help="where will the outputs go (modulo image number)")
+                    default='/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript/',
+                    help="where will the outputs go")
 parser.add_argument("-t",
                     dest="catalogs",
                     default='/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript/',
@@ -81,22 +81,15 @@ options = parser.parse_args()
 
 args_dict = vars(options)
 
-## # download the image and catalog
-## wget_command = ['python',
-##                 '/u/ki/cpd/secret-adventure/examples/wgetscript.py',
-##                 '-min', '{0}'.format(args_dict['expid']),
-##                 '-max', '{0}'.format(args_dict['expid']),
-##                 '-i', '1',
-##                 '-rid', '{0}'.format(args_dict['rid']),
-##                 '-d', '{0}'.format(args_dict['date'])]
-## 
-## call(wget_command)
 
 csv = np.recfromcsv(args_dict['csv'], usemask=True)
 image_data = csv[csv['expid'] == args_dict['expid']]
 
 nPixels = args_dict['size']
 
+##############################################################################
+# download the image and catalog
+##############################################################################
 
 # from wgetscript:
 dataDirectory = "$CPD/catalogs/wgetscript/{0:08d}".format(args_dict['expid'])
@@ -109,8 +102,9 @@ if not path.exists(dataDirectoryExp):
 # move there!
 chdir(dataDirectoryExp)
 
-
+##############################################################################
 # create the new catalogs
+##############################################################################
 for i in xrange(1, 63):
 
     if i == 61:
@@ -155,23 +149,60 @@ for i in xrange(1, 63):
     pyfits_dict = {}
     pyfits_dict.update({
         'XWIN_IMAGE': dict(name='XWIN_IMAGE',
-                           array=FP.recdata['XWIN_IMAGE'],#[],
+                           array=FP.recdata['XWIN_IMAGE'],
                            format='1D',
                            unit='pixel',),
         'YWIN_IMAGE': dict(name='YWIN_IMAGE',
-                           array=FP.recdata['YWIN_IMAGE'],#[],
+                           array=FP.recdata['YWIN_IMAGE'],
                            format='1D',
                            unit='pixel',),
+        'FLAGS':      dict(name='FLAGS',
+                           array=FP.recdata['FLAGS'],
+                           format='1I',),
         'MAG_AUTO':   dict(name='MAG_AUTO',
-                           array=FP.recdata['MAG_AUTO'],#[],
+                           array=FP.recdata['MAG_AUTO'],
                            format='1E',
                            unit='mag',),
+        'MAG_PSF':   dict(name='MAG_PSF',
+                           array=FP.recdata['MAG_PSF'],
+                           format='1E',
+                           unit='mag',),
+        'FLUX_RADIUS':   dict(name='FLUX_RADIUS',
+                           array=FP.recdata['FLUX_RADIUS'],
+                           format='1E',
+                           unit='pixel',),
         'CLASS_STAR': dict(name='CLASS_STAR',
-                           array=FP.recdata['CLASS_STAR'],#[],
+                           array=FP.recdata['CLASS_STAR'],
                            format='1E',),
-        'FLAGS':      dict(name='FLAGS',
-                           array=FP.recdata['FLAGS'],#[],
-                           format='1I',),
+        'SPREAD_MODEL':dict(name='SPREAD_MODEL',
+                            array=FP.recdata['SPREAD_MODEL'],
+                            format='1E',),
+        'SPREADERR_MODEL':dict(name='SPREADERR_MODEL',
+                               array=FP.recdata['SPREADERR_MODEL'],
+                               format='1E',),
+        'FWHMPSF_IMAGE': dict(name='FWHMPSF_IMAGE',
+                              array=FP.recdata['FWHMPSF_IMAGE'],
+                              format='1D',
+                              unit='pixel',),
+
+        # include the sextractor ones too
+        'X2WIN_IMAGE_SEX': dict(name='X2WIN_IMAGE_SEX',
+                            array=FP.recdata['X2WIN_IMAGE'],
+                           format='1D',
+                           unit='pixel**2',),
+        'XYWIN_IMAGE_SEX': dict(name='XYWIN_IMAGE_SEX',
+                            array=FP.recdata['XYWIN_IMAGE'],
+                           format='1D',
+                           unit='pixel**2',),
+        'Y2WIN_IMAGE_SEX': dict(name='Y2WIN_IMAGE_SEX',
+                            array=FP.recdata['Y2WIN_IMAGE'],
+                           format='1D',
+                           unit='pixel**2',),
+        'FWHM_WORLD_SEX': dict(name='FWHM_WORLD_SEX',
+                            array=FP.recdata['FWHM_WORLD'],
+                           format='1D',
+                           unit='deg',),
+
         'X2WIN_IMAGE': dict(name='X2WIN_IMAGE',
                            array=[],
                            format='1D',
@@ -184,7 +215,6 @@ for i in xrange(1, 63):
                            array=[],
                            format='1D',
                            unit='pixel**2',),
-
         'X3WIN_IMAGE': dict(name='X3WIN_IMAGE',
                            array=[],
                            format='1D',
@@ -208,11 +238,9 @@ for i in xrange(1, 63):
                            unit='deg',),
         'STAMP':      dict(name='STAMP',
                            array=[],
-                           format='256D')
+                           format='{0}D'.format(nPixels ** 2)
+                           unit='count')
         })
-
-    copy_keys = ['XWIN_IMAGE', 'YWIN_IMAGE', 'MAG_AUTO', 'CLASS_STAR',
-                 'FLAGS']
 
     Y, X = np.indices((16, 16)) + 0.5
 
@@ -267,7 +295,9 @@ for i in xrange(1, 63):
         columns.append(pyfits.Column(**pyfits_dict[key]))
     tbhdu = pyfits.new_table(columns)
 
-    tbhdu.writeto(list_catalogs_base + '{0:02d}_cat_cpd.fits'.format(i),
+    tbhdu.writeto(args_dict['output_directory'] + \
+                  'DECam_{0:08d}_'.format(args_dict['expid']) + \
+                  '{0:02d}_cat_cpd.fits'.format(i),
                   clobber=True)
 
     if i != 1:
