@@ -264,7 +264,7 @@ class FocalPlane(FocalPlaneShell):
         elif conds == 'all':
             # take everything
             conds = np.array([True] * recdata.size)
-        elif conds == 'eli_stars':
+        elif conds == 'eli':
             """
             A set of cuts taken from:
             https://cdcvs.fnal.gov/redmine/projects/des-sci-verification/wiki/A_Modest_Proposal_for_Preliminary_StarGalaxy_Separation
