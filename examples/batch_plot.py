@@ -11,12 +11,14 @@ TODO: ellipticity plot is a mess
 TODO: make wrappers for easily plotting whisker
 TODO: make comparison plots between filtering by max samples box and not.
 TODO: plotting for fwhm / e0...
+TODO: plot residual histograms and such
 """
 
 from __future__ import print_function, division
 import matplotlib
 # the agg is so I can submit for batch jobs.
 matplotlib.use('Agg')
+matplotlib.rc('image', interpolation='none', origin='lower', cmap = 'gray_r')
 import argparse
 import numpy as np
 from plot_wavefront import focal_plane_plot, collect_images

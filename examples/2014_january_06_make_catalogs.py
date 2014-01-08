@@ -53,7 +53,7 @@ for i in range(len(expids)):
 
     command = [
         'bsub',
-        '-q', 'medium',
+        '-q', 'long',
         '-o', '/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript' +
               '/logs/{0:08d}_cpd.log'.format(expid),
         '-R', 'rhel60&&linux64',

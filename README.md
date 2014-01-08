@@ -9,6 +9,10 @@ folks.
 Changelog
 ---------
 
+- 07.01.2014
+
+  New set of example runs added.
+
 - 19.11.2013
 
   Docs updates, example work flow for fitting and analyzing.
@@ -24,5 +28,7 @@ Changelog
 TODO
 ----
 
-- docs in almost every module
 - tests
+- module to check (once again) how the wavefront changes for very small
+  variations in focal plane parameters
+- easier way to set up fits
