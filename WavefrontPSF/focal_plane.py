@@ -365,31 +365,37 @@ class FocalPlane(FocalPlaneShell):
             conds = (extension_return == extname)
 
             # find out which ones are also nans etc
-            conds2 = (
-                      np.isfinite(recdata_return['Y2WIN_IMAGE']) *
-                      np.isfinite(recdata_return['X2WIN_IMAGE']) *
-                      np.isfinite(recdata_return['XYWIN_IMAGE']) *
-                      (recdata_return['Y2WIN_IMAGE'] > 0) *
-                      (recdata_return['X2WIN_IMAGE'] > 0)
-                     )
-            conds_kill = conds * ~conds2
-            import ipdb; ipdb.set_trace()
+            conds_finite = (
+                    np.isfinite(recdata_return['Y2WIN_IMAGE']) *
+                    np.isfinite(recdata_return['X2WIN_IMAGE']) *
+                    np.isfinite(recdata_return['XYWIN_IMAGE']) *
+                    (recdata_return['Y2WIN_IMAGE'] > 0) *
+                    (recdata_return['X2WIN_IMAGE'] > 0)
+                    )
+            # conds_kill = inside chip AND not finite
+            conds_kill = conds * ~conds_finite
+            # conds_okay = inside chip AND finite
+            conds_okay = conds * conds_finite
 
             # This is pretty kludgey.
-            # find the number of Trues we need to exclude
-            N = np.sum(conds) - max_samples_box
+            # We only want UP TO max_samples_box of conds_okay,
+            # so we find the N of conds_okay that need to be excluded
+            N = np.sum(conds_okay) - max_samples_box
             # we want the False's AND only max_samples (or all, if less
             # than max_samples) of True's !
             if N > 0:
-                true_list = [True] * N + [False] * (np.sum(conds) - N)
+                true_list = [True] * N + [False] * (np.sum(conds_okay) - N)
                 np.random.shuffle(true_list)
-                indices = np.nonzero(conds)[0]
+                indices = np.nonzero(conds_okay)[0]
                 for i in xrange(len(true_list)):
-                    conds[indices[i]] = true_list[i]
+                    conds_okay[indices[i]] = true_list[i]
+                    # in effect, conds_okay now becomes the opposite of those
+                    # that will be excluded via max_samples
 
-                # select the False's
-                recdata_return = recdata_return[~conds]
-                extension_return = extension_return[~conds]
+            conds_final = ~(conds_okay + conds_kill)
+            # select the False's
+            recdata_return = recdata_return[conds_final]
+            extension_return = extension_return[conds_final]
 
         return recdata_return, extension_return
 
