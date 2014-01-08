@@ -45,7 +45,7 @@ expids = [item for item in expids if item not in results_expids]
 
 for image_number in expids:
     command = ['bsub',
-               '-q', 'long',
+               '-q', 'xlong',
                '-o', output_directory +
                      'logs/{0:08d}.log'.format(image_number),
                '-R', 'rhel60&&linux64',
