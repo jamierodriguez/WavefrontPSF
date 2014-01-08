@@ -223,7 +223,7 @@ def FP_func(dz, e1, e2, rzero, dx, dy, xt, yt, z05d, z06d,
 ##############################################################################
 # set up minuit fit
 ##############################################################################
-par_names = ['dz', ' e1', ' e2', ' rzero', ' dx', ' dy', ' xt', ' yt', ' z05d', ' z06d', ' z07x', ' z07y', ' z08x', ' z08y']
+par_names = ['dz', 'e1', 'e2', 'rzero', 'dx', 'dy', 'xt', 'yt', 'z05d', 'z06d', 'z07x', 'z07y', 'z08x', 'z08y']
 verbosity = 3
 force_derivatives = 1
 grad_dict = dict(h_base=1e-1)
