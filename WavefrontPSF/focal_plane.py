@@ -351,6 +351,8 @@ class FocalPlane(FocalPlaneShell):
 
         """
 
+        recdata_return = np.copy(recdata)
+        extension_return = np.copy(extension)
         # create the bounds [[x0, x1, xn], [y0, y1, y2, yn]]
         bounds = []
         for i in range(1, 63):
@@ -358,19 +360,18 @@ class FocalPlane(FocalPlaneShell):
                 #n30 sucks
                 continue
             extname = self.decaminfo.ccddict[i]
-            boundi = self.decaminfo.getBounds(extname, boxdiv)
-            bounds.append(boundi)
+            box = self.decaminfo.getBounds(extname, boxdiv)
+            bounds.append(box)
 
-        recdata_return = np.copy(recdata)
-        extension_return = np.copy(extension)
-
-        for box in bounds:
             for x in range(len(box[0]) - 1):
                 for y in range(len(box[1]) - 1):
                     xmin = box[0][x]
                     xmax = box[0][x + 1]
                     ymin = box[1][y]
                     ymax = box[1][y + 1]
+                    # convert coordinates to pixel coordinates
+                    xmin, ymin = self.decaminfo.getPixel(extname, xmin, ymin)
+                    xmax, ymax = self.decamaxfo.getPixel(extname, xmax, ymax)
 
                     conds = (
                         (recdata_return[self.x_coord_name] > xmin) *
