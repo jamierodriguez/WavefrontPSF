@@ -45,7 +45,7 @@ for iterator in xrange(len(numbers)):
                'python', 'batch_plot.py',
                '-i', str([input_directories[iterator]]),
                '-o', output_directory + 'plots/',  # output_directory
-               '-m', output_directory + 'results/minuit_results.csv'  # minuit_results
+               '-m', output_directory + 'results/minuit_results.csv',  # minuit_results
                '-e', str([numbers[iterator]]),  # expid
                ]
     print_command(command)
