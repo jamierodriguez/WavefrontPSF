@@ -245,8 +245,8 @@ for i in xrange(1, 63):
     # go through each entry and make stamps and other parameters
     for recdata in FP.recdata:
 
-        x_center = recdata[FP.x_coord_name]
-        y_center = recdata[FP.y_coord_name]
+        x_center = recdata['X' + FP.coord_name]
+        y_center = recdata['Y' + FP.coord_name]
 
         # coords are y,x ordered
         y_start = int(y_center - nPixels / 2)
