@@ -8,8 +8,8 @@ Description: Module for generating PSF objects and their moments.
 from __future__ import print_function, division
 import numpy as np
 from donutlib.makedonut import makedonut
-from moment_calc import fit_gaussian, centered_moment, \
-    gaussian_window
+from moment_calc import centered_moment, \
+    gaussian_window, FWHM, windowed_centroid
 from os import path, makedirs
 import pickle
 
@@ -184,7 +184,7 @@ class Wavefront(object):
         # I think it is okay to modify things inside here; I should be creating
         # copies of arrays...
         stamp = (stamp - background).flatten()
-        conds = (stamp > thresh)
+        conds = (stamp > threshold)
         stamp = stamp[conds]
         indices = [indices_i.flatten()[conds] for indices_i in indices]
 
@@ -287,6 +287,7 @@ class Wavefront(object):
             zernike = zernikes[i]
             background = backgrounds[i]
             threshold = thresholds[i]
+            rzero = rzeros[i]
             # make stamp
             stamp_i = self.stamp(zernike=zernike,
                                  rzero=rzero,
