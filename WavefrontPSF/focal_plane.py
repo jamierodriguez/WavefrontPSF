@@ -4,9 +4,6 @@ File: focal_plane.py
 Author: Chris Davis
 Description: Class for focal plane shell tied to specific image.
 
-TODO: update attributes and methods
-TODO: update __init__
-
 """
 
 from __future__ import print_function, division
@@ -21,8 +18,6 @@ class FocalPlane(FocalPlaneShell):
 
     Attributes
     ----------
-    image_data
-
     image_correction
 
     average
@@ -71,9 +66,6 @@ class FocalPlane(FocalPlaneShell):
         super(FocalPlane, self).__init__(path_mesh, mesh_name, verbosity)
         # could put in nEle etc here
 
-        self.image_data = image_data
-        self.image_correction = image_zernike_corrections(image_data)
-
         self.average = np.mean
         self.boxdiv = boxdiv
         self.max_samples_box = max_samples_box
@@ -100,45 +92,6 @@ class FocalPlane(FocalPlaneShell):
         self.data, self.coords = self.create_data(
                 recdata=self.recdata,
                 extension=self.extension)
-
-        ## self.comparison_dict, self.comparison_data, \
-        ##     self.comparison_extension, self.coords_comparison \
-        ##         = self.comparison_coordinates(
-        ##             self.comparison_data_unfiltered,
-        ##             self.comparison_extension_unfiltered,
-        ##             max_samples, conds)
-
-        ## # generate comparisons with max_samples per chip
-        ## self.comparison_data_unfiltered, \
-        ##     self.comparison_extension_unfiltered = \
-        ##     self.comparison(list_catalogs, list_fits_extension, list_chip)
-        ## self.comparison_dict_all, self.comparison_data_all, \
-        ##     self.comparison_extension_all, self.coords_all \
-        ##         = self.comparison_coordinates(
-        ##             self.comparison_data_unfiltered,
-        ##             self.comparison_extension_unfiltered,
-        ##             10000000, conds)
-        ## self.comparison_dict, self.comparison_data, \
-        ##     self.comparison_extension, self.coords_comparison \
-        ##         = self.comparison_coordinates(
-        ##             self.comparison_data_unfiltered,
-        ##             self.comparison_extension_unfiltered,
-        ##             max_samples, conds)
-        ## # double check that coords_comparison hits all the boxes with a minimum
-        ## # number of entries
-        ## success = self.check_full_bounds(self.comparison_dict, boxdiv)
-        ## while not success:
-        ##     self.comparison_dict, self.comparison_data, \
-        ##         self.comparison_extension, self.coords_comparison \
-        ##             = self.comparison_coordinates(
-        ##                 self.comparison_data_unfiltered,
-        ##                 self.comparison_extension_unfiltered,
-        ##                 max_samples, conds)
-        ##     success = self.check_full_bounds(self.comparison_dict, boxdiv,
-        ##                                      minimum_number=5)
-
-        ## self.coords_random = self.random_coordinates(max_samples_box,
-        ##                                              boxdiv=boxdiv)jk
 
     def combine_decam_catalogs(self, list_catalogs, list_fits_extension,
                                list_chip):
@@ -233,13 +186,7 @@ class FocalPlane(FocalPlaneShell):
 
         # now do the star selection
         if conds == 'old':
-            # set the fwhm from the image recdata; account for mask
-            if not np.ma.getmaskarray(self.image_data['fwhm']):
-                fwhm = self.image_data['fwhm'][0]
-            elif not np.ma.getmaskarray(self.image_data['qrfwhm']):
-                fwhm = self.image_data['qrfwhm'][0]
-            else:
-                fwhm = 1.0
+            fwhm = 1.0
 
             conds = (
                 (recdata['CLASS_STAR'] > 0.9) *
@@ -269,7 +216,7 @@ class FocalPlane(FocalPlaneShell):
             https://cdcvs.fnal.gov/redmine/projects/des-sci-verification/wiki/A_Modest_Proposal_for_Preliminary_StarGalaxy_Separation
             (FLAGS_I <=3) AND (((CLASS_STAR_I > 0.3) AND (MAG_AUTO_I < 18.0) AND (MAG_PSF_I < 30.0)) OR (((SPREAD_MODEL_I + 3*SPREADERR_MODEL_I) < 0.003) AND ((SPREAD_MODEL_I +3*SPREADERR_MODEL_I) > -0.003)))
 
-            throw in an MAD cuts
+            throw in an MAD cuts for FWHM, Y2, X2, and XY moments
             """
             conds = (
                 ((recdata['FLAGS'] <= 3)) *
@@ -363,7 +310,7 @@ class FocalPlane(FocalPlaneShell):
                             )
 
                     # TODO: I really should never have to actually do the
-                    # following!
+                    # following, because I shouldn't be getting nan moments!
 
                     # find out which ones are also nans etc
                     conds_finite = (

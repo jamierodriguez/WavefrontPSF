@@ -290,11 +290,6 @@ class Minuit_Fit(object):
                     # dChi2dpar is a dictionary!
                     gin[ipar] = dChi2dpar[self.par_names[ipar]]
 
-        #print "minuit_fit.chisq: ",iflag,f[0]
-        #print "                ",parArr
-        #if iflag==2:
-        #    print "                ",dChi2dpar
-
     def doFit(self):
 
         """ do the fit
@@ -389,7 +384,6 @@ class Minuit_Fit(object):
         amin, edm, errdef = ROOT.Double(0.18), ROOT.Double(0.19), ROOT.Double(0.20)
         nvpar, nparx, icstat = ROOT.Long(1983), ROOT.Long(1984), ROOT.Long(1985)
         self.gMinuit.mnstat(amin, edm, errdef, nvpar, nparx, icstat)
-        #dof = pow(self.gFitFunc._nPixels,2) - nvpar
         if self.verbosity >= 1:
             mytxt = "amin = %.3f, edm = %.3f,   effdef = %.3f,   nvpar = %.3f,  nparx = %.3f, icstat = %.3f " % (amin,edm,errdef,nvpar,nparx,icstat)
             print('minuit_fit: ', mytxt)
@@ -436,7 +430,7 @@ class Minuit_Fit(object):
             for jpar in range(self.npar):
                 covariance[jpar, ipar] = covmat[jpar][ipar]
                 corr[jpar, ipar] = covmat[jpar][ipar] / \
-                    np.sqrt(covmat[jpar][jpar]*covmat[ipar][ipar])
+                    np.sqrt(covmat[jpar][jpar] * covmat[ipar][ipar])
 
         output_dict.update({'covariance': covariance, 'correlation': corr})
 

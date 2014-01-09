@@ -63,6 +63,6 @@ for image_number in expids:
                '-cpd', str(1),  # use cpd or sextractor
                '-e', '{0}'.format(image_number),  # expid
                ]
-    #print_command(command)
+    print_command(command)
     call(command)
 

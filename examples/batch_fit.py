@@ -118,8 +118,7 @@ else:
 # create the focalplane
 ##############################################################################
 
-FP = FocalPlane(image_data=image_data,
-                list_catalogs=list_catalogs,
+FP = FocalPlane(list_catalogs=list_catalogs,
                 list_fits_extension=list_fits_extension,
                 list_chip=list_chip,
                 path_mesh=args_dict['path_mesh'],
@@ -236,15 +235,15 @@ max_iterations = len(par_names) * 1000
 
 # set up initial guesses
 minuit_dict = minuit_dictionary(par_names)
-image_dictionary = image_zernike_corrections(FP.image_data)
+image_dictionary = image_zernike_corrections(image_data)
 for key in par_names:
     if (key == 'e1') + (key == 'e2'):
         continue
     elif (key == 'rzero'):
-        rzero_estimate = fwhm_to_rzero(FP.image_data['qrfwhm'])
+        rzero_estimate = fwhm_to_rzero(image_data['qrfwhm'])
         minuit_dict[key] = rzero_estimate.data[0]
     elif key == 'fwhm':
-        minuit_dict[key] = FP.image_data['qrfwhm'].data[0]
+        minuit_dict[key] = image_data['qrfwhm'].data[0]
     else:
         minuit_dict[key] = image_dictionary[key][0]
 
@@ -304,6 +303,9 @@ np.save(
 
 # save the outputted focal plane
 moments_results = FP.plane(in_dict, coords=coords, order_dict=order_dict)
+# don't forget to add common mode
+e1_moments += in_dict['e1']
+e2_moments += in_dict['e2']
 # convert moments dict to ellipticities
 e0_moments, e0prime_moments, e1_moments, e2_moments = \
     second_moment_to_ellipticity(moments_results['x2'],

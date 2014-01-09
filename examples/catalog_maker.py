@@ -42,10 +42,6 @@ parser.add_argument("-e",
                     dest="expid",
                     type=int,
                     help="what image number will we fit now?")
-parser.add_argument("-c",
-                    dest="csv",
-                    default='/nfs/slac/g/ki/ki18/cpd/focus/image_data.csv',
-                    help="where is the csv of the image data located")
 parser.add_argument("-m",
                     dest="path_mesh",
                     default='/u/ec/roodman/Astrophysics/Donuts/Meshes/',
@@ -80,10 +76,6 @@ parser.add_argument("-f",
 options = parser.parse_args()
 
 args_dict = vars(options)
-
-
-csv = np.recfromcsv(args_dict['csv'], usemask=True)
-image_data = csv[csv['expid'] == args_dict['expid']]
 
 nPixels = args_dict['size']
 
@@ -131,8 +123,7 @@ for i in xrange(1, 63):
     list_chip = [[decaminfo().ccddict[i]]]
     list_fits_extension = [[2]]
 
-    FP = FocalPlane(image_data=image_data,
-                    list_catalogs=list_catalogs,
+    FP = FocalPlane(list_catalogs=list_catalogs,
                     list_fits_extension=list_fits_extension,
                     list_chip=list_chip,
                     path_mesh=args_dict['path_mesh'],

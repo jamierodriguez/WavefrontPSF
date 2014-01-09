@@ -56,10 +56,10 @@ args_dict = vars(options)
 args_dict['expid'] = eval(args_dict['expid'])
 args_dict['input_directory'] = eval(args_dict['input_directory'])
 
-if args_dict['box_div'] == 0:
+if args_dict['boxdiv'] == 0:
     number_entries = 61
 else:
-    number_entries = 2 ** (2 * args_dict['box_div'] - 1)
+    number_entries = 2 ** (2 * args_dict['boxdiv'] - 1)
 
 time = asctime()
 
