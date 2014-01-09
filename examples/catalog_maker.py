@@ -159,6 +159,14 @@ for i in xrange(1, 63):
         'FLAGS':      dict(name='FLAGS',
                            array=FP.recdata['FLAGS'],
                            format='1I',),
+        'BACKGROUND':      dict(name='BACKGROUND',
+                           array=FP.recdata['BACKGROUND'],
+                           format='1E',
+                           unit='count',),
+        'THRESHOLD':      dict(name='THRESHOLD',
+                           array=FP.recdata['THRESHOLD'],
+                           format='1E',
+                           unit='count',),
         'MAG_AUTO':   dict(name='MAG_AUTO',
                            array=FP.recdata['MAG_AUTO'],
                            format='1E',
@@ -265,7 +273,11 @@ for i in xrange(1, 63):
                       'x2y': {'p': 2, 'q': 1},
                       'xy2': {'p': 1, 'q': 2}}
 
+        background = recdata['BACKGROUND']
+        threshold = recdata['THRESHOLD']
         moment_dict = FP.moments(stamp, indices=[Y, X],
+                                 background=background,
+                                 threshold=threshold,
                                  order_dict=order_dict)
 
         # append to pyfits_dict

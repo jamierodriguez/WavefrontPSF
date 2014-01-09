@@ -132,6 +132,7 @@ class Wavefront(object):
         return stamp
 
     def moments(self, stamp, indices=None, windowed=True,
+                background=0, threshold=-1e9,
                 order_dict={'x2': {'p': 2, 'q': 0},
                             'y2': {'p': 0, 'q': 2},
                             'xy': {'p': 1, 'q': 1}}):
@@ -142,10 +143,13 @@ class Wavefront(object):
         stamp : array
             2d image array
 
-        thresh : float, optional
+        threshhold : float, optional
             Threshold value in the data array for pixels to consider in this
-            fit.  If no value is specified, then it is set to be max(data) / 5
-            .
+            fit. If not specified, then takes all data.
+
+        background : float, optional
+            Background level to be subtracted out. If not specified, set to
+            zero.
 
         windowed : bool, optional
             Decide whether to use a gaussian window.
@@ -170,36 +174,45 @@ class Wavefront(object):
         ## popt = FWHM(stamp, centroid=[stamp.shape[0] / 2, stamp.shape[1] / 2], #[y, x],
         ##             indices=indices,
         ##             background=background, thresh=thresh)
-        popt = fit_gaussian(stamp, indices)
-        background = popt[0]
-        sigma2 = popt[2]
-        fwhm = np.sqrt(sigma2) * 2.355
-        y = popt[3]
-        x = popt[4]
+        ## popt = fit_gaussian(stamp, indices)
+        ## background = popt[0]
+        ## sigma = popt[2]
+        ## fwhm = sigma * 2.355
+        ## y = popt[3]
+        ## x = popt[4]
+
+        # I think it is okay to modify things inside here; I should be creating
+        # copies of arrays...
+        stamp = (stamp - background).flatten()
+        conds = (stamp > thresh)
+        stamp = stamp[conds]
+        indices = [indices_i.flatten()[conds] for indices_i in indices]
+
+        centroid_guess = [self.input_dict["nPixels"] / 2] * 2
+        y, x = windowed_centroid(stamp, centroid=centroid_guess,
+                                 indices=indices)
+        fwhm = FWHM(stamp, centroid=[y, x], indices=indices)
 
         # get weight for other windowed moments
         if not windowed:
             w = 1
         else:
-            w = gaussian_window(stamp,
-                                centroid=[y, x], indices=indices,
-                                background=background,
-                                sigma2=sigma2
-                                )
+            w = gaussian_window(stamp, centroid=[y, x], indices=indices)
+        stamp = w * stamp
 
-        return_dict = dict(x=x, y=y, fwhm=fwhm, background=background, w=w)
-        #background=0
+        return_dict = dict(x=x, y=y, fwhm=fwhm)
         # now go through moment_dict and create the other moments
         for order in order_dict:
             pq = order_dict[order]
-            return_dict.update({order: centered_moment((stamp - background) * w,
+            return_dict.update({order: centered_moment(stamp,
                                                        centroid=[y, x],
                                                        indices=indices,
                                                        **pq)})
         return return_dict
 
     def moment_dictionary(
-            self, zernikes, coords, rzero,
+            self, zernikes, coords, rzeros,
+            backgrounds=[], thresholds=[],
             verbosity=[], windowed=True,
             order_dict={'x2': {'p': 2, 'q': 0},
                         'y2': {'p': 0, 'q': 2},
@@ -218,8 +231,18 @@ class Wavefront(object):
             Each entry has the coordinates in [X mm, Y mm, Sensor], with the x
             and y in aaron's coordinate convention.
 
-        rzero : float
+        rzeros : list of floats
             Kolmogorov spectrum parameter. Basically, larger means smaller PSF.
+
+        threshhold : list of floats, optional
+            Threshold value in the data array for pixels to consider in this
+            fit. If not specified, then takes all data.
+
+        background : list of floats, optional
+            Background level to be subtracted out. If not specified, set to
+            zero.
+
+
 
         verbosity : list, optional
             If 'stamp' is in verbosity, then the stamps are also saved.
@@ -262,6 +285,8 @@ class Wavefront(object):
         for i in range(len(coords)):
             coord = coords[i]
             zernike = zernikes[i]
+            background = backgrounds[i]
+            threshold = thresholds[i]
             # make stamp
             stamp_i = self.stamp(zernike=zernike,
                                  rzero=rzero,
@@ -269,6 +294,7 @@ class Wavefront(object):
             # get moments
             moment_dict = self.moments(
                 stamp_i, indices=[y_indices, x_indices],
+                background=background, threshold=threshold,
                 windowed=windowed, order_dict=order_dict)
             fwhm_i = moment_dict['fwhm']
 

@@ -353,49 +353,63 @@ class FocalPlane(FocalPlaneShell):
 
         recdata_return = np.copy(recdata)
         extension_return = np.copy(extension)
-        # create the bounds [[x0, x1, xn], [y0, y1, y2, yn]]
-        bounds = []
+        # create the bounds [[x0, x1, xn], [y0, y1, y2, yn]] .  to do this,
+        # realize that you only need to make one box (since we will filter by
+        # pixel coordinates)
+        box = self.decaminfo.getBounds_pixel(boxdiv=boxdiv)
         for i in range(1, 63):
             if i == 61:
                 #n30 sucks
                 continue
             extname = self.decaminfo.ccddict[i]
 
-            # prescreen by excluding any with nans
-            conds = (extension_return == extname)
+            for x in xrange(len(box[0]) - 1):
+                for y in xrange(len(box[1]) - 1):
+                    conds = (
+                            (extension_return == extname) *
+                            (recdata_return['XWIN_IMAGE'] > box[0][x]) *
+                            (recdata_return['XWIN_IMAGE'] < box[0][x+1]) *
+                            (recdata_return['YWIN_IMAGE'] > box[1][y]) *
+                            (recdata_return['YWIN_IMAGE'] < box[1][y+1])
+                            )
 
-            # find out which ones are also nans etc
-            conds_finite = (
-                    np.isfinite(recdata_return['Y2WIN_IMAGE']) *
-                    np.isfinite(recdata_return['X2WIN_IMAGE']) *
-                    np.isfinite(recdata_return['XYWIN_IMAGE']) *
-                    (recdata_return['Y2WIN_IMAGE'] > 0) *
-                    (recdata_return['X2WIN_IMAGE'] > 0)
-                    )
-            # conds_kill = inside chip AND not finite
-            conds_kill = conds * ~conds_finite
-            # conds_okay = inside chip AND finite
-            conds_okay = conds * conds_finite
+                    # TODO: I really should never have to actually do the
+                    # following!
 
-            # This is pretty kludgey.
-            # We only want UP TO max_samples_box of conds_okay,
-            # so we find the N of conds_okay that need to be excluded
-            N = np.sum(conds_okay) - max_samples_box
-            # we want the False's AND only max_samples (or all, if less
-            # than max_samples) of True's !
-            if N > 0:
-                true_list = [True] * N + [False] * (np.sum(conds_okay) - N)
-                np.random.shuffle(true_list)
-                indices = np.nonzero(conds_okay)[0]
-                for i in xrange(len(true_list)):
-                    conds_okay[indices[i]] = true_list[i]
-                    # in effect, conds_okay now becomes the opposite of those
-                    # that will be excluded via max_samples
+                    # find out which ones are also nans etc
+                    conds_finite = (
+                            np.isfinite(recdata_return['Y2WIN_IMAGE']) *
+                            np.isfinite(recdata_return['X2WIN_IMAGE']) *
+                            np.isfinite(recdata_return['XYWIN_IMAGE']) *
+                            (recdata_return['Y2WIN_IMAGE'] > 0) *
+                            (recdata_return['X2WIN_IMAGE'] > 0)
+                            )
+                    # conds_kill = inside chip AND not finite
+                    conds_kill = conds * ~conds_finite
 
-            conds_final = ~(conds_okay + conds_kill)
-            # select the False's
-            recdata_return = recdata_return[conds_final]
-            extension_return = extension_return[conds_final]
+                    # conds_okay = inside chip AND finite
+                    conds_okay = conds * conds_finite
+
+                    # This is pretty kludgey.  We only want UP TO
+                    # max_samples_box of conds_okay, so we find the N of
+                    # conds_okay that need to be excluded
+                    N = np.sum(conds_okay) - max_samples_box
+                    # we want the False's AND only max_samples (or all, if less
+                    # than max_samples) of True's !
+                    if N > 0:
+                        true_list = [True] * N + \
+                                    [False] * (np.sum(conds_okay) - N)
+                        np.random.shuffle(true_list)
+                        indices = np.nonzero(conds_okay)[0]
+                        for i in xrange(len(true_list)):
+                            conds_okay[indices[i]] = true_list[i]
+                            # in effect, conds_okay now becomes the opposite of
+                            # those that will be excluded via max_samples
+
+                    conds_final = ~(conds_okay + conds_kill)
+                    # select the False's
+                    recdata_return = recdata_return[conds_final]
+                    extension_return = extension_return[conds_final]
 
         return recdata_return, extension_return
 

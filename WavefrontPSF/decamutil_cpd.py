@@ -1,6 +1,6 @@
 #
-# $Rev::                                                              $:  
-# $Author::                                                           $:  
+# $Rev::                                                              $:
+# $Author::                                                           $:
 # $LastChangedDate::                                                  $:
 #
 # Utility methods for DECam
@@ -22,7 +22,7 @@ class decaminfo(object):
         # AJR 9/14/2012 fixed these to agree with the DS9 coordinate system
         infoDict["S1"] =  {"xCenter":  -16.908,"yCenter":-191.670, "FAflag":False, "CCDNUM":25}
         infoDict["S2"]  = {"xCenter":  -16.908,"yCenter":-127.780, "FAflag":False, "CCDNUM":26}
-        infoDict["S3"]  = {"xCenter":  -16.908,"yCenter": -63.890, "FAflag":False, "CCDNUM":27} 
+        infoDict["S3"]  = {"xCenter":  -16.908,"yCenter": -63.890, "FAflag":False, "CCDNUM":27}
         infoDict["S4"]  = {"xCenter":  -16.908,"yCenter":   0.000, "FAflag":False, "CCDNUM":28}
         infoDict["S5"]  = {"xCenter":  -16.908,"yCenter":  63.890, "FAflag":False, "CCDNUM":29}
         infoDict["S6"]  = {"xCenter":  -16.908,"yCenter": 127.780, "FAflag":False, "CCDNUM":30}
@@ -92,7 +92,7 @@ class decaminfo(object):
         infoDict["FN4"] = {"xCenter": 219.804, "yCenter": -15.9725,"FAflag":True , "CCDNUM":70}
 
         return infoDict
-    
+
 
     def __init__(self,**inputDict):
 
@@ -194,7 +194,49 @@ class decaminfo(object):
                 '''
                 for k in xrange(2):
                     # make the location of each cut
-                    cuts = [(boundi[k][j+1] + boundi[k][j])/2. 
+                    cuts = [(boundi[k][j+1] + boundi[k][j])/2.
+                            for j in xrange(len(boundi[k])-1)]
+
+                    # append the cut
+                    for j in cuts:
+                        boundi[k].append(j)
+                    # now sort the cuts
+                    boundi[k].sort()
+
+        return boundi
+
+    def getBounds_pixel(self, extname='S9', boxdiv=0):
+        '''
+        Give the coordinates of two opposite corners in pixel
+        '''
+        ccdinfo = self.infoDict[extname]
+
+        # CCD size in pixels
+        if ccdinfo["FAflag"]:
+            xpixHalfSize = 1024.
+            ypixHalfSize = 1024.
+        else:
+            xpixHalfSize = 1024.
+            ypixHalfSize = 2048.
+
+        xmin = 0
+        xmax = 2 * xpixHalfSize
+        ymin = 0
+        ymax = 2 * ypixHalfSize
+        boundi = [[xmin, xmax], [ymin, ymax]]
+
+        if boxdiv > 0:
+            # now you need to blow these up
+            # first off, the y ones need an extra division to make square boxes
+            boundi[1].insert(1, (boundi[1][0] + boundi[1][1])/2)
+
+            for div in xrange(1, boxdiv):
+                '''
+                put in extra cuts
+                '''
+                for k in xrange(2):
+                    # make the location of each cut
+                    cuts = [(boundi[k][j+1] + boundi[k][j])/2.
                             for j in xrange(len(boundi[k])-1)]
 
                     # append the cut
@@ -222,36 +264,6 @@ class decaminfo(object):
                 continue
             extname = self.ccddict[i]
             boundi = self.getBounds(extname, boxdiv)
-            ## ccdinfo = self.infoDict[self.ccddict[i]]
-            ## xpixHalfSize = 1024.
-            ## ypixHalfSize = 2048.
-            ## mmperpixel = 0.015
-            ## xmin = ccdinfo["xCenter"] - xpixHalfSize * mmperpixel
-            ## xmax = ccdinfo["xCenter"] + xpixHalfSize * mmperpixel
-            ## ymin = ccdinfo["yCenter"] - ypixHalfSize * mmperpixel
-            ## ymax = ccdinfo["yCenter"] + ypixHalfSize * mmperpixel
-            ## boundi = [[xmin, xmax], [ymin, ymax]]
-
-            ## # now you need to blow these up
-            ## # first off, the y ones need an extra division to make square boxes
-            ## if boxdiv > 0:
-            ##     boundi[1].insert(1, (boundi[1][0] + boundi[1][1])/2)
-
-            ##     for div in range(1, boxdiv):
-            ##         '''
-            ##         put in extra cuts
-            ##         '''
-            ##         for k in range(2):
-            ##             # make the location of each cut
-            ##             cuts = [(boundi[k][j+1] + boundi[k][j])/2.
-            ##                     for j in xrange(len(boundi[k])-1)]
-
-            ##             # append the cut
-            ##             for j in cuts:
-            ##                 boundi[k].append(j)
-            ##             # now sort the cuts
-            ##             boundi[k].sort()
-
             bounds.append(boundi)
 
 
@@ -311,7 +323,7 @@ class mosaicinfo(object):
 
 
         return infoDict
-    
+
 
     def __init__(self,**inputDict):
 

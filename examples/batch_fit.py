@@ -4,6 +4,8 @@ File: batch_fit.py
 Author: Chris Davis
 Description: If you submit this script to the batch queue, you will get fits
 for a given image.
+
+TODO: fix nan's!
 """
 
 from __future__ import print_function, division
@@ -138,14 +140,14 @@ FP.data.update(dict(
 comparison_average = average_dictionary(FP.data, FP.average,
     boxdiv=args_dict['boxdiv'], subav=args_dict['subav'])
 
-coords_used = FP.coords
+coords = FP.coords
 
 ## # check our variables are the right length
 ## check_average = average_dictionary(FP.comparison_dict, FP.average,
 ##     boxdiv=args_dict['boxdiv'], subav=args_dict['subav'])
 ## if len(check_average['x']) != len(comparison_average['x']):
 ##     # if they are not, use the random coords
-##     coords_used = FP.coords_random
+##     coords = FP.coords_random
 
 # create var_dict from comparison_average
 var_dict = variance_dictionary(
@@ -185,7 +187,7 @@ def FP_func(dz, e1, e2, rzero, dx, dy, xt, yt, z05d, z06d,
 
     # get current iteration
     moments_FP_func = FP.plane(in_dict_FP_func,
-        coords=coords_used, order_dict=order_dict)
+        coords=coords, order_dict=order_dict)
 
     # convert to ellipticities
     e0_moment, e0prime_moment, e1_moment, e2_moment = \
@@ -293,7 +295,7 @@ np.save(
 # save the coords
 np.save(
     output_directory + '{0:08d}_coords'.format(args_dict['expid']),
-    coords_used)
+    coords)
 
 # save the comparison dictionary
 np.save(
@@ -301,7 +303,7 @@ np.save(
     comparison_average)
 
 # save the outputted focal plane
-moments_results = FP.plane(in_dict, coords=coords_used, order_dict=order_dict)
+moments_results = FP.plane(in_dict, coords=coords, order_dict=order_dict)
 # convert moments dict to ellipticities
 e0_moments, e0prime_moments, e1_moments, e2_moments = \
     second_moment_to_ellipticity(moments_results['x2'],

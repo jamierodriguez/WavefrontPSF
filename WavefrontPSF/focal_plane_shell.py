@@ -330,21 +330,27 @@ class FocalPlaneShell(Wavefront):
             # set the atmospheric contribution to some nominal level
             rzero = 0.14
 
-        zernike_corrections = self.zernike_corrections_from_dictionary(
-            in_dict)
-
-        zernikes = self.zernikes(coords, zernike_corrections)
-
+        zernikes = self.zernikes(coords, in_dict)
+        N = len(zernikes)
+        rzeros = [rzero] * N
+        backgrounds = [self.background] * N
+        if self.input_dict['randomFlag']:
+            # TODO: This is not tested
+            thresholds = [np.sqrt(self.number_electrons)] * N
+        else:
+            thresholds = [0] * N
         # make moments
         moments = self.moment_dictionary(zernikes,
-                                         coords, rzero,
+                                         coords, rzeros,
+                                         backgrounds=backgrounds,
+                                         thresholds=thresholds,
                                          verbosity=self.verbosity,
                                          windowed=windowed,
                                          order_dict=order_dict)
 
         return moments
 
-    def zernikes(self, coords, zernike_corrections_in):
+    def zernikes(self, coords, in_dict):
         """create a list of zernikes at these coordinate locations
 
         Parameters
@@ -353,9 +359,8 @@ class FocalPlaneShell(Wavefront):
             A list of [[x, y, ext_num]] detailing the locations we wish to
             sample on the focal plane
 
-        zernike_corrections_in : array
-            An array with the z delta and theta corrections to the reference
-            mesh.
+        in_dict : dictionary
+            dictionary containing the zernike corrections
 
         Returns
         -------
@@ -372,6 +377,9 @@ class FocalPlaneShell(Wavefront):
 
         """
 
+        zernike_corrections_in = self.zernike_corrections_from_dictionary(
+            in_dict)
+        #TODO: why the copy?
         zernike_corrections = np.copy(zernike_corrections_in)
 
         # add in the cross reference correction

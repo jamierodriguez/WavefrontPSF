@@ -2,6 +2,13 @@ from __future__ import print_function, division
 import numpy as np
 from scipy.optimize import leastsq
 
+"""
+8 Jan 2014: I have decided the window function will be a gaussian with sigma =
+            5 pixels
+"""
+
+SIGMA_WINDOW = 5.
+
 def centroid(data, indices=None):
     """Calculate first and second moments for a given dataset
 
@@ -47,7 +54,7 @@ def centroid(data, indices=None):
 
 def centered_moment(data, q=0, p=0, centroid=None, indices=None):
     """Calculate the centered moment
-    Mpq = sum(w * data * (X - x) ** p * (Y - y) ** q) / sum(w * data)
+    Mpq = sum(data * (X - x) ** p * (Y - y) ** q) / sum(data)
     where x and y are the centroid locations and X and Y are the indices of the
     data array
 
@@ -92,11 +99,10 @@ def centered_moment(data, q=0, p=0, centroid=None, indices=None):
         x, y = centroid(data, indices=[Y, X])
     else:
         y, x = centroid
-    Mpq = np.sum(data * (X - x) ** p * (Y - y) ** q) / \
-        np.sum(data)
+    Mpq = np.sum(data * (X - x) ** p * (Y - y) ** q) / np.sum(data)
     return Mpq
 
-def fit_gaussian(data, indices=None):
+def fit_gaussian(data, indices=None, verbose=False):
     """Fit a gaussian model plus background to the stamp
 
     Parameters
@@ -104,65 +110,103 @@ def fit_gaussian(data, indices=None):
     data : array
         2d image array
 
+    indices : length 2 list, optional
+        length 2 list of 2d arrays Y and X such that Y and X indicate the
+        index values (ie indices[0][i,j] = i, indices[1][i,j] = j)
+        Default is None; constructs the indices with each call.
+
+    verbose : Bool
+        If true, return the fit parameters
+
     Returns
     -------
     popt : list
         List of the fit parameters:
-        [background, normalization, sigma2, centroid_y, centroid_x]
-
+        [background, normalization, sigma, centroid_y, centroid_x]
     """
 
     shape = data.shape
     if not indices:
-        indices = np.indices(data.shape) + 0.5
+        Y, X = np.indices(data.shape) + 0.5
+        indices = [Y, X]
     centroid = [shape_i / 2 for shape_i in shape]
-    maxval2 = (shape[0] * 0.75) ** 2
-    def model(p):
-        if np.any(p) < 0:
-            return 1e20
-        elif np.any(np.square(p[2:5])) > maxval2:
-            return 1e20
-        else:
+    if verbose:
+        history = dict(model=[], value=[], y=[])
 
-            w = gaussian_window(data, centroid=[p[3], p[4]],
+    def f(p, y, indices):
+        fx = p[0] + p[1] * np.exp(-0.5 / p[2] ** 2 *
+                    (np.square(indices[0] - p[3]) +
+                     np.square(indices[1] - p[4])))
+        return fx
+
+    def model(p, y, indices):
+        ## if np.any(p) < 0:
+        ##     return_val = 1e20 * np.ones(data.size)
+        ## elif ((p[3] > shape[0] * 0.75) + (p[3] < shape[0] * 0.25) +
+        ##       (p[4] > shape[1] * 0.75) + (p[4] < shape[1] * 0.25)):
+        ##     return_val = 1e20 * np.ones(data.size)
+        ## else:
+        if True:
+            w = gaussian_window(shape, centroid=[p[3], p[4]],
                                 indices=[indices[0], indices[1]],
-                                background=p[0],
-                                sigma2=p[2])#np.square(p[2]) / (8 * np.log(2)))
+                                sigma=SIGMA_WINDOW)
+            fx = f(p, y, indices)
+            return_val = (w * (fx - y)).flatten()
 
-            y = data
-            fx = p[0] + p[1] * np.exp(-0.5 / p[2] * (np.square(indices[0] -
-                                                               p[3]) +
-                                                     np.square(indices[1] -
-                                                               p[4])))
-            return (w * (fx - y)).flatten()
-    def dmodel(p):
-        term = -0.5 / p[2] * (np.square(indices[0] - p[3]) +
-                              np.square(indices[1] - p[4]))
-        expterm = np.exp(term)
-        length = shape[0] * shape[1]
+        if verbose:
+            history['model'].append(p.copy())
+            history['value'].append(return_val.sum() ** 2)
+            history['y'].append(y.copy().mean())
+        return return_val
 
-        w = gaussian_window(data, centroid=[p[3], p[4]],
+    def dmodel(p, y, indices):
+        # account for centroid in w
+
+        w = gaussian_window(shape, centroid=[p[3], p[4]],
                             indices=[indices[0], indices[1]],
-                            background=p[0],
-                            sigma2=p[2])#np.square(p[2]) / (8 * np.log(2)))
+                            sigma=SIGMA_WINDOW)
 
-        dmdp0 = (w * 1).flatten()
-        dmdp1 = (w * expterm).flatten()
-        dmdp2 = (w * expterm * p[1] * term * -1 / p[2]).flatten()
-        dmdp3 = (w * expterm * p[1] * (indices[0] - p[3]) / p[2]).flatten()
-        dmdp4 = (w * expterm * p[1] * (indices[1] - p[4]) / p[2]).flatten()
-        return [dmdp0, dmdp1, dmdp2, dmdp3, dmdp4]
+        chi = -0.5 / p[2] ** 2 * (np.square(indices[0] - p[3]) +
+                                  np.square(indices[1] - p[4]))
+        expchi = np.exp(chi)
+
+        dwdp3 = SIGMA_WINDOW ** -2 * (indices[0] - p[3])
+        dwdp4 = SIGMA_WINDOW ** -2 * (indices[1] - p[4])
+
+        dchidp2 = -2 * p[2] ** -1 * chi
+        dchidp3 = p[2] ** -2 * (indices[0] - p[3])
+        dchidp4 = p[2] ** -2 * (indices[1] - p[4])
+
+
+        dmodeldp0 = (w * 1).flatten()
+        dmodeldp1 = (w * expchi).flatten()
+        dmodeldp2 = (w * p[1] * expchi * dchidp2).flatten()
+        dmodeldp3 = ((p[0] + p[1] * expchi - y) * dwdp3 +
+                    p[1] * w * expchi * dchidp3).flatten()
+        dmodeldp4 = ((p[0] + p[1] * expchi - y) * dwdp4 +
+                    p[1] * w * expchi * dchidp4).flatten()
+
+        return [dmodeldp0, dmodeldp1, dmodeldp2, dmodeldp3, dmodeldp4]
+
 
     mindata = np.min(data)
+    databack = np.append(data[0, :], data[-1, :])
+    databack = np.append(databack, data[:, 0])
+    databack = np.append(databack, data[:, -1])
+    background = np.median(databack)
+    thresh = np.max(data - background) / 5.0
+    x0 = np.array([background, 2 * mindata, 1.0, centroid[0], centroid[1]])
     #popt, ier = \
     popt,cov,infodict,mesg,ier = \
-        leastsq(model, x0=[mindata, 2 * mindata, 1.,
-                           centroid[0], centroid[1]],
+        leastsq(model, x0=x0,
                        col_deriv=1,
                        Dfun=dmodel,
                        maxfev=35,
-                       xtol=1e-3,
-                       full_output=True)
+                       xtol=1e-5,
+                       full_output=True,
+                       args=(data, indices),
+                       diag=[1e-3, 1e-3, 10, 1, 1])
+    popt_fin = np.copy(popt)
     # print(popt)
     # print(ier)
     # correct fwhm with empirical correction
@@ -175,26 +219,39 @@ def fit_gaussian(data, indices=None):
     # TODO: implement backup method using old ways in case this one fails...
     # basically, if you hit the cap in function calls, just move on and
     # calculate the old-fashioned way:
+    failure = False
     if (ier > 4) + (not np.any(np.isfinite(popt))) + (np.any(popt < 0)):
-        databack = np.append(data[0, :], data[-1, :])
-        databack = np.append(databack, data[:, 0])
-        databack = np.append(databack, data[:, -1])
-        background = np.median(databack)
-        thresh = np.max(data - background) / 5.0
-        y, x, fwhm = windowed_centroid(data,
-                                       centroid=centroid,
-                                       indices=indices,
-                                       background=background,
-                                       thresh=thresh)
-        popt = [background, 2 * background,
-                np.square(fwhm) / (8 * np.log(2)), y, x]
+        failure = True
+        y, x = windowed_centroid(data,
+                                 centroid=centroid,
+                                 indices=indices,
+                                 sigma=SIGMA_WINDOW)
+        fwhm = FWHM(data, centroid=[y,x], indices=indices)
+        popt = np.array([background, 2 * background,
+                         fwhm / np.sqrt(8 * np.log(2)), y, x])
         # print('p prime')
         # print(popt)
+    if verbose:
+        fit_dict = dict(popt=popt,
+                        cov=cov,
+                        infodict=infodict,
+                        mesg=mesg,
+                        ier=ier,
+                        model=model,
+                        dmodel=dmodel,
+                        f=f,
+                        failure=failure,
+                        history=history,
+                        centroid=centroid,
+                        background=background,
+                        thresh=thresh,
+                        x0=x0,
+                        popt_fin=popt_fin)
+        return popt, fit_dict
+    else:
+        return popt
 
-
-    return popt
-
-def FWHM(data, centroid=None, indices=None, background=0, thresh=-1):
+def FWHM(data, centroid=None, indices=None):
     """Calculate the FWHM via least squares fit, weighted by (data value -
     background).
 
@@ -211,14 +268,6 @@ def FWHM(data, centroid=None, indices=None, background=0, thresh=-1):
         length 2 list of 2d arrays Y and X such that Y and X indicate the
         index values (ie indices[0][i,j] = i, indices[1][i,j] = j)
         Default is None; constructs the indices with each call.
-
-    background : float, optional
-        Background data value. This is subtracted out.
-        If not given, estimate by an annulus around the edge of the image.
-
-    thresh : float, optional
-        Threshold value in the data array for pixels to consider in this fit.
-        If no value is specified, then it is set to be max(data) / 5 .
 
     Returns
     -------
@@ -261,39 +310,21 @@ def FWHM(data, centroid=None, indices=None, background=0, thresh=-1):
         # else, centroids are listed (y, x)
         y, x = centroid
 
-    # also estimate background via annulus around edge
-    if background == 0:
-        databack = np.append(data[0, :], data[-1, :])
-        databack = np.append(databack, data[:, 0])
-        databack = np.append(databack, data[:, -1])
-        background = np.median(databack)
-
-    #print(background)
-
-    data_use = data - background
-
     # get x_i = r^2
     dx = X - x
     dy = Y - y
     d2 = dx * dx + dy * dy
 
-    # filter by threshold
-    if thresh == -1:
-        thresh = np.max(data - background) / 5.0
-    conds = (data_use > thresh)
-    d2 = d2[conds]
-    data_use = data_use[conds]
-
     ## if np.sum(conds_negative) != len(conds_negative):
     ##     print('Error in background calculation. Some points ended up' +
     ##           'negative!')
 
-    lpix = np.log(data_use)  # this is the y parameter
+    lpix = np.log(data)  # this is the y parameter
     # in sextractor, inverr2 = data**2, which is weird since the error should
     # go as err propto 1/sqrt(data), or in other words inverr2 = data. maybe
     # emanuel meant err as in var = std^2 instead of err as std... but then
     # this doesn't fit with the least squares regression.
-    inverr2 = data_use * data_use  # otherwise known as weight w
+    inverr2 = data * data  # otherwise known as weight w
 
     s = np.sum(inverr2)
     sx = np.sum(d2 * inverr2)
@@ -321,14 +352,14 @@ def FWHM(data, centroid=None, indices=None, background=0, thresh=-1):
     return fwhm
 
 
-def gaussian_window(data, centroid=None, indices=None, background=0,
-                    sigma2=None):
+def gaussian_window(shape, centroid=None, indices=None,
+                    sigma=SIGMA_WINDOW):
     """Calculate the gaussian window.
 
     Parameters
     ----------
-    data : array
-        2d image array
+    shape : tuple
+        Shape of the 2d image array
 
     centroid : list, optional
         A length 2 list with centroid[0] = y and centroid[1] = x.
@@ -339,13 +370,8 @@ def gaussian_window(data, centroid=None, indices=None, background=0,
         index values (ie indices[0][i,j] = i, indices[1][i,j] = j)
         Default is None; constructs the indices with each call.
 
-    background : float, optional
-        Background data value. This is subtracted out.
-        If not given, estimate by an annulus around the edge of the image.
-
-    sigma2 : float, optional
-        The size of the window.
-        If no value is specified, then find it yourself.
+    sigma : float, optional
+        The size of the window. Default is SIGMA_WINDOW.
 
     Returns
     -------
@@ -360,53 +386,33 @@ def gaussian_window(data, centroid=None, indices=None, background=0,
     """
 
     if not indices:
-        Y, X = np.indices(data.shape) + 0.5  # data is Y,X!!
+        Y, X = np.indices(shape) + 0.5  # data is Y,X!!
     else:
         Y, X = indices
-    centroid_guess = [data_shape_i / 2 for data_shape_i in data.shape]
-    if not sigma2:
-        fwhm = FWHM(data, centroid=centroid_guess, indices=indices,
-                    background=background)
-        sigma2 = np.square(fwhm) / (8 * np.log(2))
+    centroid_guess = [data_shape_i / 2 for data_shape_i in shape]
     if not centroid:
         y, x = centroid_guess
     else:
         y, x = centroid
 
-    ## # calculate centroids if not given
-    ## if not centroid:
-    ##     tot = data.sum()
-    ##     # get centroids
-    ##     x = np.sum(X * data) / tot
-    ##     y = np.sum(Y * data) / tot
-    ## else:
-    ##     # else, centroids are listed (y, x)
-    ##     y, x = centroid
-
-    ## # get the scale for the window
-    ## if not sigma2:
-    ##     d502, background = np.square(FWHM(data, centroid=[y, x], indices=[Y, X],
-    ##                           background=background, thresh=thresh))
-    ##     swin2 = d502 / (8 * np.log(2))
-    ##     sigma2 = swin2
     # make the window
     r2 = (X - x) ** 2 + (Y - y) ** 2
-    w = np.exp(-0.5 * r2 / sigma2)
+    w = np.exp(-0.5 * r2 / sigma ** 2)
 
     # TODO: the oversampling stuff from sextractor?
     # oversample some areas
-    WINPOS_NSIG = 4
-    raper = WINPOS_NSIG * np.sqrt(sigma2)
+    WINPOS_NSIG = 3
+    raper = WINPOS_NSIG * sigma
     ## WINPOS_OVERSAMP = 3
     ## scaley = scalex = 1.0 / WINPOS_OVERSAMP
 
-    rintlim = raper - 0.75
-    if rintlim < 0:
-        rintlim2 = 0
-    else:
-        rintlim2 = rintlim ** 2
-    rextlim2 = (raper + 0.75) ** 2
-    locarea = np.zeros(w.shape)
+    ## rintlim = raper - 0.75
+    ## if rintlim < 0:
+    ##     rintlim2 = 0
+    ## else:
+    ##     rintlim2 = rintlim ** 2
+    ## rextlim2 = (raper + 0.75) ** 2
+    ## locarea = np.zeros(w.shape)
 
     # if you are outside the window, set weight to zero
     xmin = x - raper
@@ -419,8 +425,7 @@ def gaussian_window(data, centroid=None, indices=None, background=0,
     return w
 
 
-def windowed_centroid(data, centroid=None, indices=None, background=0,
-                      thresh=-1):
+def windowed_centroid(data, centroid=None, indices=None, sigma=SIGMA_WINDOW):
     """calculate windowed centroid ala sextractor WIN parameter with iterative
     fit
 
@@ -438,13 +443,8 @@ def windowed_centroid(data, centroid=None, indices=None, background=0,
         index values (ie indices[0][i,j] = i, indices[1][i,j] = j)
         Default is None; constructs the indices with each call.
 
-    background : float, optional
-        Background data value. This is subtracted out.
-        If not given, estimate by an annulus around the edge of the image.
-
-    thresh : float, optional
-        Threshold value in the data array for pixels to consider in this fit.
-        If no value is specified, then it is set to be max(data) / 5 .
+    sigma : float, optional
+        Size of the window used. Default is SIGMA_WINDOW
 
     Returns
     -------
@@ -473,7 +473,7 @@ def windowed_centroid(data, centroid=None, indices=None, background=0,
         Y, X = indices
     # calculate centroids if not given
     if not centroid:
-        tot = data.sum()
+        tot = np.sum(data)
         # get centroids
         x = np.sum(X * data) / tot
         y = np.sum(Y * data) / tot
@@ -488,34 +488,20 @@ def windowed_centroid(data, centroid=None, indices=None, background=0,
     i = 0
     epsilon = 1e5
 
-
-    d502 = np.square(FWHM(data, centroid=[y, x], indices=[Y, X],
-                          background=background, thresh=thresh))
-    sigma2 = d502 / (8 * np.log(2))
-    w = gaussian_window(data, centroid=[y, x], indices=[Y, X],
-                        background=background,
-                        sigma2=sigma2)
+    w = gaussian_window(data.shape, centroid=[y, x], indices=[Y, X],
+                        sigma=sigma)
 
     while (i < maxiter) * (epsilon > minepsilon):
         tot = np.sum(w * data)
         xp = x + 2 * np.sum(w * data * (X - x)) / tot
         yp = y + 2 * np.sum(w * data * (Y - y)) / tot
 
-        epsilon = np.sqrt((np.square(xp - x) + np.square(yp - y)) / sigma2)
+        epsilon = np.sqrt((np.square(xp - x) + np.square(yp - y))) / sigma
         i = i + 1
         x, y = xp, yp
 
         # iterate window
-        # update sigma?
-        ## sigma2 = np.square(FWHM(data, centroid=[y, x], indices=[Y, X],
-        ##                         background=background, thresh=thresh))
-        ## sigma2 /= (8 * np.log(2))
-        w = gaussian_window(data, centroid=[y, x], indices=[Y, X],
-                            background=background,
-                            sigma2=sigma2)
+        w = gaussian_window(data.shape, centroid=[y, x], indices=[Y, X],
+                            sigma=sigma)
 
-    #fwhm = np.sqrt(sigma2 * 8 * np.log(2))
-    # make final fwhm calculation
-    fwhm = FWHM(data, centroid=[y, x], indices=[Y, X],
-                background=background, thresh=thresh)
-    return y, x, fwhm
+    return y, x
