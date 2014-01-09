@@ -505,3 +505,46 @@ def windowed_centroid(data, centroid=None, indices=None, sigma=SIGMA_WINDOW):
                             sigma=sigma)
 
     return y, x
+
+def adaptive_moments(data, centroid=None, indices=None):
+    """find adaptive first and second moments
+
+    Parameters
+    ----------
+    data : array
+        2d image array
+
+    centroid : list, optional
+        A length 2 list with centroid[0] = y and centroid[1] = x.
+        This is an initial guess.
+
+    indices : length 2 list, optional
+        length 2 list of 2d arrays Y and X such that Y and X indicate the
+        index values (ie indices[0][i,j] = i, indices[1][i,j] = j)
+        Default is None; constructs the indices with each call.
+
+    Returns
+    -------
+
+    Notes
+    -----
+    See Hirata et al 2004
+
+    """
+
+    # get unwindowed moments and indices
+    if not indices:
+        Y, X = np.indices(data.shape) + 0.5  # data is Y,X!!
+    else:
+        Y, X = indices
+    # calculate centroids if not given
+    if not centroid:
+        tot = np.sum(data)
+        # get centroids
+        x = np.sum(X * data) / tot
+        y = np.sum(Y * data) / tot
+    else:
+        # else, centroids are listed (y, x)
+        y, x = centroid
+
+    return

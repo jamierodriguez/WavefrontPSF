@@ -54,7 +54,7 @@ class FocalPlane(FocalPlaneShell):
 
     """
 
-    def __init__(self, image_data,
+    def __init__(self,
                  list_catalogs, list_fits_extension, list_chip,
                  max_samples_box=300, boxdiv=0,
                  path_mesh='/u/ec/roodman/Astrophysics/Donuts/Meshes/',
