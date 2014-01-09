@@ -129,7 +129,7 @@ for i in xrange(1, 63):
                     path_mesh=args_dict['path_mesh'],
                     mesh_name=args_dict['mesh_name'],
                     boxdiv=0,
-                    max_samples_box=200,
+                    max_samples_box=20000,
                     conds=args_dict['conds'],
                     )
 

@@ -44,7 +44,7 @@ parser.add_argument("-e",
                     "[12,34] for looking at expids 12 and 34.")
 parser.add_argument("-i",
                     dest="input_directory",
-                    default="['/nfs/slac/g/ki/ki18/cpd/focus/november_8/']",
+                    default="['/nfs/slac/g/ki/ki18/cpd/focus/january_06/']",
                     help="in what directories are my results located?" +
                     " Format is ['/path/to/directory1/', " +
                     "'/path/to/directory2/']")
@@ -53,7 +53,7 @@ parser.add_argument("-m",
                     help="Where are the minuit results located?")
 parser.add_argument("-o",
                     dest="output_directory",
-                    default="/nfs/slac/g/ki/ki18/cpd/focus/november_8/",
+                    default="/nfs/slac/g/ki/ki18/cpd/focus/january_06/",
                     help="where will the outputs go (modulo image number)")
 options = parser.parse_args()
 
