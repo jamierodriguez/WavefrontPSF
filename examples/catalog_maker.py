@@ -75,7 +75,7 @@ parser.add_argument("-s",
                     help="Stamp size")
 parser.add_argument("-f",
                     dest="conds",
-                    default='eli',  # eli's filterings
+                    default='default',
                     help="String for filter conditions")
 options = parser.parse_args()
 

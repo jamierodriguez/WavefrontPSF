@@ -82,7 +82,7 @@ parser.add_argument("-d",
                     + "apparently not thread safe. oh well.")
 parser.add_argument("-f",
                     dest="conds",
-                    default='eli',  # eli's filterings
+                    default='default',
                     help="String for filter conditions")
 parser.add_argument("-cpd",
                     dest="cpd",

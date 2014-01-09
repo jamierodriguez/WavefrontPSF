@@ -59,7 +59,7 @@ for image_number in expids:
                '-b', str(1),  # boxdiv
                '-a', str(0),  # subav
                '-d', str(0),  # seed
-               '-f', 'eli',  # filtering for conds
+               '-f', 'default',  # filtering for conds
                '-cpd', str(1),  # use cpd or sextractor
                '-e', '{0}'.format(image_number),  # expid
                ]

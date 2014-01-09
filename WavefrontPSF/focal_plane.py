@@ -78,8 +78,7 @@ class FocalPlane(FocalPlaneShell):
         self.boxdiv = boxdiv
         self.max_samples_box = max_samples_box
 
-        self.x_coord_name = 'XWIN_IMAGE'
-        self.y_coord_name = 'YWIN_IMAGE'
+        self.coord_name = 'WIN_IMAGE'
 
         # generate recdata
         recdata_unfiltered, \
@@ -233,7 +232,7 @@ class FocalPlane(FocalPlaneShell):
         pixel_border = 30
 
         # now do the star selection
-        if conds == 'default':
+        if conds == 'old':
             # set the fwhm from the image recdata; account for mask
             if not np.ma.getmaskarray(self.image_data['fwhm']):
                 fwhm = self.image_data['fwhm'][0]
@@ -249,26 +248,28 @@ class FocalPlane(FocalPlaneShell):
                 (recdata['FWHM_WORLD'] > 0) *
                 (recdata['FWHM_WORLD'] * 60 ** 2 < 2 * fwhm) *
                 (recdata['FLAGS'] <= 3) *
-                (recdata[self.x_coord_name] > pixel_border) *
-                (recdata[self.x_coord_name] < 2048 - pixel_border) *
-                (recdata[self.y_coord_name] > pixel_border) *
-                (recdata[self.y_coord_name] < 4096 - pixel_border))
+                (recdata['X' + self.coord_name] > pixel_border) *
+                (recdata['X' + self.coord_name] < 2048 - pixel_border) *
+                (recdata['Y' + self.coord_name] > pixel_border) *
+                (recdata['Y' + self.coord_name] < 4096 - pixel_border))
         elif conds == 'minimal':
             # eliminate base on flags and coordnames only
             conds = (
                 (recdata['FLAGS'] <= 3) *
-                (recdata[self.x_coord_name] > pixel_border) *
-                (recdata[self.x_coord_name] < 2048 - pixel_border) *
-                (recdata[self.y_coord_name] > pixel_border) *
-                (recdata[self.y_coord_name] < 4096 - pixel_border))
+                (recdata['X' + self.coord_name] > pixel_border) *
+                (recdata['X' + self.coord_name] < 2048 - pixel_border) *
+                (recdata['Y' + self.coord_name] > pixel_border) *
+                (recdata['Y' + self.coord_name] < 4096 - pixel_border))
         elif conds == 'all':
             # take everything
             conds = np.array([True] * recdata.size)
-        elif conds == 'eli':
+        elif conds == 'default':
             """
             A set of cuts taken from:
             https://cdcvs.fnal.gov/redmine/projects/des-sci-verification/wiki/A_Modest_Proposal_for_Preliminary_StarGalaxy_Separation
             (FLAGS_I <=3) AND (((CLASS_STAR_I > 0.3) AND (MAG_AUTO_I < 18.0) AND (MAG_PSF_I < 30.0)) OR (((SPREAD_MODEL_I + 3*SPREADERR_MODEL_I) < 0.003) AND ((SPREAD_MODEL_I +3*SPREADERR_MODEL_I) > -0.003)))
+
+            throw in an MAD cuts
             """
             conds = (
                 ((recdata['FLAGS'] <= 3)) *
@@ -282,43 +283,27 @@ class FocalPlane(FocalPlaneShell):
                    3 * recdata['SPREADERR_MODEL'] > -0.003)
                  )
                 ) *
-                ((recdata[self.x_coord_name] > pixel_border) *
-                 (recdata[self.x_coord_name] < 2048 - pixel_border) *
-                 (recdata[self.y_coord_name] > pixel_border) *
-                 (recdata[self.y_coord_name] < 4096 - pixel_border)
+                ((recdata['X' + self.coord_name] > pixel_border) *
+                 (recdata['X' + self.coord_name] < 2048 - pixel_border) *
+                 (recdata['Y' + self.coord_name] > pixel_border) *
+                 (recdata['Y' + self.coord_name] < 4096 - pixel_border)
                 )
                 )
+            mad_keys = ['FWHM_WORLD',
+                        'Y2' + self.coord_name,
+                        'X2' + self.coord_name,
+                        'XY' + self.coord_name]
+            for mad_key in mad_keys:
+                a = recdata[mad_key]
+                d = np.median(a)
+                c = 0.6745  # constant to convert from MAD to std
+                mad = np.median(np.fabs(a - d) / c)
+                conds_mad = (a < d + 3 * mad) * (a > d - 3 * mad)
+                conds *= conds_mad
         else:
             # evaluate the string
             conds = eval(conds)
 
-        ## recdata_use = recdata[conds]
-        ## extension_use = extension[conds]
-        ## if (recdata_use.size > max_samples) * (max_samples > 0):
-        ##     chooselist = np.arange(recdata_use.size)
-        ##     np.random.shuffle(chooselist)
-        ##     recdata_use = recdata_use[chooselist[:max_samples]]
-        ##     extension_use = extension_use[chooselist[:max_samples]]
-
-        ## coords = np.array([self.decaminfo.getPosition(
-        ##     extension_use[i],
-        ##     recdata_use[self.x_coord_name][i],
-        ##     recdata_use[self.y_coord_name][i])
-        ##                     for i in xrange(len(extension_use))])
-        ## extNumbers = [self.decaminfo.infoDict[i]['CCDNUM']
-        ##               for i in extension_use]
-
-        ## coords_final = np.append(coords.T, [extNumbers], axis=0).T
-
-        ## comparison_dict = dict(
-        ##         x=coords_final[:,0], y=coords_final[:,1],
-        ##         x2=recdata_use['X2WIN_IMAGE'].astype(np.float64),
-        ##         y2=recdata_use['Y2WIN_IMAGE'].astype(np.float64),
-        ##         xy=recdata_use['XYWIN_IMAGE'].astype(np.float64),
-        ##         fwhm=recdata_use['FWHM_WORLD'].astype(np.float64) * 3600,)
-
-
-        ## return comparison_dict, recdata_use, extension_use, coords_final
         return conds
 
     def filter_number_in_box(
@@ -367,10 +352,14 @@ class FocalPlane(FocalPlaneShell):
                 for y in xrange(len(box[1]) - 1):
                     conds = (
                             (extension_return == extname) *
-                            (recdata_return['XWIN_IMAGE'] > box[0][x]) *
-                            (recdata_return['XWIN_IMAGE'] < box[0][x+1]) *
-                            (recdata_return['YWIN_IMAGE'] > box[1][y]) *
-                            (recdata_return['YWIN_IMAGE'] < box[1][y+1])
+                            (recdata_return['X' + self.coord_name] >
+                                box[0][x]) *
+                            (recdata_return['X' + self.coord_name] <
+                                box[0][x+1]) *
+                            (recdata_return['Y' + self.coord_name] >
+                                box[1][y]) *
+                            (recdata_return['Y' + self.coord_name] <
+                                box[1][y+1])
                             )
 
                     # TODO: I really should never have to actually do the
@@ -378,12 +367,12 @@ class FocalPlane(FocalPlaneShell):
 
                     # find out which ones are also nans etc
                     conds_finite = (
-                            np.isfinite(recdata_return['Y2WIN_IMAGE']) *
-                            np.isfinite(recdata_return['X2WIN_IMAGE']) *
-                            np.isfinite(recdata_return['XYWIN_IMAGE']) *
-                            (recdata_return['Y2WIN_IMAGE'] > 0) *
-                            (recdata_return['X2WIN_IMAGE'] > 0)
-                            )
+                        np.isfinite(recdata_return['Y2' + self.coord_name]) *
+                        np.isfinite(recdata_return['X2' + self.coord_name]) *
+                        np.isfinite(recdata_return['XY' + self.coord_name]) *
+                        (recdata_return['Y2' + self.coord_name] > 0) *
+                        (recdata_return['X2' + self.coord_name] > 0)
+                        )
                     # conds_kill = inside chip AND not finite
                     conds_kill = conds * ~conds_finite
 
@@ -406,7 +395,10 @@ class FocalPlane(FocalPlaneShell):
                             # in effect, conds_okay now becomes the opposite of
                             # those that will be excluded via max_samples
 
-                    conds_final = ~(conds_okay + conds_kill)
+                        conds_final = ~(conds_okay + conds_kill)
+                    else:
+                        conds_final = ~conds_kill
+
                     # select the False's
                     recdata_return = recdata_return[conds_final]
                     extension_return = extension_return[conds_final]
@@ -440,8 +432,8 @@ class FocalPlane(FocalPlaneShell):
 
         coords = np.array([self.decaminfo.getPosition(
             extension[i],
-            recdata[self.x_coord_name][i],
-            recdata[self.y_coord_name][i])
+            recdata['X' + self.coord_name][i],
+            recdata['Y' + self.coord_name][i])
                             for i in xrange(len(extension))])
         extNumbers = [self.decaminfo.infoDict[i]['CCDNUM']
                       for i in extension]
@@ -449,9 +441,9 @@ class FocalPlane(FocalPlaneShell):
 
         data = dict(
                 x=coords[:,0], y=coords[:,1],
-                x2=recdata['X2WIN_IMAGE'].astype(np.float64),
-                y2=recdata['Y2WIN_IMAGE'].astype(np.float64),
-                xy=recdata['XYWIN_IMAGE'].astype(np.float64),
+                x2=recdata['X2' + self.coord_name].astype(np.float64),
+                y2=recdata['Y2' + self.coord_name].astype(np.float64),
+                xy=recdata['XY' + self.coord_name].astype(np.float64),
                 fwhm=recdata['FWHM_WORLD'].astype(np.float64) * 3600,)
 
         return data, coords
