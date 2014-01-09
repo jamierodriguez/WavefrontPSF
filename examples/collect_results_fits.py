@@ -59,7 +59,7 @@ args_dict['input_directory'] = eval(args_dict['input_directory'])
 if args_dict['boxdiv'] == 0:
     number_entries = 61
 else:
-    number_entries = 2 ** (2 * args_dict['boxdiv'] - 1)
+    number_entries = 61 * 2 ** (2 * args_dict['boxdiv'] - 1)
 
 time = asctime()
 
