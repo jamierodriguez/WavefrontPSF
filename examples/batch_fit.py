@@ -303,14 +303,14 @@ np.save(
 
 # save the outputted focal plane
 moments_results = FP.plane(in_dict, coords=coords, order_dict=order_dict)
-# don't forget to add common mode
-e1_moments += in_dict['e1']
-e2_moments += in_dict['e2']
 # convert moments dict to ellipticities
 e0_moments, e0prime_moments, e1_moments, e2_moments = \
     second_moment_to_ellipticity(moments_results['x2'],
                                  moments_results['y2'],
                                  moments_results['xy'])
+# don't forget to add common mode
+e1_moments += in_dict['e1']
+e2_moments += in_dict['e2']
 moments_results.update(dict(
     e0=e0_moments, e0prime=e0prime_moments,
     e1=e1_moments, e2=e2_moments))

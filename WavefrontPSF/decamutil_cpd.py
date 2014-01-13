@@ -152,7 +152,7 @@ class decaminfo(object):
 
         # determine extname
         for extname in self.infoDict:
-            bounds = self.getBounds(extname)
+            bounds = self.getBounds(extname, boxdiv=0)
             # bounds are [[xmin, xmax], [ymin, ymax]]
             inside = np.multiply(*[(coord_mm[i] > bounds[i][0]) *
                                    (coord_mm[i] < bounds[i][1])

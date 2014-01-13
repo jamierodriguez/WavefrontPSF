@@ -356,6 +356,8 @@ class FocalPlane(FocalPlaneShell):
     def create_data(self, recdata, extension):
         """Create the data attribute
 
+        TODO: add order_dict param
+
         Parameters
         ----------
         recdata : recarray
