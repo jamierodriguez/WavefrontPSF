@@ -339,9 +339,11 @@ class FocalPlaneShell(Wavefront):
             thresholds = [np.sqrt(self.number_electrons)] * N
         else:
             thresholds = [0] * N
+        # make stamps
+        stamps = self.stamp_factory(zernikes, rzeros, coords)
         # make moments
-        moments = self.moment_dictionary(zernikes,
-                                         coords, rzeros,
+        moments = self.moment_dictionary(stamps,
+                                         coords,
                                          backgrounds=backgrounds,
                                          thresholds=thresholds,
                                          verbosity=self.verbosity,
@@ -506,7 +508,9 @@ class FocalPlaneShell(Wavefront):
             # convert pixel to be in center of 16 x 16 box with
             # x -> p with int(p) = 7
             # so p = x - int(x) + 7
-            coord = pixel[1] - int(pixel[1]) + 7
+            # the following is 7 for nPixels = 16
+            pixel_offset = int(self.input_dict['nPixels'] / 2 - 1)
+            coord = pixel[1] - int(pixel[1]) + pixel_offset
 
             # in order to incorporate z7 correction, need to calculate z7
             if z_length > 6:
@@ -514,7 +518,9 @@ class FocalPlaneShell(Wavefront):
             else:
                 z7 = 0
 
-            z3 = (coord - 7.87479) / -0.56477 - 2 * z7 + \
+            # TODO:
+            # this equation has only been fitted for 16 x 16
+            z3 = (coord - 0.87479 - pixel_offset) / -0.56477 - 2 * z7 + \
                 zdelta[2] + coordy * zthetax[2] + coordx * zthetay[2]
 
             return z3
@@ -527,7 +533,8 @@ class FocalPlaneShell(Wavefront):
             # convert pixel to be in center of 16 x 16 box with
             # x -> p with int(p) = 7
             # so p = x - int(x) + 7
-            coord = pixel[0] - int(pixel[0]) + 7
+            pixel_offset = int(self.input_dict['nPixels'] / 2 - 1)
+            coord = pixel[0] - int(pixel[0]) + pixel_offset
 
             # in order to incorporate z8 correction, need to calculate z8
             if z_length > 7:
@@ -535,7 +542,9 @@ class FocalPlaneShell(Wavefront):
             else:
                 z8 = 0
 
-            z2 = (coord - 7.87479) / -0.56477 - 2 * z8 + \
+            # TODO:
+            # this equation has only been fitted for 16 x 16;
+            z2 = (coord - 0.87479 - pixel_offset) / -0.56477 - 2 * z8 + \
                 zdelta[1] + coordy * zthetax[1] + coordx * zthetay[1]
 
             return z2

@@ -31,7 +31,7 @@ command = ['python', 'collect_results.py',
            '-e', str(numbers),  # expid
            '-o', output_directory + 'results/',  # output_directory
            ]
-#print_command(command)
+print_command(command)
 call(command)
 
 command = ['python', 'collect_results_fits.py',
@@ -40,5 +40,5 @@ command = ['python', 'collect_results_fits.py',
            '-b', str(1),  # boxdiv
            '-e', str(numbers),  # expid
            ]
-#print_command(command)
+print_command(command)
 call(command)

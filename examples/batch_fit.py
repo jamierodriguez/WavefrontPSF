@@ -6,6 +6,7 @@ Description: If you submit this script to the batch queue, you will get fits
 for a given image.
 
 TODO: fix nan's!
+TODO: take out limits to my fits? it slows things down and also puts roundoff problems in?
 """
 
 from __future__ import print_function, division

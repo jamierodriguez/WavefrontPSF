@@ -78,6 +78,7 @@ class Wavefront(object):
         in order to save as a pickleable object, I need to set make_donut
         (which is a pyswig object) to none. So when you reload this object, it
         can have everything else /except/ the make_donut property.
+
         """
 
         if not path.exists(path.dirname(out_path)):
@@ -94,6 +95,7 @@ class Wavefront(object):
         Notes
         -----
         No input or return.
+
         """
         self.make_donut = makedonut(**self.input_dict)
         return
@@ -130,6 +132,44 @@ class Wavefront(object):
                                      yDECam=y_decam).astype(np.float64)
 
         return stamp
+
+    def stamp_factory(self, zernikes, rzeros, coords):
+        """Make lots of stamps
+
+        Parameters
+        ----------
+        zernikes : list of lists
+            Each entry in the list corresponds to a coordinate point and
+            contains some number of zernike polynomial coefficients to be used
+            in generating the stamp.
+
+        coords : list of lists
+            Each entry has the coordinates in [X mm, Y mm, Sensor], with the x
+            and y in aaron's coordinate convention.
+
+        rzeros : list of floats
+            Kolmogorov spectrum parameter. Basically, larger means smaller PSF.
+
+        Returns
+        -------
+        stamps : list of array
+            The resultant stamps
+
+        """
+        stamps = []
+        for i in range(len(coords)):
+            coord = coords[i]
+            zernike = zernikes[i]
+            rzero = rzeros[i]
+            # make stamp
+            stamp_i = self.stamp(zernike=zernike,
+                                 rzero=rzero,
+                                 coord=coord[:2])
+            stamps.append(stamp_i)
+
+        stamps = np.array(stamps)
+
+        return stamps
 
     def moments(self, stamp, indices=None, windowed=True,
                 background=0, threshold=-1e9,
@@ -191,14 +231,14 @@ class Wavefront(object):
         centroid_guess = [self.input_dict["nPixels"] / 2] * 2
         y, x = windowed_centroid(stamp, centroid=centroid_guess,
                                  indices=indices)
-        fwhm = FWHM(stamp, centroid=[y, x], indices=indices)
-
         # get weight for other windowed moments
         if not windowed:
             w = 1
         else:
             w = gaussian_window(stamp, centroid=[y, x], indices=indices)
         stamp = w * stamp
+
+        fwhm = FWHM(stamp, centroid=[y, x], indices=indices)
 
         return_dict = dict(x=x, y=y, fwhm=fwhm)
         # now go through moment_dict and create the other moments
@@ -211,7 +251,7 @@ class Wavefront(object):
         return return_dict
 
     def moment_dictionary(
-            self, zernikes, coords, rzeros,
+            self, stamps, coords,
             backgrounds=[], thresholds=[],
             verbosity=[], windowed=True,
             order_dict={'x2': {'p': 2, 'q': 0},
@@ -222,17 +262,12 @@ class Wavefront(object):
 
         Parameters
         ----------
-        zernikes : list of lists
-            Each entry in the list corresponds to a coordinate point and
-            contains some number of zernike polynomial coefficients to be used
-            in generating the stamp.
+        stamps : list of arrays
+            All the stamps we shall analyze
 
         coords : list of lists
             Each entry has the coordinates in [X mm, Y mm, Sensor], with the x
             and y in aaron's coordinate convention.
-
-        rzeros : list of floats
-            Kolmogorov spectrum parameter. Basically, larger means smaller PSF.
 
         threshhold : list of floats, optional
             Threshold value in the data array for pixels to consider in this
@@ -241,8 +276,6 @@ class Wavefront(object):
         background : list of floats, optional
             Background level to be subtracted out. If not specified, set to
             zero.
-
-
 
         verbosity : list, optional
             If 'stamp' is in verbosity, then the stamps are also saved.
@@ -284,31 +317,26 @@ class Wavefront(object):
 
         for i in range(len(coords)):
             coord = coords[i]
-            zernike = zernikes[i]
             background = backgrounds[i]
             threshold = thresholds[i]
-            rzero = rzeros[i]
-            # make stamp
-            stamp_i = self.stamp(zernike=zernike,
-                                 rzero=rzero,
-                                 coord=coord[:2])
+            stamp = stamps[i]
             # get moments
             moment_dict = self.moments(
-                stamp_i, indices=[y_indices, x_indices],
+                stamp, indices=[y_indices, x_indices],
                 background=background, threshold=threshold,
                 windowed=windowed, order_dict=order_dict)
-            fwhm_i = moment_dict['fwhm']
+            fwhm = moment_dict['fwhm']
 
             # append to big list
             return_dict['x'].append(coord[0])
             return_dict['y'].append(coord[1])
 
             # append the fwhm
-            return_dict['fwhm'].append(fwhm_i * 0.27)
+            return_dict['fwhm'].append(fwhm * 0.27)
 
             # append the stamp if verbosity is high enough
             if 'stamp' in verbosity:
-                return_dict['stamp'].append(stamp_i)
+                return_dict['stamp'].append(stamp)
 
             # now append things from order_dict
             for order in order_dict.keys():

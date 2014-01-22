@@ -1,10 +1,22 @@
 from __future__ import print_function, division
 import numpy as np
 from scipy.optimize import leastsq
+from math import atan2, cos, sin, sqrt
 
 """
 8 Jan 2014: I have decided the window function will be a gaussian with sigma =
             5 pixels
+
+TODO: should I change that window size? How many sigma out should I go?
+      If I make it such that the window cuts off at exactly 32/2 pixels out,
+      how many sigma shoudl I make it?
+
+TODO: implement im3shape method for getting fwhm and moments
+    - radial profile
+    - fwhm
+    - weight method
+    - moments
+    - background levels and threshold?
 """
 
 SIGMA_WINDOW = 5.
@@ -52,7 +64,7 @@ def centroid(data, indices=None):
 
     return x, y
 
-def centered_moment(data, q=0, p=0, centroid=None, indices=None):
+def centered_moment(data, q=0, p=0, centroid=None, indices=None, amplitude=None):
     """Calculate the centered moment
     Mpq = sum(data * (X - x) ** p * (Y - y) ** q) / sum(data)
     where x and y are the centroid locations and X and Y are the indices of the
@@ -64,7 +76,7 @@ def centered_moment(data, q=0, p=0, centroid=None, indices=None):
         2d image array
 
     p, q : floats, optional
-        The moments we are interested in.
+        The moments we are interested in. p,q for x,y
         Default for each is 0. (should return close to zero)
 
     centroid : list, optional
@@ -75,6 +87,9 @@ def centered_moment(data, q=0, p=0, centroid=None, indices=None):
         length 2 list of 2d arrays Y and X such that Y and X indicate the
         index values (ie indices[0][i,j] = i, indices[1][i,j] = j)
         Default is None; constructs the indices with each call.
+
+    amplitude : float, optional
+        sum(data) (in case you are calculating this multiple times)
 
     Returns
     -------
@@ -99,7 +114,9 @@ def centered_moment(data, q=0, p=0, centroid=None, indices=None):
         x, y = centroid(data, indices=[Y, X])
     else:
         y, x = centroid
-    Mpq = np.sum(data * (X - x) ** p * (Y - y) ** q) / np.sum(data)
+    if not amplitude:
+        amplitude = np.sum(data)
+    Mpq = np.sum(data * (X - x) ** p * (Y - y) ** q) / amplitude
     return Mpq
 
 def fit_gaussian(data, indices=None, verbose=False):
@@ -344,12 +361,231 @@ def FWHM(data, centroid=None, indices=None):
     ## if fwhm > 0.5:
     ##     fwhm -= 1 / (4 * fwhm)
 
-    # check for nan's from pathological cases
-    if not np.isfinite(fwhm):
-        #print('Warning! non-fininite fwhm calculated!')
-        fwhm = 4.  # some number; any number!
+    ## # check for nan's from pathological cases
+    ## if not np.isfinite(fwhm):
+    ##     #print('Warning! non-fininite fwhm calculated!')
+    ##     fwhm = 4.  # some number; any number!
 
     return fwhm
+
+def adaptive_second_moment_window(y, x,
+                                  max_moment_nsig2=25.,
+                                  My=8., Mx=8.,
+                                  Myy=9., Mxy=0., Mxx=9.):
+    """Calculate adaptive second moment window
+
+    Parameters
+    ----------
+    x, y : array
+        Array of x and y coordinate values.
+
+    max_moment_nsig2 : float, optional
+        Maximal radius for the window squared. Defaults to 25.
+
+    Mx, My : float, optional
+        Location of centroid of image.
+
+    Mxx, Mxy, Myy : float, optional
+        Second moment matrix used for window.
+
+    Returns
+    -------
+    window : array
+        Window of x.shape shape.
+
+    """
+
+    x_Mx = x - Mx
+    y_My = y - My
+
+    detM = Mxx * Myy - Mxy * Mxy
+    Minv_xx = Myy / detM
+    Minv_xy = -Mxy / detM
+    Minv_yy = Mxx / detM
+
+    rho2 = Minv_xx * np.square(x_Mx) + \
+        2 * Minv_xy * x_Mx * y_My + \
+        Minv_yy * np.square(y_My)
+
+    window = np.where(rho2 <= max_moment_nsig2, np.exp(-0.5 * rho2), 0)
+
+    return window
+
+def adaptive_moments(data):
+    """Calculate the adaptive moments ala Hirata et al 2004
+
+    Parameters
+    ----------
+    data : array
+        The image.
+
+    Returns
+    -------
+    Mx, My : float
+        Centroids
+
+    Mxx, Mxy, Myy : float
+        Second moment matrix
+
+    amplitude : float
+        Total windowed intensity sum(w data)
+
+    window : array
+        Window used for calculations.
+
+
+    Not Implemented
+    ---------------
+
+    rho4 : float
+        Radial fourth moment rho4 = 2(1 + a_4) which corresponds to the
+        nongaussianity, such that a_4 approx 0.046 for kolmogorov turbulance.
+
+    ## # Now that we have converged, find the final moments
+    ## end_order_dict = {
+    ##         'Mxxx': {'p':3, 'q':0},
+    ##         'Mxxy': {'p':2, 'q':1},
+    ##         'Mxyy': {'p':1, 'q':2},
+    ##         'Myyy': {'p':0, 'q':3},
+    ##         'Mxxxx': {'p':4, 'q':0},
+    ##         'Mxxxy': {'p':3, 'q':1},
+    ##         'Mxxyy': {'p':2, 'q':2},
+    ##         'Mxyyy': {'p':1, 'q':3},
+    ##         'Myyyy': {'p':0, 'q':4},
+    ##         }
+    ## # Convert 4th moments into rho4 Parameter
+
+    Notes
+    -----
+    rho2 = (r-r0)Minv(r-r0)
+    so rho4 = (x-x0)^4 Minv_xx^2 +
+              (x-x0)^3 (y-y0) 4 Minv_xx Minv_xy +
+              (x-x0)^2 (y-y0)^2 (2 Minv_xx Minv_yy + 4 Minv_xy^2)
+              + obvious perms
+
+
+    """
+    shape = data.shape
+
+    Y, X = np.indices(shape) + 0.5  # data is Y,X ; 0.5 ?
+
+    # initial guesses
+    Mx, My = np.array(shape) / 2
+    Mxx, Mxy, Myy = 9., 0., 9.
+
+    convergence_factor = 1.0
+    bound_correct_wt = 0.25  # Maximum shift in centroids and sigma between
+                             # iterations for adaptive moments.
+    max_moment_nsig2 = 25.
+    epsilon = 1e-6
+    num_iter = 0
+    max_num_iter = 1000
+
+    # Iterate until we converge
+    while (convergence_factor > epsilon) * (num_iter < max_num_iter):
+
+        window = adaptive_second_moment_window(
+                Y, X,
+                max_moment_nsig2=max_moment_nsig2,
+                Mx=Mx, My=My,
+                Mxx=Mxx, Mxy=Mxy, Myy=Myy
+                )
+        amplitude = np.sum(window * data)
+
+        # Compute configuration of the weight function
+        two_psi = atan2(2 * Mxy, Mxx - Myy)
+        semi_a2 = 0.5 * ((Mxx + Myy) + (Mxx - Myy) * cos(two_psi)) + \
+                         Mxy * sin(two_psi)
+        semi_b2 = Mxx + Myy - semi_a2
+
+        if semi_b2 <= 0:
+            print("Error: non positive-definite weight in adaptive_moments.\n")
+
+        shiftscale = sqrt(semi_b2)
+        if num_iter == 0:
+            shiftscale0 = shiftscale
+
+        # Compute moments
+        Cx = centered_moment(
+                window * data,
+                centroid = [My, Mx],
+                indices=[Y, X],
+                amplitude=amplitude,
+                p=1, q=0)
+        Cy = centered_moment(
+                window * data,
+                centroid = [My, Mx],
+                indices=[Y, X],
+                amplitude=amplitude,
+                p=0, q=1)
+        Cxx = centered_moment(
+                window * data,
+                centroid = [My, Mx],
+                indices=[Y, X],
+                amplitude=amplitude,
+                p=2, q=0)
+        Cxy = centered_moment(
+                window * data,
+                centroid = [My, Mx],
+                indices=[Y, X],
+                amplitude=amplitude,
+                p=1, q=1)
+        Cyy = centered_moment(
+                window * data,
+                centroid = [My, Mx],
+                indices=[Y, X],
+                amplitude=amplitude,
+                p=0, q=2)
+
+        # Now compute changes to x0
+        dx = 2. * Cx / (shiftscale)
+        dy = 2. * Cy / (shiftscale)
+        dxx = 4. * (Cxx - 0.5 * Mxx) / semi_b2
+        dxy = 4. * (Cxy - 0.5 * Mxy) / semi_b2
+        dyy = 4. * (Cyy - 0.5 * Myy) / semi_b2
+
+        # Bound correction tests
+        if (dx     >  bound_correct_wt): dx     =  bound_correct_wt
+        if (dx     < -bound_correct_wt): dx     = -bound_correct_wt
+        if (dy     >  bound_correct_wt): dy     =  bound_correct_wt
+        if (dy     < -bound_correct_wt): dy     = -bound_correct_wt
+        if (dxx    >  bound_correct_wt): dxx    =  bound_correct_wt
+        if (dxx    < -bound_correct_wt): dxx    = -bound_correct_wt
+        if (dxy    >  bound_correct_wt): dxy    =  bound_correct_wt
+        if (dxy    < -bound_correct_wt): dxy    = -bound_correct_wt
+        if (dyy    >  bound_correct_wt): dyy    =  bound_correct_wt
+        if (dyy    < -bound_correct_wt): dyy    = -bound_correct_wt
+
+        # Convergence tests
+        convergence_factor = abs(dx) ** 2
+        if (abs(dy) > convergence_factor):
+            convergence_factor = abs(dy) ** 2
+        if (abs(dxx) > convergence_factor):
+            convergence_factor = abs(dxx)
+        if (abs(dxy) > convergence_factor):
+            convergence_factor = abs(dxy)
+        if (abs(dyy) > convergence_factor):
+            convergence_factor = abs(dyy)
+        convergence_factor = sqrt(convergence_factor)
+        if (shiftscale < shiftscale0):
+            convergence_factor *= shiftscale0 / shiftscale
+
+        # Update moments
+        Mx += dx * shiftscale
+        My += dy * shiftscale
+        Mxx += dxx * semi_b2
+        Mxy += dxy * semi_b2
+        Myy += dyy * semi_b2
+
+        num_iter += 1
+
+    if num_iter > max_num_iter:
+        print('Warning, maximum number of iterations', max_num_iter,
+              'reached with at', num_iter,
+              'with convergence factor', convergence_factor,
+              'less than epsilon', epsilon)
+
+    return Mx, My, Mxx, Mxy, Myy, amplitude, window
 
 
 def gaussian_window(shape, centroid=None, indices=None,

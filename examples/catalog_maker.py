@@ -240,7 +240,7 @@ for i in xrange(1, 63):
                            unit='count')
         })
 
-    Y, X = np.indices((16, 16)) + 0.5
+    Y, X = np.indices((nPixels, nPixels)) + 0.5
 
     # go through each entry and make stamps and other parameters
     for recdata in FP.recdata:
