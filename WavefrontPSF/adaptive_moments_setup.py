@@ -7,7 +7,7 @@ from numpy import get_include
 compile by:
     python adaptive_moments_setup.py build_ext --inplace
 '''
-
+print('python adaptive_moments_setup.py build_ext --inplace')
 setup(
     cmdclass = {'build_ext': build_ext},
     ext_modules = [Extension("adaptive_moments", ["adaptive_moments.pyx"],
