@@ -125,18 +125,19 @@ cpdef np.ndarray[DTYPE_t, ndim=1] find_ellipmom_1(
         ix2 = min(int(floor(x2)), xmax)
         # in the following two cases, ask if we somehow wanted to find
         # pixels outside the image
-        if (ix1 > 32) * (ix2 == 32):
+        if (ix1 > xmax) * (ix2 == xmax):
             continue
-        elif (ix1 == 0) * (ix2 < 0):
+        elif (ix1 == xmin) * (ix2 < xmin):
             continue
         elif ix1 > ix2:
             # print('ix1 > ix2', y, x1, xmin, x2, xmax, ix1, ix2)
             # usually what happens is you want to take only one pixel and you
             # end up due to the ceil and floor funcs with e.g. 15, 14 instead
             # of 14, 15
-            ix1, ix2 = ix2, ix1
-            ix1 = max(ix1, xmin)
-            ix2 = min(ix2, xmax)
+            # ix1, ix2 = ix2, ix1
+            # ix1 = max(ix1, xmin)
+            # ix2 = min(ix2, xmax)
+            continue
 
         for x in xrange(ix1, ix2):
 
@@ -374,18 +375,19 @@ cpdef double centered_moment(
         ix2 = min(int(floor(x2)), xmax)
         # in the following two cases, ask if we somehow wanted to find
         # pixels outside the image
-        if (ix1 > 32) * (ix2 == 32):
+        if (ix1 > xmax) * (ix2 == xmax):
             continue
-        elif (ix1 == 0) * (ix2 < 0):
+        elif (ix1 == xmin) * (ix2 < xmin):
             continue
         elif ix1 > ix2:
             # print('ix1 > ix2', y, x1, xmin, x2, xmax, ix1, ix2)
             # usually what happens is you want to take only one pixel and you
             # end up due to the ceil and floor funcs with e.g. 15, 14 instead
             # of 14, 15
-            ix1, ix2 = ix2, ix1
-            ix1 = max(ix1, xmin)
-            ix2 = min(ix2, xmax)
+            # ix1, ix2 = ix2, ix1
+            # ix1 = max(ix1, xmin)
+            # ix2 = min(ix2, xmax)
+            continue
 
         for x in xrange(ix1, ix2):
 
