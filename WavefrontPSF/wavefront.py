@@ -317,7 +317,7 @@ class Wavefront(object):
             return_dict['y'].append(coord[1])
 
             # append the fwhm
-            return_dict['fwhm'].append(fwhm * 0.27)
+            return_dict['fwhm'].append(fwhm)
 
             # append the stamp if verbosity is high enough
             if 'stamp' in verbosity:

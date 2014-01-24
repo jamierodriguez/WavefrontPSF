@@ -177,17 +177,6 @@ class FocalPlane(FocalPlaneShell):
                  (recdata['Y' + self.coord_name] < 4096 - pixel_border)
                 )
                 )
-            mad_keys = ['FWHM_WORLD',
-                        'Y2' + self.coord_name,
-                        'X2' + self.coord_name,
-                        'XY' + self.coord_name]
-            for mad_key in mad_keys:
-                a = recdata[mad_key]
-                d = np.median(a)
-                c = 0.6745  # constant to convert from MAD to std
-                mad = np.median(np.fabs(a - d) / c)
-                conds_mad = (a < d + 4 * mad) * (a > d - 4 * mad)
-                conds *= conds_mad
 
             # add an SN cut
             SN = 2.5 / np.log(10) / recdata['MAGERR_AUTO']

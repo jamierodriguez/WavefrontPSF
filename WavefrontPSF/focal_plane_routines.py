@@ -486,3 +486,30 @@ def image_zernike_corrections(image_data):
                         -image_data[entry].data})
 
     return image_dictionary
+
+def MAD(data, sigma=3):
+    """Take your data and give conditions that cut out MAD outliers
+
+    Parameters
+    ----------
+    data : array
+        the data over which we want to filter
+
+    sigma : float
+        the number of sigma greater than which we want to fitler out
+
+    Returns
+    -------
+    conds_mad : bool array
+        boolean conditions for True being within sigma * mad
+
+    mad : float
+        The value of mad
+    """
+    a = data
+    d = np.median(a)
+    c = 0.6745  # constant to convert from MAD to std
+    mad = np.median(np.fabs(a - d) / c)
+    conds_mad = (a < d + sigma * mad) * (a > d - sigma * mad)
+
+    return conds_mad, mad
