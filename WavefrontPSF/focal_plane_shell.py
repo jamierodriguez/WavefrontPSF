@@ -82,10 +82,11 @@ class FocalPlaneShell(Wavefront):
     def __init__(self,
                  path_mesh='/u/ec/roodman/Astrophysics/Donuts/Meshes/',
                  mesh_name="Science20120915s1v3_134239",
-                 verbosity=['history']):
+                 verbosity=['history'],
+                 **args):
 
         # do the old init for Wavefront
-        super(FocalPlaneShell, self).__init__()  # could put in nEle etc here
+        super(FocalPlaneShell, self).__init__(**args)
 
         self.path_mesh = path_mesh
         self.mesh_name = mesh_name
@@ -638,7 +639,7 @@ class FocalPlaneShell(Wavefront):
 
         return coords_final
 
-    def check_full_bounds(self, data, boxdiv, minimum_number):
+    def check_full_bounds(self, data, boxdiv, minimum_number, average):
         """Convenience method for checking whether my sampling hits all
         possible divisions over the chip.
 
@@ -653,6 +654,9 @@ class FocalPlaneShell(Wavefront):
 
         minimum_number : int
             The number that should be in each box.
+
+        average : function
+            The function that we use to average over.
 
         Returns
         -------
@@ -679,7 +683,7 @@ class FocalPlaneShell(Wavefront):
         # average x coord
         x = data['x']
         y = data['y']
-        x_av, x_av2, N, _ = self.decaminfo.average_boxdiv(x, y, x, self.average,
+        x_av, x_av2, N, _ = self.decaminfo.average_boxdiv(x, y, x, average,
                                                           boxdiv=boxdiv,
                                                           Ntrue=True)
         # check that all N >= minimum_number
@@ -692,10 +696,10 @@ class FocalPlaneShell(Wavefront):
         """Take other's items and append them to this one's data attribute.
         NOTE: data is NOT defined here!"""
 
-        keys = other.data.keys()
+        other_keys = other.data.keys()
         # pop the keys that are not in self:
         self_keys = self.data.keys()
-        keys = [key for key in keys if key in self_keys]
+        keys = [key for key in other_keys if key in self_keys]
 
         return_dict = {}
         for key in keys:

@@ -9,7 +9,7 @@ from __future__ import print_function, division
 import numpy as np
 from os import path, makedirs
 from decamutil_cpd import decaminfo
-
+import pyfits
 
 def extract_image_data(expids, path_image_data, path_out):
     """The big csv is huge; let's make a smaller one
@@ -250,7 +250,8 @@ def generate_path_results(expids, path_base):
     return path_results, expids_used
 
 
-def generate_hdu_lists(expid, path_base):
+def generate_hdu_lists(
+        expid, path_base='/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript/'):
     """quick and dirty way of getting the hdu list format I am now using
 
     Parameters
@@ -291,7 +292,8 @@ def generate_hdu_lists(expid, path_base):
 
     return list_catalogs, list_fits_extension, list_chip
 
-def generate_hdu_lists_cpd(expid, path_base):
+def generate_hdu_lists_cpd(
+        expid, path_base='/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript/'):
     """quick and dirty way of getting the hdu list format I am now using
 
     Parameters
@@ -331,3 +333,65 @@ def generate_hdu_lists_cpd(expid, path_base):
     list_fits_extension = [[1]] * (63-2)
 
     return list_catalogs, list_fits_extension, list_chip
+
+
+def combine_decam_catalogs(list_catalogs, list_fits_extension, list_chip):
+    """assemble an array from all the focal plane chips
+
+    Parameters
+    ----------
+    list_catalogs : list
+        a list pointing to all the catalogs we wish to combine.
+
+    list_fits_extension : list of integers
+        a list pointing which extension on a given fits file we open
+        format: [[2], [3,4]] says for the first in list_catalog, combine
+        the 2nd extension with the 2nd list_catalog's 3rd and 4th
+        extensions.
+
+    list_chip : list of strings
+        a list containing the extension name of the chip. ie [['N1'],
+        ['S29', 'S5']]
+
+    Returns
+    -------
+    recdata_all : recarray
+        The entire contents of all the fits extensions combined
+
+    ext_all : array
+        Array of all the extension names
+
+    """
+
+    for catalog_i in xrange(len(list_catalogs)):
+        hdu_path = list_catalogs[catalog_i]
+
+        try:
+            hdu = pyfits.open(hdu_path)
+        except IOError:
+            print('Cannot open ', hdu_path)
+            continue
+
+        fits_extension_i = list_fits_extension[catalog_i]
+        chip_i = list_chip[catalog_i]
+
+        for fits_extension_ij in xrange(len(fits_extension_i)):
+            ext_name = chip_i[fits_extension_ij]
+            recdata = hdu[fits_extension_i[fits_extension_ij]].data
+            recheader = hdu[fits_extension_i[fits_extension_ij]].header
+
+            try:
+                recdata_all = np.append(recdata_all, recdata)
+                ext_all = np.append(ext_all,
+                                   [ext_name] * recdata.size)
+                recheader_all = np.append(recheader_all, recheader)
+
+            except NameError:
+                # haven't made recdata_combined yet!
+                recdata_all = recdata.copy()
+                ext_all = np.array([ext_name] * recdata.size)
+                recheader_all = recheader.copy()
+
+        hdu.close()
+
+    return recdata_all, ext_all, recheader_all

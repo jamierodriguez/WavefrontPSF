@@ -8,8 +8,7 @@ Description: Module for generating PSF objects and their moments.
 from __future__ import print_function, division
 import numpy as np
 from donutlib.makedonut import makedonut
-from moment_calc import centered_moment, \
-    gaussian_window, FWHM, windowed_centroid
+from adaptive_moments import adaptive_moments, centered_moment
 from os import path, makedirs
 import pickle
 
@@ -51,8 +50,9 @@ class Wavefront(object):
 
     """
 
-    def __init__(self, number_electrons=1e6, background=1000, randomFlag=0,
-                 nbin=64, nPixels=16, pixelOverSample=4, scaleFactor=2.):
+    def __init__(self, number_electrons=1e6, background=0, randomFlag=0,
+                 nbin=64, nPixels=16, pixelOverSample=4, scaleFactor=2.,
+                 **args):
 
         self.number_electrons = number_electrons
         self.background = background
@@ -171,7 +171,7 @@ class Wavefront(object):
 
         return stamps
 
-    def moments(self, stamp, indices=None, windowed=True,
+    def moments(self, data,
                 background=0, threshold=-1e9,
                 order_dict={'x2': {'p': 2, 'q': 0},
                             'y2': {'p': 0, 'q': 2},
@@ -180,7 +180,7 @@ class Wavefront(object):
 
         Parameters
         ----------
-        stamp : array
+        data : array
             2d image array
 
         threshhold : float, optional
@@ -191,7 +191,7 @@ class Wavefront(object):
             Background level to be subtracted out. If not specified, set to
             zero.
 
-        windowed : bool, optional
+        windowed : bool, optional ; Depreciated
             Decide whether to use a gaussian window.
             Default to True
 
@@ -206,49 +206,37 @@ class Wavefront(object):
             Returns a dictionary of the calculated moments, centroid, fwhm.
 
         """
-
-        # get windowed centroid
-        # y, x = windowed_centroid(stamp, indices=indices,
-        #                          background=background, thresh=thresh)
-        # get fwhm
-        ## popt = FWHM(stamp, centroid=[stamp.shape[0] / 2, stamp.shape[1] / 2], #[y, x],
-        ##             indices=indices,
-        ##             background=background, thresh=thresh)
-        ## popt = fit_gaussian(stamp, indices)
-        ## background = popt[0]
-        ## sigma = popt[2]
-        ## fwhm = sigma * 2.355
-        ## y = popt[3]
-        ## x = popt[4]
-
-        # I think it is okay to modify things inside here; I should be creating
-        # copies of arrays...
-        stamp = (stamp - background).flatten()
+        stamp = (data - background)
         conds = (stamp > threshold)
-        stamp = stamp[conds]
-        indices = [indices_i.flatten()[conds] for indices_i in indices]
+        stamp = np.where(conds, stamp, 0)  # mask noise
 
-        centroid_guess = [self.input_dict["nPixels"] / 2] * 2
-        y, x = windowed_centroid(stamp, centroid=centroid_guess,
-                                 indices=indices)
-        # get weight for other windowed moments
-        if not windowed:
-            w = 1
-        else:
-            w = gaussian_window(stamp, centroid=[y, x], indices=indices)
-        stamp = w * stamp
+        # get moment matrix
+        Mx, My, Mxx, Mxy, Myy, A, rho4 = adaptive_moments(stamp)
 
-        fwhm = FWHM(stamp, centroid=[y, x], indices=indices)
+        fwhm = np.sqrt(np.sqrt(Mxx * Myy - Mxy * Mxy))
+        whisker = np.sqrt(np.sqrt(Mxy * Mxy + 0.25 * np.square(Mxx - Myy)))
+        # 2 (1 + a4) = rho4
+        a4 = 0.5 * rho4 - 1
+        # update return_dict
+        return_dict = {
+                'x': Mx, 'y': My,
+                'Mxx': Mxx, 'Mxy': Mxy, 'Myy': Myy,
+                'fwhm': fwhm, 'flux': A, 'a4': a4, 'whisker': whisker,
+                }
 
-        return_dict = dict(x=x, y=y, fwhm=fwhm)
         # now go through moment_dict and create the other moments
         for order in order_dict:
             pq = order_dict[order]
+            p = pq['p']
+            q = pq['q']
             return_dict.update({order: centered_moment(stamp,
-                                                       centroid=[y, x],
-                                                       indices=indices,
-                                                       **pq)})
+                                                       Mx=Mx, My=My,
+                                                       p=p, q=q,
+                                                       Mxx=Mxx, Mxy=Mxy,
+                                                       Myy=Myy
+                                                       )})
         return return_dict
+
 
     def moment_dictionary(
             self, stamps, coords,
@@ -303,9 +291,6 @@ class Wavefront(object):
 
         """
 
-        # temporary fix for a list creation problem
-        y_indices, x_indices = np.indices((self.input_dict["nPixels"],
-                             self.input_dict["nPixels"])) + 0.5
         # create return_dict
         return_dict = dict(x=[], y=[], fwhm=[])#,
                            #zernikes=zernikes)
@@ -322,9 +307,9 @@ class Wavefront(object):
             stamp = stamps[i]
             # get moments
             moment_dict = self.moments(
-                stamp, indices=[y_indices, x_indices],
+                stamp,
                 background=background, threshold=threshold,
-                windowed=windowed, order_dict=order_dict)
+                order_dict=order_dict)
             fwhm = moment_dict['fwhm']
 
             # append to big list

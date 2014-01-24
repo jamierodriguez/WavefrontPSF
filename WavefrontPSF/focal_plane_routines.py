@@ -80,12 +80,17 @@ def second_moment_to_ellipticity(x2, y2, xy):
     see http://des-docdb.fnal.gov:8080/cgi-bin/RetrieveFile?docid=353
     though my convention is different.
 
+    History
+    -------
+    23.01.14 : Conversion relation updated to adaptive moments.
+
     """
 
     e0 = (x2 + y2) * 0.27 ** 2
     e0prime = (x2 + y2 + 2 * np.sqrt(x2 * y2 - xy ** 2)) * 0.27 ** 2
-    e1 = (x2 - y2) * 0.27 ** 2
-    e2 = (2 * xy) * 0.27 ** 2
+    e1 = (x2 - y2) * 0.27 ** 2 / 2  # 23.1.14: the /2 is necessary according to
+                                    # tests comparing results with sextractor.
+    e2 = (2 * xy) * 0.27 ** 2 / 2
 
     return e0, e0prime, e1, e2
 
@@ -402,7 +407,7 @@ def in_dict_from_minuit_dict(minuit_dict):
     # determine par_names
     par_names = []
     for key in minuit_dict:
-        if 'error_' in key:
+        if '_' not in key:
             par_names.append(key[6:])
     in_dict = {}
     for pari in par_names:

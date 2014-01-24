@@ -9,12 +9,12 @@ Description: Class for focal plane shell tied to specific image.
 from __future__ import print_function, division
 import numpy as np
 from focal_plane_shell import FocalPlaneShell
-from focal_plane_routines import image_zernike_corrections
 import pyfits
-
+from decam_csv_routines import combine_decam_catalogs
 
 class FocalPlane(FocalPlaneShell):
-    """FocalPlaneShell tied to a specific image. Comparisons and such possible.
+    """FocalPlaneShell tied to a specific image. Comparisons and such
+    possible.
 
     Attributes
     ----------
@@ -57,25 +57,25 @@ class FocalPlane(FocalPlaneShell):
     def __init__(self,
                  list_catalogs, list_fits_extension, list_chip,
                  max_samples_box=300, boxdiv=0,
-                 path_mesh='/u/ec/roodman/Astrophysics/Donuts/Meshes/',
-                 mesh_name="Science20120915s1v3_134239",
-                 verbosity=['history'],
-                 conds='default'):
+                 conds='default',
+                 **args):
 
         # do the old init for Wavefront
-        super(FocalPlane, self).__init__(path_mesh, mesh_name, verbosity)
+        super(FocalPlane, self).__init__(**args)
         # could put in nEle etc here
 
         self.average = np.mean
         self.boxdiv = boxdiv
         self.max_samples_box = max_samples_box
-
+        self.list_catalogs = list_catalogs
+        self.list_fits_extension = list_fits_extension
+        self.list_chip = list_chip
         self.coord_name = 'WIN_IMAGE'
 
         # generate recdata
         recdata_unfiltered, \
-            extension_unfiltered = \
-            self.combine_decam_catalogs(
+            extension_unfiltered, self.recheader = \
+            combine_decam_catalogs(
                 list_catalogs, list_fits_extension, list_chip)
 
         conds = self.filter(
@@ -93,66 +93,7 @@ class FocalPlane(FocalPlaneShell):
                 recdata=self.recdata,
                 extension=self.extension)
 
-    def combine_decam_catalogs(self, list_catalogs, list_fits_extension,
-                               list_chip):
-        """assemble an array from all the focal plane chips
-
-        Parameters
-        ----------
-        list_catalogs : list
-            a list pointing to all the catalogs we wish to combine.
-
-        list_fits_extension : list of integers
-            a list pointing which extension on a given fits file we open
-            format: [[2], [3,4]] says for the first in list_catalog, combine
-            the 2nd extension with the 2nd list_catalog's 3rd and 4th
-            extensions.
-
-        list_chip : list of strings
-            a list containing the extension name of the chip. ie [['N1'],
-            ['S29', 'S5']]
-
-        Returns
-        -------
-        recdata_all : recarray
-            The entire contents of all the fits extensions combined
-
-        ext_all : array
-            Array of all the extension names
-
-        """
-
-        for catalog_i in xrange(len(list_catalogs)):
-            hdu_path = list_catalogs[catalog_i]
-
-            try:
-                hdu = pyfits.open(hdu_path)
-            except IOError:
-                print('Cannot open ', hdu_path)
-                continue
-
-            fits_extension_i = list_fits_extension[catalog_i]
-            chip_i = list_chip[catalog_i]
-
-            for fits_extension_ij in xrange(len(fits_extension_i)):
-                ext_name = chip_i[fits_extension_ij]
-                recdata = hdu[fits_extension_i[fits_extension_ij]].data
-
-                try:
-                    recdata_all = np.append(recdata_all, recdata)
-                    ext_all = np.append(ext_all,
-                                       [ext_name] * recdata.size)
-
-                except NameError:
-                    # haven't made recdata_combined yet!
-                    recdata_all = recdata.copy()
-                    ext_all = np.array([ext_name] * recdata.size)
-
-            hdu.close()
-
-        return recdata_all, ext_all
-
-    def filter(self, recdata, conds=None):
+    def filter(self, recdata, conds='default'):
         ##self, recdata, extension, max_samples=10000000, conds=None):
         """A method for generating coordinates from actual images
 
@@ -245,8 +186,13 @@ class FocalPlane(FocalPlaneShell):
                 d = np.median(a)
                 c = 0.6745  # constant to convert from MAD to std
                 mad = np.median(np.fabs(a - d) / c)
-                conds_mad = (a < d + 3 * mad) * (a > d - 3 * mad)
+                conds_mad = (a < d + 4 * mad) * (a > d - 4 * mad)
                 conds *= conds_mad
+
+            # add an SN cut
+            SN = 2.5 / np.log(10) / recdata['MAGERR_AUTO']
+            conds_SN = (SN > 20) * (SN < 200)
+            conds *= conds_SN
         else:
             # evaluate the string
             conds = eval(conds)
@@ -389,7 +335,7 @@ class FocalPlane(FocalPlaneShell):
         coords = np.append(coords.T, [extNumbers], axis=0).T
 
         data = dict(
-                x=coords[:,0], y=coords[:,1],
+                x=coords[:, 0], y=coords[:, 1],
                 x2=recdata['X2' + self.coord_name].astype(np.float64),
                 y2=recdata['Y2' + self.coord_name].astype(np.float64),
                 xy=recdata['XY' + self.coord_name].astype(np.float64),

@@ -77,7 +77,7 @@ options = parser.parse_args()
 
 args_dict = vars(options)
 
-nPixels = args_dict['size']
+nPixels = 32 #args_dict['size']
 
 ##############################################################################
 # download the image and catalog
@@ -131,11 +131,21 @@ for i in xrange(1, 63):
                     boxdiv=0,
                     max_samples_box=20000,
                     conds=args_dict['conds'],
+
+                    nbin=256,
+                    nPixels=nPixels,
+                    pixelOverSample=8,
+                    scaleFactor=1.,
+                    background=0,
                     )
 
     # now use the catalog here to make a new catalog
-    image = pyfits.getdata(list_catalogs_base + '{0:02d}.fits'.format(i), ext=0)
-
+    image = pyfits.getdata(list_catalogs_base + '{0:02d}.fits'.format(i),
+                           ext=0)
+    header = pyfits.getheader(list_catalogs_base + '{0:02d}.fits'.format(i),
+                              ext=0)
+    gain = np.mean([header['GAINA'], header['GAINB']])
+    gain_std = np.std([header['GAINA'], header['GAINB']])
     # generate dictionary of columns
     pyfits_dict = {}
     pyfits_dict.update({
@@ -154,16 +164,28 @@ for i in xrange(1, 63):
                            array=FP.recdata['BACKGROUND'],
                            format='1E',
                            unit='count',),
-        'THRESHOLD':      dict(name='THRESHOLD',
-                           array=FP.recdata['THRESHOLD'],
+        'FLUX_AUTO':   dict(name='FLUX_AUTO',
+                           array=FP.recdata['FLUX_AUTO'],
                            format='1E',
-                           unit='count',),
+                           unit='counts',),
+        'FLUXERR_AUTO':   dict(name='FLUXERR_AUTO',
+                           array=FP.recdata['FLUXERR_AUTO'],
+                           format='1E',
+                           unit='counts',),
         'MAG_AUTO':   dict(name='MAG_AUTO',
                            array=FP.recdata['MAG_AUTO'],
                            format='1E',
                            unit='mag',),
+        'MAGERR_AUTO':   dict(name='MAGERR_AUTO',
+                           array=FP.recdata['MAGERR_AUTO'],
+                           format='1E',
+                           unit='mag',),
         'MAG_PSF':   dict(name='MAG_PSF',
                            array=FP.recdata['MAG_PSF'],
+                           format='1E',
+                           unit='mag',),
+        'MAGERR_PSF':   dict(name='MAGERR_PSF',
+                           array=FP.recdata['MAGERR_PSF'],
                            format='1E',
                            unit='mag',),
         'FLUX_RADIUS':   dict(name='FLUX_RADIUS',
@@ -202,6 +224,10 @@ for i in xrange(1, 63):
                            format='1D',
                            unit='deg',),
 
+        'SN_FLUX': dict(name='SN_FLUX',
+                           array=2.5 / np.log(10) / FP.recdata['MAGERR_AUTO'],
+                           format='1E',),
+
         'X2WIN_IMAGE': dict(name='X2WIN_IMAGE',
                            array=[],
                            format='1D',
@@ -234,13 +260,29 @@ for i in xrange(1, 63):
                            array=[],
                            format='1D',
                            unit='deg',),
+
+        'THRESHOLD':      dict(name='THRESHOLD',
+                           array=[],
+                           format='1E',
+                           unit='count',),
+        'WHISKER': dict(name='WHISKER',
+                           array=[],
+                           format='1D',
+                           unit='pixel',),
+        'FLUX_ADAPTIVE': dict(name='FLUX_ADAPTIVE',
+                           array=[],
+                           format='1D',
+                           unit='counts',),
+        'A4_ADAPTIVE': dict(name='A4_ADAPTIVE',
+                           array=[],
+                           format='1D',
+                           unit='pixel**4',),
+
         'STAMP':      dict(name='STAMP',
                            array=[],
                            format='{0}D'.format(nPixels ** 2),
                            unit='count')
         })
-
-    Y, X = np.indices((nPixels, nPixels)) + 0.5
 
     # go through each entry and make stamps and other parameters
     for recdata in FP.recdata:
@@ -265,8 +307,11 @@ for i in xrange(1, 63):
                       'xy2': {'p': 1, 'q': 2}}
 
         background = recdata['BACKGROUND']
-        threshold = recdata['THRESHOLD']
-        moment_dict = FP.moments(stamp, indices=[Y, X],
+        # only cut off at one std; it seems like 2 std actually biases the
+        # data...
+        # 1 std and esp 2 std are plenty for 16 x 16...
+        threshold = np.sqrt(background / gain)
+        moment_dict = FP.moments(stamp,
                                  background=background,
                                  threshold=threshold,
                                  order_dict=order_dict)
@@ -274,6 +319,8 @@ for i in xrange(1, 63):
         # append to pyfits_dict
         pyfits_dict['STAMP']['array'].append(
             stamp.flatten())
+        pyfits_dict['THRESHOLD']['array'].append(
+            threshold)
         pyfits_dict['X2WIN_IMAGE']['array'].append(
             moment_dict['x2'])
         pyfits_dict['Y2WIN_IMAGE']['array'].append(
@@ -291,9 +338,21 @@ for i in xrange(1, 63):
         pyfits_dict['FWHM_WORLD']['array'].append(
             moment_dict['fwhm'] * 0.27 / 3600)
 
+        pyfits_dict['WHISKER']['array'].append(
+            moment_dict['whisker'])
+        pyfits_dict['FLUX_ADAPTIVE']['array'].append(
+            moment_dict['flux'])
+        pyfits_dict['A4_ADAPTIVE']['array'].append(
+            moment_dict['a4'])
+
+    # almost universally, any a4 > 0.3 is either a completely miscentered
+    # image or a cosmic (though there are some of both that have a4 < 0.3!)
+    conds = ((np.array(pyfits_dict['A4_ADAPTIVE']['array']) < 0.15) *
+            (np.array(pyfits_dict['FLUX_ADAPTIVE']['array']) > 10))
     # create the columns
     columns = []
     for key in pyfits_dict:
+        pyfits_dict[key]['array'] = np.array(pyfits_dict[key]['array'])[conds]
         columns.append(pyfits.Column(**pyfits_dict[key]))
     tbhdu = pyfits.new_table(columns)
 
