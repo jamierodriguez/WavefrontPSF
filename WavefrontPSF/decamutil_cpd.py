@@ -163,6 +163,28 @@ class decaminfo(object):
         ix, iy = self.getPixel(extname, xPos, yPos)
         return ix, iy
 
+    def getEdges(self,boxdiv=0):
+        '''
+        Get the pixel edges across entire focal plane
+        '''
+        # calculate center to center chip distances
+        x_step = 33.816
+        y_step = 63.89
+        x_min = -236.712
+        x_max = -x_min
+        y_min = -223.615
+        y_max = -y_min
+
+        if boxdiv == 0:
+            x_edges = np.arange(x_min, x_max + x_step, x_step)
+            y_edges = np.arange(y_min, y_max + y_step, y_step)
+        else:
+            x_edges = np.arange(x_min, x_max + x_step, x_step / 2 ** (boxdiv - 1))
+            y_edges = np.arange(y_min, y_max + y_step, y_step / 2 ** boxdiv)
+
+        return [x_edges, y_edges]
+
+
     def getBounds(self,extname,boxdiv=0):
         '''
         Give the coordinates of two opposite corners in mm
@@ -248,7 +270,7 @@ class decaminfo(object):
         return boundi
 
     def average_boxdiv(self, X, Y, P, average, boxdiv=1, rejectsize=1,
-            Ntrue=False, members=False):
+            Ntrue=False, members=False, boxes=False):
         '''
         give average X, Y, P in boxes as well as P2
 
@@ -269,37 +291,44 @@ class decaminfo(object):
 
         # do this for loop and then numpythonic ?
         Pave = []
-        Pave2 = []
+        var_Pave = []
         N = []
         members_list = []
+        boxes_list = []
 
         for box in bounds:
             for x in xrange(len(box[0]) - 1):
                 for y in xrange(len(box[1]) - 1):
                     choose = (
                              (X > box[0][x]) *
-                             (X < box[0][x+1]) *
+                             (X < box[0][x + 1]) *
                              (Y > box[1][y]) *
-                             (Y < box[1][y+1]))
+                             (Y < box[1][y + 1]))
                     if np.sum(choose) < rejectsize:
                         # make sure we have enough in the box
                         continue
                     N.append(np.sum(choose))
                     Pave.append(average(P[choose]))
-                    Pave2.append(average(P[choose] ** 2))
+                    var_Pave.append(average(np.square(P[choose] - Pave[-1]))
+                                    / N[-1])
                     if members:
                         members_list.append(np.where(choose)[0])
+                    if boxes:
+                        boxes_list.append([0.5 * (box[0][x] + box[0][x + 1]),
+                                           0.5 * (box[1][y] + box[1][y + 1])])
         Pave = np.array(Pave)
-        Pave2 = np.array(Pave2)
+        var_Pave = np.array(var_Pave)
         N = np.array(N)
         members_list = np.array(members_list)
-
+        boxes_list = np.array(boxes_list)
+        if boxes:
+            return boxes_list
         if members:
             return bounds, members_list
         if Ntrue:
-            return Pave, Pave2, N, bounds
+            return Pave, var_Pave, N, bounds
         else:
-            return Pave, Pave2
+            return Pave, var_Pave
 
 class mosaicinfo(object):
     """ mosaicinfo is a class used to contain Mosaic geometry information and various utility routines

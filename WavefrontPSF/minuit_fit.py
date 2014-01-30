@@ -6,13 +6,8 @@ import time
 import ROOT
 ROOT.PyConfig.IgnoreCommandLineOptions = True
 
-'''
-minuit tolerance
-'''
-#TODO: PEP8 compliant; comments
 
-
-def grad_func(in_dict, fit_func, error_dict, h_base=1e-1,
+def grad_func(in_dict, fit_func, h_dict,
               stencil=[[-1. / 2, -1], [1. / 2, 1]]):
     """numerical gradient of a function
 
@@ -26,16 +21,19 @@ def grad_func(in_dict, fit_func, error_dict, h_base=1e-1,
         The function we are concerned with. Must be able to call
         fit_func(**in_dict)
 
-    error_dict : dictionary
-        Dictionary giving the error for each parameter, assumed to be in the
-        format 'error_{parameter_name}'
-
-    h_base : float, optional
-        How much smaller than the errors are we stepping for our gradient?
+    h_dict : dictionary
+        Dictionary giving the h step size for each parameter, assumed to be in
+        the format 'parameter_name'
 
     stencil : list, optional
         What stencil are we using. In format [[multiplicative_factor, number of
         h's]]. Default is centered two point stencil.
+
+        A 5 point stencil would be:
+        stencil = [[-1. / 12, 2], [2. / 3, 1], [-2. / 3, -1], [1. / 12, -2]]
+
+        Centered 2 point stencil:
+        stencil = [[-1. / 2, -1], [1. / 2, 1]]
 
     Returns
     -------
@@ -46,12 +44,10 @@ def grad_func(in_dict, fit_func, error_dict, h_base=1e-1,
 
     """
 
-    #stencil=[[-1. / 12, 2], [2. / 3, 1], [-2. / 3, -1], [1. / 12, -2]]):
-    #print(in_dict)
     derivatives = {}
     for key in in_dict:
-        h = h_base * error_dict['error_{0}'.format(key)]
-        # calculate 5 point stencil
+        h = h_dict[key]
+        # calculate stencil
         fprime = 0
         for h_mod in stencil:
             prime_dict = in_dict.copy()
@@ -107,11 +103,8 @@ class Minuit_Fit(object):
 
     """
 
-    def __init__(self, FitFunc, minuit_dict, par_names,
+    def __init__(self, FitFunc, minuit_dict, h_dict, par_names,
                  GradFunc=grad_func,
-                 grad_dict=dict(h_base=1e-3,
-                                stencil=[[-1. / 12, 2], [2. / 3, 1],
-                                         [-2. / 3, -1], [1. / 12, -2]]),
                  force_derivatives=0,
                  verbosity=0, max_iterations=1000,
                  tolerance=0.3,
@@ -129,13 +122,7 @@ class Minuit_Fit(object):
         self.par_names = par_names
         self.strategy = strategy
         self.tolerance = tolerance
-        self.grad_dict = grad_dict
-        if 'error_dict' not in self.grad_dict.keys():
-            error_dict = {}
-            for key in par_names:
-                error_dict.update({'error_{0}'.format(key):
-                                   minuit_dict['error_{0}'.format(key)]})
-            self.grad_dict.update({'error_dict': error_dict})
+        self.h_dict = h_dict
 
         # setup MINUIT
         self.gMinuit = ROOT.TMinuit(self.npar)
@@ -268,7 +255,7 @@ class Minuit_Fit(object):
 
                 # not currently called in calcAll
                 dChi2dpar = self.gGradFunc(in_dict, self.gFitFunc,
-                                           **self.grad_dict)
+                                           h_dict=self.h_dict)
                 if self.verbosity >= 2:
                     print('minuit_fit: \tdChi2dpar',
                           '\n\t\tkey\tderivative\tvalue\t\tstep')
@@ -277,10 +264,7 @@ class Minuit_Fit(object):
                         print('\t\t', key,
                               '\t', '{0: .4e}'.format(dChi2dpar[key]),
                               '\t', '{0: .4e}'.format(in_dict[key]),
-                              '\t', '{0: .4e}'.format(
-                                  self.grad_dict['h_base'] *
-                                  self.grad_dict['error_dict']
-                                  ['error_{0}'.format(key)]))
+                              '\t', '{0: .4e}'.format(self.h_dict[key]))
                 gin.SetSize(self.npar)  # need to handle root bug
                 self.nCallsDerivative += 1
                 #
@@ -374,7 +358,7 @@ class Minuit_Fit(object):
             'tolerance': self.tolerance,
             'startingtime': self.startingtime,
             'verbosity': self.verbosity,
-            'grad_dict': self.grad_dict,
+            'h_dict': self.h_dict,
             'npar': self.npar,
             'nCalls': float(self.nCalls),
             'nCallsDerivative': float(self.nCallsDerivative)

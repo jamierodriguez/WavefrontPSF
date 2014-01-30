@@ -11,7 +11,8 @@ from wavefront import Wavefront
 from hexapodtoZernike_cpd import hexapodtoZernike
 from donutana_cpd import donutana
 from decamutil_cpd import decaminfo
-from focal_plane_routines import fwhm_to_rzero
+from focal_plane_routines import fwhm_to_rzero, average_dictionary, \
+    variance_dictionary, convert_moments
 
 
 class FocalPlaneShell(Wavefront):
@@ -304,7 +305,7 @@ class FocalPlaneShell(Wavefront):
         coords : array
             An array of [[coordx, coordy, ext_num]] of the locations sampled
 
-        windowed : bool, optional
+        windowed : bool, optional ; depreciated
             Do we calculate the windowed moments, or unwindowed? Default true.
 
         order_dict : dictionary, optional
@@ -352,6 +353,58 @@ class FocalPlaneShell(Wavefront):
                                          order_dict=order_dict)
 
         return moments
+
+    def plane_averaged(
+            self, in_dict, coords, average, boxdiv, subav=False,
+            windowed=True, order_dict={'x2': {'p': 2, 'q': 0},
+                                       'y2': {'p': 0, 'q': 2},
+                                       'xy': {'p': 1, 'q': 1}}):
+        """create a wavefront across the focal plane and average into boxes
+
+        Parameters
+        ----------
+        in_dict : dictionary
+            dictionary containing the zernike corrections
+
+        coords : array
+            An array of [[coordx, coordy, ext_num]] of the locations sampled
+
+        windowed : bool, optional ; depreciated
+            Do we calculate the windowed moments, or unwindowed? Default true.
+
+        order_dict : dictionary, optional
+            A dictionary of dictionaries indicating the name and the powers of
+            the moments calculated.
+            Default calculates the second moments.
+
+        average : function
+            Function used for averaging
+
+        boxdiv : int
+            Sets the divisions of the chip that we average over.
+
+        subav : bool
+            True subtracts the mean when averaging
+
+
+        Returns
+        -------
+        moments : dictionary
+            Dictionary with the averaged moments and the variance
+
+        """
+
+        # get the moments
+        moments_unaveraged = self.plane(in_dict, coords, windowed=windowed,
+                                        order_dict=order_dict)
+
+        # now average
+        moments = average_dictionary(moments_unaveraged, average,
+                                     boxdiv=boxdiv, subav=subav)
+
+        poles = convert_moments(moments)
+
+        return poles
 
     def zernikes(self, coords, in_dict):
         """create a list of zernikes at these coordinate locations
@@ -615,8 +668,8 @@ class FocalPlaneShell(Wavefront):
         coords_final = []
         for ext_num in range(1, 63):
             ext_name = self.decaminfo.ccddict[ext_num]
-            if ext_name == 'N31':
-                # N31 is bad
+            if ext_num == 61:
+                # N30 is bad
                 continue
             boundaries = self.decaminfo.getBounds(ext_name, boxdiv=boxdiv)
             for x in xrange(len(boundaries[0]) - 1):

@@ -15,10 +15,9 @@ import numpy as np
 from minuit_fit import Minuit_Fit
 #from iminuit import describe
 from os import path, makedirs
-from focal_plane_routines import average_dictionary, variance_dictionary, \
-    chi2, minuit_dictionary, fwhm_to_rzero, second_moment_to_ellipticity, \
-    second_moment_variance_to_ellipticity_variance, image_zernike_corrections
-from decam_csv_routines import generate_hdu_lists, generate_hdu_lists_cpd
+from focal_plane_routines import minuit_dictionary, fwhm_to_rzero, \
+    image_zernike_corrections
+from decam_csv_routines import generate_hdu_lists
 from focal_plane import FocalPlane
 
 ##############################################################################
@@ -85,11 +84,6 @@ parser.add_argument("-f",
                     dest="conds",
                     default='default',
                     help="String for filter conditions")
-parser.add_argument("-cpd",
-                    dest="cpd",
-                    default=1,  # yes use my catalogs
-                    type=int,
-                    help="Use my catalogs or sextractor's?")
 options = parser.parse_args()
 
 args_dict = vars(options)
@@ -108,16 +102,14 @@ image_data = csv[csv['expid'] == args_dict['expid']]
 
 # find the locations of the catalog files
 path_catalogs = args_dict['catalogs']
-if args_dict['cpd']:
-    list_catalogs, list_fits_extension, list_chip = \
-        generate_hdu_lists_cpd(args_dict['expid'], path_catalogs)
-else:
-    list_catalogs, list_fits_extension, list_chip = \
+list_catalogs, list_fits_extension, list_chip = \
         generate_hdu_lists(args_dict['expid'], path_catalogs)
 
 ##############################################################################
 # create the focalplane
 ##############################################################################
+
+average = np.mean
 
 FP = FocalPlane(list_catalogs=list_catalogs,
                 list_fits_extension=list_fits_extension,
@@ -127,37 +119,13 @@ FP = FocalPlane(list_catalogs=list_catalogs,
                 boxdiv=args_dict['boxdiv'],
                 max_samples_box=args_dict['max_samples_box'],
                 conds=args_dict['conds'],
+                subav=args_dict['subav'],
+                average=average,
                 )
 
-# convert comparison dict to ellipticities
-e0_comparison, e0prime_comparison, e1_comparison, e2_comparison = \
-    second_moment_to_ellipticity(FP.data['x2'],
-                                 FP.data['y2'],
-                                 FP.data['xy'])
-FP.data.update(dict(
-    e0=e0_comparison, e0prime=e0prime_comparison,
-    e1=e1_comparison, e2=e2_comparison))
-comparison_average = average_dictionary(FP.data, FP.average,
-    boxdiv=args_dict['boxdiv'], subav=args_dict['subav'])
+comparison = FP.data
 
 coords = FP.coords
-
-## # check our variables are the right length
-## check_average = average_dictionary(FP.comparison_dict, FP.average,
-##     boxdiv=args_dict['boxdiv'], subav=args_dict['subav'])
-## if len(check_average['x']) != len(comparison_average['x']):
-##     # if they are not, use the random coords
-##     coords = FP.coords_random
-
-# create var_dict from comparison_average
-var_dict = variance_dictionary(
-    data=comparison_average,
-    keys=['x', 'y', 'x2', 'y2', 'xy', 'e0', 'e1', 'e2'],
-    var_type=0)
-# also update comparison_average to include these vars
-for key_var_dict in var_dict.keys():
-    comparison_average.update(
-        {'var_{0}'.format(key_var_dict):var_dict[key_var_dict]})
 
 chi_weights = {
     'e0': 1.,
@@ -171,7 +139,7 @@ order_dict = {
     }
 
 def FP_func(dz, e1, e2, rzero, dx, dy, xt, yt, z05d, z06d,
-            z07x, z07y, z08x, z08y):
+            z07x, z07y, z08x, z08y, z09d, z10d):
     in_dict_FP_func = locals().copy()
 
     # assumes FP, order_dict, chi_weights, boxdiv, subav, comparison_average
@@ -186,56 +154,52 @@ def FP_func(dz, e1, e2, rzero, dx, dy, xt, yt, z05d, z06d,
             return 1e20
 
     # get current iteration
-    moments_FP_func = FP.plane(in_dict_FP_func,
-        coords=coords, order_dict=order_dict)
-
-    # convert to ellipticities
-    e0_moment, e0prime_moment, e1_moment, e2_moment = \
-        second_moment_to_ellipticity(
-            moments_FP_func['x2'],
-            moments_FP_func['y2'],
-            moments_FP_func['xy'])
-
-    # add ellipticity corrections
-    e1_moment += e1
-    e2_moment += e2
-
-    ellipticities = {'x': moments_FP_func['x'], 'y': moments_FP_func['y'],
-                     'e0': e0_moment, 'e1': e1_moment, 'e2': e2_moment}
-
-    # convert to average
-    ellipticities_average = average_dictionary(ellipticities, FP.average,
-        boxdiv=args_dict['boxdiv'], subav=args_dict['subav'])
+    poles_i = FP.plane_averaged(
+            in_dict_FP_func, coords=coords,
+            average=average, boxdiv=args_dict['boxdiv'],
+            order_dict=order_dict,)
+    poles_i['e1'] += e1
+    poles_i['e2'] += e2
 
     # get chi
-    chi_dict = chi2(data_a=ellipticities_average,
-                    data_b=comparison_average,
-                    chi_weights=chi_weights,
-                    var_dict=var_dict)
-    chi2_val = chi_dict['chi2']
+    chi2 = 0
+    for key in chi_weights:
+        val_a = comparison[key]
+        val_b = poles_i[key]
+        var = comparison['var_{0}'.format(key)]
+        weight = chi_weights[key]
+
+        chi2_i = np.square(val_a - val_b) / var
+        chi2 += np.sum(weight * chi2_i)
+
+    if (chi2 < 0) + (np.isnan(chi2)):
+        chi2 = 1e20
 
     # update the chi2 by *= 1. / (Nobs - Nparam)
-    chi2_val *= 1. / (len(ellipticities_average['x']) -
-                      len(in_dict_FP_func.keys()))
+    chi2 *= 1. / (len(poles_i['e1']) -
+                  len(in_dict_FP_func.keys()))
     # divide another bit by the sum of the chi_weights
     # not so sure about this one...
-    chi2_val *= 1. / sum([chi_weights[i] for i in chi_weights])
+    chi2 *= 1. / sum([chi_weights[i] for i in chi_weights])
 
-    return chi2_val
+    return chi2
 
 ##############################################################################
 # set up minuit fit
 ##############################################################################
-par_names = ['dz', 'e1', 'e2', 'rzero', 'dx', 'dy', 'xt', 'yt', 'z05d', 'z06d', 'z07x', 'z07y', 'z08x', 'z08y']
+
+par_names = ['dz', 'e1', 'e2', 'rzero', 'dx', 'dy', 'xt', 'yt', 'z05d', 'z06d',
+             'z07x', 'z07y', 'z08x', 'z08y', 'z09d', 'z10d']
 verbosity = 3
 force_derivatives = 1
-grad_dict = dict(h_base=1e-1)
 strategy = 1
 tolerance = 40
+h_base = 1e-3
 max_iterations = len(par_names) * 1000
 
+
 # set up initial guesses
-minuit_dict = minuit_dictionary(par_names)
+minuit_dict, h_dict = minuit_dictionary(par_names, h_base=h_base)
 image_dictionary = image_zernike_corrections(image_data)
 for key in par_names:
     if (key == 'e1') + (key == 'e2'):
@@ -248,7 +212,8 @@ for key in par_names:
     else:
         minuit_dict[key] = image_dictionary[key][0]
 
-minuit_fit = Minuit_Fit(FP_func, minuit_dict, par_names, grad_dict=grad_dict,
+minuit_fit = Minuit_Fit(FP_func, minuit_dict, par_names=par_names,
+                        h_dict=h_dict,
                         verbosity=verbosity,
                         force_derivatives=force_derivatives,
                         strategy=strategy, tolerance=tolerance,
@@ -300,38 +265,18 @@ np.save(
 # save the comparison dictionary
 np.save(
     output_directory + '{0:08d}_image_plane'.format(args_dict['expid']),
-    comparison_average)
+    comparison)
 
 # save the outputted focal plane
-moments_results = FP.plane(in_dict, coords=coords, order_dict=order_dict)
-# convert moments dict to ellipticities
-e0_moments, e0prime_moments, e1_moments, e2_moments = \
-    second_moment_to_ellipticity(moments_results['x2'],
-                                 moments_results['y2'],
-                                 moments_results['xy'])
-# don't forget to add common mode
-e1_moments += in_dict['e1']
-e2_moments += in_dict['e2']
-moments_results.update(dict(
-    e0=e0_moments, e0prime=e0prime_moments,
-    e1=e1_moments, e2=e2_moments))
-# and then average
-moments_average = average_dictionary(moments_results, FP.average,
-    boxdiv=args_dict['boxdiv'], subav=args_dict['subav'])
-# create var_dict from moments_average
-var_dict_results = variance_dictionary(
-    data=moments_average,
-    keys=['x', 'y', 'x2', 'y2', 'xy', 'e0', 'e1', 'e2'],
-    var_type=0)
+moments = FP.plane_averaged(
+    minuit_results['args'], coords=coords,
+    average=average, boxdiv=args_dict['boxdiv'], order_dict=order_dict)
+moments['e1'] += minuit_results['args']['e1']
+moments['e2'] += minuit_results['args']['e2']
 
-# also update moments_average to include these vars
-for key_var_dict_results in var_dict_results.keys():
-    moments_average.update(
-        {'var_{0}'.format(key_var_dict_results):
-         var_dict_results[key_var_dict_results]})
 np.save(
     output_directory + '{0:08d}_fitted_plane'.format(
-    args_dict['expid']), moments_average)
+    args_dict['expid']), moments)
 
 # save the FP history
 np.save(

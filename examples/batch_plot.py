@@ -7,11 +7,9 @@ Description: Include the locations of the moments (both fitted and comparison)
 This file will take the results and plot them as well as collate everything
 together into csv files. Those can also be plotted?
 
-TODO: ellipticity plot is a mess
-TODO: make wrappers for easily plotting whisker
-TODO: make comparison plots between filtering by max samples box and not.
-TODO: plotting for fwhm / e0...
+TODO: redo construction to use plot_wavefront.data_focal_plot
 TODO: plot residual histograms and such
+
 """
 
 from __future__ import print_function, division
@@ -101,15 +99,15 @@ for iterator in xrange(len(args_dict['expid'])):
     v_var_comparison = comparison_dict['var_e0']
     u_ave_comparison = 0
     v_ave_comparison = np.mean(v_comparison)
+    r = np.sqrt(u_comparison**2 + v_comparison**2)
+    scale_val = np.maximum(r.min(), r.mean() - 2 * r.std())
     figure_e0, axis_e0 = focal_plane_plot(
         x=x_comparison, y=y_comparison,
         u=u_comparison, v=v_comparison,
         u_ave=u_ave_comparison, v_ave=v_ave_comparison,
         u_var=u_var_comparison, v_var=v_var_comparison,
         color='r',
-        scale=10 / 1.2e-1,
-        quiverkey_dict={'title': '',
-                        'value': 2 * 1.2e-1},
+        scale=8 / scale_val,
         artpatch=2,
         offset_x=-2)
     # do the fitted
@@ -129,9 +127,7 @@ for iterator in xrange(len(args_dict['expid'])):
         focal_figure=figure_e0,
         focal_axis=axis_e0,
         color='k',
-        scale=10 / 1.2e-1,
-        quiverkey_dict={'title': r'$1.2 \times 10^{-1}$ arcsec$^{2}$',
-                        'value': 2 * 1.2e-1},
+        scale=8 / scale_val,
         artpatch=2,
         offset_x=2)
     axis_e0.set_title('{0:08d}, {1}, {2:.2e}'.format(
@@ -152,15 +148,15 @@ for iterator in xrange(len(args_dict['expid'])):
     v_var_comparison = comparison_dict['var_e2']
     u_ave_comparison = np.mean(u_comparison)
     v_ave_comparison = np.mean(v_comparison)
+    r = np.sqrt(u_comparison**2 + v_comparison**2)
+    scale_val = np.min(r.min(), r.mean() - 2 * r.std())
     figure_ellipticity, axis_ellipticity = focal_plane_plot(
         x=x_comparison, y=y_comparison,
         u=u_comparison, v=v_comparison,
         u_ave=u_ave_comparison, v_ave=v_ave_comparison,
         u_var=u_var_comparison, v_var=v_var_comparison,
         color='r',
-        scale=2 * 10 / 2e-3,  # 2x here is to make our quiverkey 20 pixels
-        quiverkey_dict={'title': '',
-                        'value': 2e-3},
+        scale=2 * 10 / 2e-3,  # 2x here is to make our quiverkey 20 mm
         whisker_width=3,
         artpatch=1)
     # do the fitted
@@ -181,8 +177,6 @@ for iterator in xrange(len(args_dict['expid'])):
         focal_axis=axis_ellipticity,
         color='k',
         scale=2 * 10 / 2e-3,  # 2x here is to make our quiverkey 20 pixels
-        quiverkey_dict={'title': r'$2 \times 10^{-3}$ arcsec$^{2}$',
-                        'value': 2e-3},
         whisker_width=3,
         artpatch=1)
     axis_ellipticity.set_title('{0:08d}, {1}, {2:.2e}'.format(
@@ -208,8 +202,6 @@ for iterator in xrange(len(args_dict['expid'])):
         u_var=u_var_comparison, v_var=v_var_comparison,
         color='r',
         scale=10 / 5e-2,
-        quiverkey_dict={'title': '',
-                        'value': 2 * 5e-2},
         artpatch=2)
 
     # do fitted
@@ -230,8 +222,6 @@ for iterator in xrange(len(args_dict['expid'])):
         focal_axis=axis_whisker,
         color='k',
         scale=10 / 5e-2,
-        quiverkey_dict={'title': r'$5 \times 10^{-2}$ arcsec',
-                        'value': 2 * 5e-2},
         artpatch=2)
     axis_whisker.set_title('{0:08d}, {1}, {2:.2e}'.format(
         expid, ierflg, amin))

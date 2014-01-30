@@ -250,7 +250,7 @@ def generate_path_results(expids, path_base):
     return path_results, expids_used
 
 
-def generate_hdu_lists(
+def generate_hdu_lists_sex(
         expid, path_base='/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript/'):
     """quick and dirty way of getting the hdu list format I am now using
 
@@ -292,7 +292,7 @@ def generate_hdu_lists(
 
     return list_catalogs, list_fits_extension, list_chip
 
-def generate_hdu_lists_cpd(
+def generate_hdu_lists(
         expid, path_base='/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript/'):
     """quick and dirty way of getting the hdu list format I am now using
 

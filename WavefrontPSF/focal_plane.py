@@ -11,6 +11,7 @@ import numpy as np
 from focal_plane_shell import FocalPlaneShell
 import pyfits
 from decam_csv_routines import combine_decam_catalogs
+from focal_plane_routines import average_dictionary, convert_moments
 
 class FocalPlane(FocalPlaneShell):
     """FocalPlaneShell tied to a specific image. Comparisons and such
@@ -56,16 +57,17 @@ class FocalPlane(FocalPlaneShell):
 
     def __init__(self,
                  list_catalogs, list_fits_extension, list_chip,
-                 max_samples_box=300, boxdiv=0,
-                 conds='default',
+                 max_samples_box=300, boxdiv=0, subav=0,
+                 conds='default', average=np.mean,
                  **args):
 
         # do the old init for Wavefront
         super(FocalPlane, self).__init__(**args)
         # could put in nEle etc here
 
-        self.average = np.mean
+        self.average = average
         self.boxdiv = boxdiv
+        self.subav = subav
         self.max_samples_box = max_samples_box
         self.list_catalogs = list_catalogs
         self.list_fits_extension = list_fits_extension
@@ -91,7 +93,11 @@ class FocalPlane(FocalPlaneShell):
 
         self.data, self.coords = self.create_data(
                 recdata=self.recdata,
-                extension=self.extension)
+                extension=self.extension,
+                average=self.average,
+                boxdiv=self.boxdiv,
+                subav=self.subav,
+                )
 
     def filter(self, recdata, conds='default'):
         ##self, recdata, extension, max_samples=10000000, conds=None):
@@ -288,7 +294,7 @@ class FocalPlane(FocalPlaneShell):
         return recdata_return, extension_return
 
 
-    def create_data(self, recdata, extension):
+    def create_data(self, recdata, extension, average, boxdiv, subav):
         """Create the data attribute
 
         TODO: add order_dict param
@@ -323,11 +329,17 @@ class FocalPlane(FocalPlaneShell):
                       for i in extension]
         coords = np.append(coords.T, [extNumbers], axis=0).T
 
-        data = dict(
+        moments_unaveraged = dict(
                 x=coords[:, 0], y=coords[:, 1],
                 x2=recdata['X2' + self.coord_name].astype(np.float64),
                 y2=recdata['Y2' + self.coord_name].astype(np.float64),
                 xy=recdata['XY' + self.coord_name].astype(np.float64),
                 fwhm=recdata['FWHM_WORLD'].astype(np.float64) * 3600,)
+
+        # now average
+        moments = average_dictionary(moments_unaveraged, average,
+                                     boxdiv=boxdiv, subav=subav)
+
+        data = convert_moments(moments)
 
         return data, coords

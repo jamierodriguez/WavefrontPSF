@@ -10,6 +10,7 @@ import numpy as np
 from decamutil_cpd import decaminfo
 
 # TODO: docs!
+# TODO: fwhm conversions are now all wrong
 
 def print_command(command):
     string = ''
@@ -50,7 +51,7 @@ def fwhm_to_e0(fwhm, windowed=True):
     return e0
 
 
-def second_moment_to_ellipticity(x2, y2, xy):
+def second_moment_to_ellipticity(x2, y2, xy, **args):
 
     """Take moments and convert to unnormalized ellipticity basis
 
@@ -90,7 +91,7 @@ def second_moment_to_ellipticity(x2, y2, xy):
     return e0, e0prime, e1, e2
 
 
-def third_moments_to_octupoles(x3, x2y, xy2, y3):
+def third_moments_to_octupoles(x3, x2y, xy2, y3, **args):
 
     """Take moments and convert to unnormalized octupole basis
 
@@ -121,7 +122,7 @@ def third_moments_to_octupoles(x3, x2y, xy2, y3):
     return zeta1, zeta2, delta1, delta2
 
 
-def ellipticity_to_whisker(e1, e2):
+def ellipticity_to_whisker(e1, e2, spin=2., power=2., **args):
 
     """Take unnormalized ellipticities and convert to relevant whisker
     parameters
@@ -153,8 +154,8 @@ def ellipticity_to_whisker(e1, e2):
     """
 
     # get magnitude and direction
-    w = np.sqrt(np.sqrt(np.square(e1) + np.square(e2)))
-    phi = 0.5 * np.arctan2(e2, e1)
+    w = np.sqrt(np.square(e1) + np.square(e2)) ** (1 / power)
+    phi = np.arctan2(e2, e1) / spin
     # convert to cartesian
     u = w * np.cos(phi)
     v = w * np.sin(phi)
@@ -162,30 +163,56 @@ def ellipticity_to_whisker(e1, e2):
     return u, v, w, phi
 
 
-def second_moment_variance_to_ellipticity_variance(x2_var, y2_var, xy_var):
+def second_moment_variance_to_ellipticity_variance(var_x2, var_y2, var_xy,
+                                                   **args):
 
     """Convert variance in moments to ellipticity variances
 
     Parameters
     ----------
-    x2_var, y2_var, xy_var : array
+    var_x2, var_y2, var_xy : array
         Array of second moments variances
 
     Returns
     -------
-    e0_var, e1_var, e2_var : array
+    var_e0, var_e1, var_e2 : array
         Arrays converted to unnormalized ellipticity basis.
 
     """
     alpha = 0.27 ** 2  # pixel to arcsec
-    e0_var = alpha ** 2 * (x2_var + y2_var)
-    e1_var = alpha ** 2 * (x2_var + y2_var)
-    e2_var = alpha ** 2 * 4 * xy_var
+    var_e0 = alpha ** 2 * (var_x2 + var_y2)
+    var_e1 = alpha ** 2 * (var_x2 + var_y2)
+    var_e2 = alpha ** 2 * 4 * var_xy
 
-    return e0_var, e1_var, e2_var
+    return var_e0, var_e1, var_e2
+
+def third_moment_variance_to_octupole_variance(
+        var_x3, var_x2y, var_xy2, var_y3, **args):
+    """Convert variance in moments to ellipticity variances
+
+    Parameters
+    ----------
+    var_x3, etc : array
+        Array of third moments variances
+
+    Returns
+    -------
+    var_delta1 etc : array
+        Arrays converted to unnormalized octupole basis.
+
+    """
+
+    alpha = 0.27 ** 3  # pixel to arcsec
+    var_zeta1 = alpha ** 2 * (var_x3 + var_xy2)
+    var_zeta2 = alpha ** 2 * (var_y3 + var_x2y)
+
+    var_delta1 = alpha ** 2 * (var_x3 + 9 * var_xy2)
+    var_delta2 = alpha ** 2 * (var_y3 + 9 * var_x2y)
+
+    return var_zeta1, var_zeta2, var_delta1, var_delta2
 
 
-def ellipticity_variance_to_whisker_variance(e1, e2, e1_var, e2_var):
+def ellipticity_variance_to_whisker_variance(e1, e2, var_e1, var_e2, **args):
 
     """Convert error in ellipticity to error in cartesian whisker parameters
     (for later wedge plotting).
@@ -195,13 +222,13 @@ def ellipticity_variance_to_whisker_variance(e1, e2, e1_var, e2_var):
     e1, e2 : array
         Array of unnormalized ellipticity vectors.
 
-    e1_var, e2_var : array or float
+    var_e1, var_e2 : array or float
         Variance in measurement of e1 or e2, either one value for all, or one
         value per object.
 
     Returns
     -------
-    u_var, v_var : array
+    var_u, var_v : array
         Variance in the u and v components of the whisker.
 
     """
@@ -216,11 +243,74 @@ def ellipticity_variance_to_whisker_variance(e1, e2, e1_var, e2_var):
     dvde2 = 0.5 * w ** -4 * (e2 * v + e1 * u)
 
     # errors are added in quadrature
-    u_var = dude1 ** 2 * e1_var + dude2 ** 2 * e2_var
-    v_var = dvde1 ** 2 * e1_var + dvde2 ** 2 * e2_var
+    var_u = dude1 ** 2 * var_e1 + dude2 ** 2 * var_e2
+    var_v = dvde1 ** 2 * var_e1 + dvde2 ** 2 * var_e2
 
-    return u_var, v_var
+    return var_u, var_v
 
+def convert_moments(data, **args):
+    """Looks through data and converts all relevant parameters and updates into
+    the data object.
+
+    Parameters
+    ----------
+    data : recarray or dictionary
+        Set of data with the moments
+
+    Returns
+    -------
+    poles : dictionary
+        Dictionary of results
+
+    """
+    poles = {}
+    if ('x2' in data) * ('y2' in data) * ('xy' in data):
+        e0, e0prime, e1, e2 = second_moment_to_ellipticity(**data)
+        poles.update(dict(e0=e0, e0prime=e0prime, e1=e1, e2=e2))
+
+    if ('var_x2' in data) * ('var_y2' in data) * ('var_xy' in data):
+        var_e0, var_e1, var_e2 = \
+            second_moment_variance_to_ellipticity_variance(**data)
+        poles.update(dict(var_e0=var_e0, var_e1=var_e1, var_e2=var_e2))
+
+    if ('e1' in poles) * ('e2' in poles):
+        w1, w2, w, phi = ellipticity_to_whisker(**poles)
+        poles.update(dict(w1=w1, w2=w2, w=w, phi=phi))
+
+    if ('e1' in poles) * ('e2' in poles) * \
+            ('var_e1' in poles) * ('var_e2' in poles):
+        var_w1, var_w2 = ellipticity_variance_to_whisker_variance(**poles)
+        poles.update(dict(var_w1=var_w1, var_w2=var_w2))
+
+    if ('x3' in data) * ('x2y' in data) * ('xy2' in data) * ('y3' in data):
+        zeta1, zeta2, delta1, delta2 = third_moments_to_octupoles(**data)
+        wd1, wd2 = ellipticity_to_whisker(delta1, delta2, spin=3, power=3)[:2]
+        poles.update(dict(zeta1=zeta1, zeta2=zeta2,
+                          delta1=delta1, delta2=delta2,
+                          wd1=wd1, wd2=wd2))
+
+    if ('var_x3' in data) * ('var_x2y' in data) * \
+            ('var_xy2' in data) * ('var_y3' in data):
+        var_zeta1, var_zeta2, var_delta1, var_delta2 = \
+            third_moment_variance_to_octupole_variance(**data)
+        poles.update(dict(var_zeta1=var_zeta1, var_zeta2=var_zeta2,
+                          var_delta1=var_delta1, var_delta2=var_delta2,))
+
+    if ('x4' in data) * ('x2y2' in data) * ('y4' in data):
+        xi = data['x4'] + 2 * data['x2y2'] + data['y4']
+        poles.update(dict(xi=xi))
+
+    # other parameters
+    if ('x' in data) * ('y' in data):
+        poles.update(dict(x=data['x'], y=data['y']))
+
+    if ('x_box' in data) * ('y_box' in data):
+        poles.update(dict(x_box=data['x_box'], y_box=data['y_box']))
+
+    if 'n' in data:
+        poles.update(dict(n=data['n']))
+
+    return poles
 
 def average_dictionary(
         data, average,
@@ -233,31 +323,27 @@ def average_dictionary(
         # subtract average if desired
         if subav:
             zin = zin - average(zin)
-        z, z2 = decaminfo().average_boxdiv(x, y, zin, average,
+        z, var_z = decaminfo().average_boxdiv(x, y, zin, average,
                                            boxdiv=boxdiv)
-        returndict.update({name: z, '{0}_2'.format(name): z2})
+        returndict.update({name: z, 'var_{0}'.format(name): var_z})
     # do x and y and get number, too
-    x_av, x_av2, N, bounds = decaminfo().average_boxdiv(x, y, x, average,
+    x_av, var_x, N, bounds = decaminfo().average_boxdiv(x, y, x, average,
                                                         boxdiv=boxdiv,
                                                         Ntrue=True)
-    y_av, y_av2, = decaminfo().average_boxdiv(x, y, y, average,
+    y_av, var_y, = decaminfo().average_boxdiv(x, y, y, average,
                                               boxdiv=boxdiv,
                                               Ntrue=False)
 
-    returndict.update({'x': x_av, 'x_2': x_av2,
-                       'y': y_av, 'y_2': y_av2,
+    returndict.update({'x': x_av, 'var_x': var_x,
+                       'y': y_av, 'var_y': var_y,
                        'n': N})
 
     # get the midpoints of each box
-    x_box = []
-    y_box = []
-    for box in bounds:
-        for x in range(len(box[0]) - 1):
-            for y in range(len(box[1]) - 1):
-                x_box.append((box[0][x] + box[0][x + 1]) / 2.)
-                y_box.append((box[1][y] + box[1][y + 1]) / 2.)
-    x_box = np.array(x_box)
-    y_box = np.array(y_box)
+    boxes = decaminfo().average_boxdiv(x, y, y, average,
+                                       boxdiv=boxdiv,
+                                       boxes=True)
+    x_box = boxes[:,0]
+    y_box = boxes[:,1]
     returndict.update({'x_box': x_box, 'y_box': y_box})
 
     return returndict
@@ -324,7 +410,7 @@ def chi2(data_a, data_b, chi_weights, var_dict):
     return chi_dict
 
 
-def average_function(data, average, average_type):
+def average_function(data, average, average_type='default'):
     if average_type == 'scalar_whisker':
         a_i = average(np.sqrt(np.sqrt(data['e1'] ** 2 +
                                       data['e2'] ** 2)))
@@ -336,38 +422,35 @@ def average_function(data, average, average_type):
     return a_i
 
 
-def minuit_dictionary(keys):
+def minuit_dictionary(keys, h_base=1e-1):
     # based on what params you want to fit to, create a minuit dictionary
     # with errors and initial values and everything
     minuit_dict = {}
+    h_dict = {}
     for key in keys:
         minuit_dict.update({'fix_{0}'.format(key): False})
         if key == 'rzero':
-            minuit_dict.update({'rzero': 0.125})
-            minuit_dict.update({'error_rzero': 0.005})
-            minuit_dict.update({'limit_rzero': (0.07, 0.4)})
+            minuit_dict.update({key: 0.125})
+            minuit_dict.update({'error_{0}'.format(key): 0.005})
+            minuit_dict.update({'limit_{0}'.format(key): (0.07, 0.4)})
+            h_dict.update({key: 0.005 * h_base})
             #minuit_dict.update({'fix_rzero':False})
         elif key == 'fwhm':
             #minuit_dict.update({'fwhm':0.14 / self.rzero})
-            minuit_dict.update({'fwhm': 1.0})
-            minuit_dict.update({'error_fwhm': 0.1})
-            minuit_dict.update({'limit_fwhm': (0.6, 2.0)})
-        elif key == 'dz':
-            minuit_dict.update({'dz': 0})
-            minuit_dict.update({'error_dz': 40})
-            minuit_dict.update({'limit_dz': (-300, 300)})
-        elif key == 'z04d':
-            minuit_dict.update({'z04d': 0})
-            minuit_dict.update({'error_z04d': 40})
-            minuit_dict.update({'limit_z04d': (-300, 300)})
-        elif key == 'z04x':
-            minuit_dict.update({'z04x': 0})
-            minuit_dict.update({'error_z04x': 20})
-            minuit_dict.update({'limit_z04x': (-100, 100)})
-        elif key == 'z04y':
-            minuit_dict.update({'z04y': 0})
-            minuit_dict.update({'error_z04y': 20})
-            minuit_dict.update({'limit_z04y': (-100, 100)})
+            minuit_dict.update({key: 1.0})
+            minuit_dict.update({'error_{0}'.format(key): 0.1})
+            minuit_dict.update({'limit_{0}'.format(key): (0.6, 2.0)})
+            h_dict.update({key: 0.1 * h_base})
+        elif (key == 'dz') + (key == 'z04d'):
+            minuit_dict.update({key: 0})
+            minuit_dict.update({'error_{0}'.format(key): 40})
+            minuit_dict.update({'limit_{0}'.format(key): (-300, 300)})
+            h_dict.update({key: 40 * h_base})
+        elif (key == 'z04x') + (key == 'z04y'):
+            minuit_dict.update({key: 0})
+            minuit_dict.update({'error_{0}'.format(key): 20})
+            minuit_dict.update({'limit_{0}'.format(key): (-100, 100)})
+            h_dict.update({key: 20 * h_base})
         elif (key[0] == 'z') * (len(key) == 4):
             # all zernikes
             # guess from image_correction
@@ -379,23 +462,27 @@ def minuit_dictionary(keys):
             if key[3] == 'd':
                 minuit_dict.update({'error_{0}'.format(key): 0.1})
                 minuit_dict.update({'limit_{0}'.format(key): (-0.75, 0.75)})
+                h_dict.update({key: 0.1 * h_base})
             else:
                 # x and y
                 minuit_dict.update({'error_{0}'.format(key): 5e-4})
                 minuit_dict.update({
                     'limit_{0}'.format(key): (-0.0075, 0.0075)})
-        elif (key[0] == 'e') * (len(key) == 2):
+                h_dict.update({key: 5e-4 * h_base})
+        elif (key == 'e1') + (key == 'e2'):
             # looking at the common mode terms
             minuit_dict.update({key: 0})
             minuit_dict.update({'error_{0}'.format(key): 0.005})
             minuit_dict.update({'limit_{0}'.format(key): (-0.05, 0.05)})
+            h_dict.update({key: 0.005 * h_base})
         else:
             # hexapod:
             minuit_dict.update({key: 0})
             minuit_dict.update({'error_{0}'.format(key): 100})
             minuit_dict.update({'limit_{0}'.format(key): (-4500, 4500)})
+            h_dict.update({key: 100 * h_base})
 
-    return minuit_dict
+    return minuit_dict, h_dict
 
 
 def in_dict_from_minuit_dict(minuit_dict):
@@ -508,3 +595,7 @@ def MAD(data, sigma=3):
     conds_mad = (a < d + sigma * mad) * (a > d - sigma * mad)
 
     return conds_mad, mad
+
+def mean_trim(data, sigma=3):
+    conds, mad = MAD(data, sigma=sigma)
+    return np.mean(data[conds])

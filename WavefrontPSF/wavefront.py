@@ -51,7 +51,7 @@ class Wavefront(object):
     """
 
     def __init__(self, number_electrons=1e6, background=0, randomFlag=0,
-                 nbin=64, nPixels=16, pixelOverSample=4, scaleFactor=2.,
+                 nbin=256, nPixels=32, pixelOverSample=8, scaleFactor=1.,
                  **args):
 
         self.number_electrons = number_electrons
