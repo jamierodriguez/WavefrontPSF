@@ -219,7 +219,7 @@ class Wavefront(object):
         a4 = 0.5 * rho4 - 1
         # update return_dict
         return_dict = {
-                'x': Mx, 'y': My,
+                'Mx': Mx, 'My': My,
                 'Mxx': Mxx, 'Mxy': Mxy, 'Myy': Myy,
                 'fwhm': fwhm, 'flux': A, 'a4': a4, 'whisker': whisker,
                 }
@@ -292,7 +292,7 @@ class Wavefront(object):
         """
 
         # create return_dict
-        return_dict = dict(x=[], y=[], fwhm=[])#,
+        return_dict = dict(x=[], y=[])
                            #zernikes=zernikes)
         if 'stamp' in verbosity:
             return_dict.update(dict(stamp=[]))
@@ -310,22 +310,20 @@ class Wavefront(object):
                 stamp,
                 background=background, threshold=threshold,
                 order_dict=order_dict)
-            fwhm = moment_dict['fwhm']
+
+            if i == 0:
+                for key in moment_dict.keys():
+                    return_dict.update({key: []})
+            for key in moment_dict.keys():
+                return_dict[key].append(moment_dict[key])
 
             # append to big list
             return_dict['x'].append(coord[0])
             return_dict['y'].append(coord[1])
 
-            # append the fwhm
-            return_dict['fwhm'].append(fwhm)
-
             # append the stamp if verbosity is high enough
             if 'stamp' in verbosity:
                 return_dict['stamp'].append(stamp)
-
-            # now append things from order_dict
-            for order in order_dict.keys():
-                return_dict[order].append(moment_dict[order])
 
         # turn all these lists into arrays
         for key in return_dict:

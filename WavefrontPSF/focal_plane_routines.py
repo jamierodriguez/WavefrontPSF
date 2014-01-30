@@ -263,7 +263,7 @@ def convert_moments(data, **args):
         Dictionary of results
 
     """
-    poles = {}
+    poles = data.copy()
     if ('x2' in data) * ('y2' in data) * ('xy' in data):
         e0, e0prime, e1, e2 = second_moment_to_ellipticity(**data)
         poles.update(dict(e0=e0, e0prime=e0prime, e1=e1, e2=e2))

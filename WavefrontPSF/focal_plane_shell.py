@@ -355,7 +355,7 @@ class FocalPlaneShell(Wavefront):
         return moments
 
     def plane_averaged(
-            self, in_dict, coords, average, boxdiv, subav=False,
+            self, in_dict, coords, average=np.mean, boxdiv=0, subav=False,
             windowed=True, order_dict={'x2': {'p': 2, 'q': 0},
                                        'y2': {'p': 0, 'q': 2},
                                        'xy': {'p': 1, 'q': 1}}):

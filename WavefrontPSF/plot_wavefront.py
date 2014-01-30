@@ -39,7 +39,7 @@ def wedge_collection(X, Y, U, V,
                      U_var, V_var,
                      scale=1,
                      artpatch=0,
-                     patch_dict={'alpha': 0.4},
+                     patch_dict={},
                      color='b'):
 
     """A fairly kludgy way of plotting uncertainties on whisker plots.
@@ -92,21 +92,27 @@ def wedge_collection(X, Y, U, V,
 
     for i in range(X.size):
         for j in range(artpatch):
-            theta_l = theta[i] - sigma_theta[i]
-            theta_u = theta_l + 2 * sigma_theta[i]
+            theta_l = theta[i] - 0.5 * sigma_theta[i]
+            theta_u = theta_l + sigma_theta[i]
 
-            # we want the slice, not the rest of the annulus.
-            if theta_u < theta_l:
-                theta_l, theta_u = theta_u, theta_l
+            # # we want the slice, not the rest of the annulus.
+            # if theta_u < theta_l:
+            #     theta_l, theta_u = theta_u, theta_l
+
+            # it CAN be possible to be more than 360 degress unsure
+            if sigma_theta[i] > 360:
+                theta_u = 360
+                theta_l = 0
             #TODO: should this be / scale or * scale?
-            RU = (R[i] + sigma_r[i]) / scale
-            wid2 = 2 * sigma_r[i] / scale
+            RU = (R[i] + 0.5 * sigma_r[i]) / scale
+            wid2 = sigma_r[i] / scale
             if RU - wid2 < 0:
                 wid2 = None
             try:
                 art = Wedge([X[i], Y[i]], RU,
                             theta_l, theta_u, width=wid2,
-                            color=color)
+                            color=color,
+                            alpha=0.4)
             except ValueError:
                 #import ipdb; ipdb.set_trace()
                 print('error in wedge:', X[i], Y[i], RU, theta_l, theta_u,
@@ -118,7 +124,8 @@ def wedge_collection(X, Y, U, V,
 
             theta[i] += delta_theta
 
-    collection = PatchCollection(patches, **patch_dict)
+    collection = PatchCollection(patches, match_original=True,
+                                 **patch_dict)
 
     return collection
 
@@ -534,7 +541,7 @@ def data_focal_plot(data, color='k',
 
     return figures, axes, scales
 
-def data_hist_plot(data, edges):
+def data_hist_plot(data, edges, scales=None):
     """Takes data and makse a bunch of 2d histograms
 
     Parameters
@@ -552,6 +559,16 @@ def data_hist_plot(data, edges):
 
     """
 
+    easy_plots = ['e0', 'e0prime', 'xi', 'a4', 'whisker', 'flux', 'fwhm']
+    double_plots = ['e', 'w', 'zeta', 'delta']
+    if not scales:
+        scales = {}
+        for key in easy_plots:
+            scales.update({key : dict(cmin=1e-9, vmin=None, vmax=None)})
+        for key in double_plots:
+            scales.update({key : dict(cmin=1e-9, vmin=None, vmax=None)})
+
+
 
     if ('x_box' in data) * ('y_box' in data):
         x = data['x_box']
@@ -565,91 +582,34 @@ def data_hist_plot(data, edges):
 
     # plots
 
-    if 'e0' in data:
-        # e0
-        e0_figure, e0_axis = focal_graph()
-        e0_axis.set_title('e0')
-        (counts, xedges, yedges, Image) = e0_axis.hist2d(
-            x, y, bins=edges, weights=data['e0'], cmin=1e-9,)
-        e0_figure.colorbar(Image)
-        figures.update(dict(e0=e0_figure))
-        axes.update(dict(e0=e0_axis))
+    for key in easy_plots:
+        if key in data:
 
-    if 'e0prime' in data:
-        # e0prime
-        e0prime_figure, e0prime_axis = focal_graph()
-        e0prime_axis.set_title('e0prime')
-        (counts, xedges, yedges, Image) = e0prime_axis.hist2d(
-            x, y, bins=edges, weights=data['e0prime'], cmin=1e-9,)
-        e0prime_figure.colorbar(Image)
-        figures.update(dict(e0prime=e0prime_figure))
-        axes.update(dict(e0prime=e0prime_axis))
+            key_figure, key_axis = focal_graph()
+            key_axis.set_title(key)
+            (counts, xedges, yedges, Image) = key_axis.hist2d(
+                x, y, bins=edges, weights=data[key], **scales[key])
+            CB = key_figure.colorbar(Image)
+            scales[key].update(dict(vmin = CB.vmin, vmax = CB.vmax))
 
-    if 'xi' in data:
-        # xi
-        xi_figure, xi_axis = focal_graph()
-        xi_axis.set_title('xi')
-        (counts, xedges, yedges, Image) = xi_axis.hist2d(
-            x, y, bins=edges, weights=data['xi'], cmin=1e-9,)
-        xi_figure.colorbar(Image)
-        figures.update(dict(xi=xi_figure))
-        axes.update(dict(xi=xi_axis))
+            figures.update({key: key_figure})
+            axes.update({key: key_axis})
 
-    if ('e1' in data) * ('e2' in data):
-        # e
-        u = data['e1']
-        v = data['e2']
+    for key in double_plots:
+        if (key + '1' in data) * (key + '2' in data):
+            u = data[key + '1']
+            v = data[key + '2']
 
-        e_figure, e_axis = focal_graph()
-        e_axis.set_title('e')
-        r = np.sqrt(u ** 2 + v ** 2)
-        (counts, xedges, yedges, Image) = e_axis.hist2d(
-            x, y, bins=edges, weights=r, cmin=1e-9,)
-        e_figure.colorbar(Image)
-        figures.update(dict(e=e_figure))
-        axes.update(dict(e=e_axis))
+            key_figure, key_axis = focal_graph()
+            key_axis.set_title(key)
+            r = np.sqrt(u ** 2 + v ** 2)
+            (counts, xedges, yedges, Image) = key_axis.hist2d(
+                x, y, bins=edges, weights=r, **scales[key])
+            CB = key_figure.colorbar(Image)
+            scales[key].update(dict(vmin = CB.vmin, vmax = CB.vmax))
 
-    if ('w1' in data) * ('w2' in data):
-        # w
-        u = data['w1']
-        v = data['w2']
+            figures.update({key: key_figure})
+            axes.update({key: key_axis})
 
-        w_figure, w_axis = focal_graph()
-        w_axis.set_title('whisker')
-        r = np.sqrt(u ** 2 + v ** 2)
-        (counts, xedges, yedges, Image) = w_axis.hist2d(
-            x, y, bins=edges, weights=r, cmin=1e-9,)
-        w_figure.colorbar(Image)
-        figures.update(dict(w=w_figure))
-        axes.update(dict(w=w_axis))
-
-    if ('zeta1' in data) * ('zeta2' in data):
-        # zeta
-        u = data['zeta1']
-        v = data['zeta2']
-
-        zeta_figure, zeta_axis = focal_graph()
-        zeta_axis.set_title('zeta')
-        r = np.sqrt(u ** 2 + v ** 2)
-        (counts, xedges, yedges, Image) = zeta_axis.hist2d(
-            x, y, bins=edges, weights=r, cmin=1e-9,)
-        zeta_figure.colorbar(Image)
-        figures.update(dict(zeta=zeta_figure))
-        axes.update(dict(zeta=zeta_axis))
-
-    if ('delta1' in data) * ('delta2' in data):
-        # delta
-        u = data['delta1']
-        v = data['delta2']
-
-        delta_figure, delta_axis = focal_graph()
-        delta_axis.set_title('delta')
-        r = np.sqrt(u ** 2 + v ** 2)
-        (counts, xedges, yedges, Image) = delta_axis.hist2d(
-            x, y, bins=edges, weights=r, cmin=1e-9,)
-        delta_figure.colorbar(Image)
-        figures.update(dict(delta=delta_figure))
-        axes.update(dict(delta=delta_axis))
-
-    return figures, axes
+    return figures, axes, scales
 
