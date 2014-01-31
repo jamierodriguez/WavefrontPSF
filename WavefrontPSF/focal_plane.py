@@ -334,6 +334,10 @@ class FocalPlane(FocalPlaneShell):
                 x2=recdata['X2' + self.coord_name].astype(np.float64),
                 y2=recdata['Y2' + self.coord_name].astype(np.float64),
                 xy=recdata['XY' + self.coord_name].astype(np.float64),
+                x3=recdata['X3' + self.coord_name].astype(np.float64),
+                x2y=recdata['X2Y' + self.coord_name].astype(np.float64),
+                xy2=recdata['XY2' + self.coord_name].astype(np.float64),
+                y3=recdata['Y3' + self.coord_name].astype(np.float64),
                 fwhm=recdata['FWHM_WORLD'].astype(np.float64) * 3600,)
 
         # now average
