@@ -310,9 +310,8 @@ class decaminfo(object):
                     N.append(np.sum(choose))
                     Pave.append(average(P[choose]))
                     var_Pave.append(
-                        average(np.square(P[choose] - average(P[choose]))))
-                                    #/ np.sum(choose))
-                                    # variance in param, not mean
+                        average(np.square(P[choose] - average(P[choose])))
+                                    / np.sum(choose))
                     if members:
                         members_list.append(np.where(choose)[0])
                     if boxes:
