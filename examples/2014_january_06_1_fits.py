@@ -60,7 +60,6 @@ for image_number in expids:
                '-a', str(0),  # subav
                '-d', str(0),  # seed
                '-f', 'default',  # filtering for conds
-               '-cpd', str(1),  # use cpd or sextractor
                '-e', '{0}'.format(image_number),  # expid
                ]
     print_command(command)
