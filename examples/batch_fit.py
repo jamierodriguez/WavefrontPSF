@@ -132,17 +132,12 @@ chi_weights = {
     'e1': 1.,
     'e2': 1.,
     }
-order_dict = {
-    'x2': {'p': 2, 'q': 0},
-    'y2': {'p': 0, 'q': 2},
-    'xy': {'p': 1, 'q': 1},
-    }
 
 def FP_func(dz, e1, e2, rzero, dx, dy, xt, yt, z05d, z06d,
             z07x, z07y, z08x, z08y, z09d, z10d):
     in_dict_FP_func = locals().copy()
 
-    # assumes FP, order_dict, chi_weights, boxdiv, subav, comparison_average
+    # assumes FP, chi_weights, boxdiv, subav, comparison_average
     # are defined before this!
 
     # go through the key_FP_funcs and make sure there are no nans
@@ -157,7 +152,7 @@ def FP_func(dz, e1, e2, rzero, dx, dy, xt, yt, z05d, z06d,
     poles_i = FP.plane_averaged(
             in_dict_FP_func, coords=coords,
             average=average, boxdiv=args_dict['boxdiv'],
-            order_dict=order_dict,)
+            )
     poles_i['e1'] += e1
     poles_i['e2'] += e2
 
@@ -270,7 +265,7 @@ np.save(
 # save the outputted focal plane
 moments = FP.plane_averaged(
     minuit_results['args'], coords=coords,
-    average=average, boxdiv=args_dict['boxdiv'], order_dict=order_dict)
+    average=average, boxdiv=args_dict['boxdiv'])
 moments['e1'] += minuit_results['args']['e1']
 moments['e2'] += minuit_results['args']['e2']
 

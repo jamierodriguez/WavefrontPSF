@@ -16,6 +16,9 @@ from os import path, makedirs, chdir, system, remove
 
 from focal_plane import FocalPlane
 from decamutil_cpd import decaminfo
+
+from focal_plane_routines import MAD
+
 """
 TODO:
     [ ] Consider looking at DESDB for the 'smart' way of downloading the files.
@@ -228,6 +231,11 @@ for i in xrange(1, 63):
                            array=2.5 / np.log(10) / FP.recdata['MAGERR_AUTO'],
                            format='1E',),
 
+        # to chip number
+        'CHIP': dict(name='CHIP',
+                     array=np.ones(FP.recdata['MAGERR_AUTO'].size) * i,
+                     format='1I'),
+
         'X2WIN_IMAGE': dict(name='X2WIN_IMAGE',
                            array=[],
                            format='1D',
@@ -298,14 +306,6 @@ for i in xrange(1, 63):
 
         stamp = image[y_start:y_end, x_start:x_end].astype(np.float64)
 
-        order_dict = {'x2': {'p': 2, 'q': 0},
-                      'y2': {'p': 0, 'q': 2},
-                      'xy': {'p': 1, 'q': 1},
-                      'x3': {'p': 3, 'q': 0},
-                      'y3': {'p': 0, 'q': 3},
-                      'x2y': {'p': 2, 'q': 1},
-                      'xy2': {'p': 1, 'q': 2}}
-
         background = recdata['BACKGROUND']
         # only cut off at one std; it seems like 2 std actually biases the
         # data...
@@ -314,7 +314,7 @@ for i in xrange(1, 63):
         moment_dict = FP.moments(stamp,
                                  background=background,
                                  threshold=threshold,
-                                 order_dict=order_dict)
+                                 )
 
         # append to pyfits_dict
         pyfits_dict['STAMP']['array'].append(
@@ -349,6 +349,12 @@ for i in xrange(1, 63):
     # image or a cosmic (though there are some of both that have a4 < 0.3!)
     conds = ((np.array(pyfits_dict['A4_ADAPTIVE']['array']) < 0.15) *
             (np.array(pyfits_dict['FLUX_ADAPTIVE']['array']) > 10))
+    # cull crazy things
+    mad_keys =  ['X2WIN_IMAGE', 'XYWIN_IMAGE', 'Y2WIN_IMAGE',
+                 'X3WIN_IMAGE', 'X2YWIN_IMAGE', 'XY2WIN_IMAGE', 'Y3WIN_IMAGE',
+                 'A4_ADAPTIVE', 'WHISKER', 'FWHM_WORLD', 'FLUX_RADIUS']
+    for key in mad_keys:
+        conds *= MAD(pyfits_dict[key]['array'], sigma=5)[0]
     # create the columns
     columns = []
     for key in pyfits_dict:

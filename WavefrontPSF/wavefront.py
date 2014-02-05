@@ -173,9 +173,7 @@ class Wavefront(object):
 
     def moments(self, data,
                 background=0, threshold=-1e9,
-                order_dict={'x2': {'p': 2, 'q': 0},
-                            'y2': {'p': 0, 'q': 2},
-                            'xy': {'p': 1, 'q': 1}}):
+                order_dict={}):
         """Given a stamp, create moments
 
         Parameters
@@ -199,6 +197,9 @@ class Wavefront(object):
             Gives a list of the x and y orders of the moments we want to
             calculate.
             Defaults to x2 y2 and xy moments.
+            Ex:            {'x2': {'p': 2, 'q': 0},
+                            'y2': {'p': 0, 'q': 2},
+                            'xy': {'p': 1, 'q': 1}}
 
         Returns
         -------
@@ -211,7 +212,9 @@ class Wavefront(object):
         stamp = np.where(conds, stamp, 0)  # mask noise
 
         # get moment matrix
-        Mx, My, Mxx, Mxy, Myy, A, rho4 = adaptive_moments(stamp)
+        Mx, My, Mxx, Mxy, Myy, A, rho4, \
+            x2, xy, y2, x3, x2y, xy2, y3 \
+            = adaptive_moments(stamp)
 
         fwhm = np.sqrt(np.sqrt(Mxx * Myy - Mxy * Mxy))
         whisker = np.sqrt(np.sqrt(Mxy * Mxy + 0.25 * np.square(Mxx - Myy)))
@@ -222,9 +225,11 @@ class Wavefront(object):
                 'Mx': Mx, 'My': My,
                 'Mxx': Mxx, 'Mxy': Mxy, 'Myy': Myy,
                 'fwhm': fwhm, 'flux': A, 'a4': a4, 'whisker': whisker,
+                'x2': x2, 'xy': xy, 'y2': y2,
+                'x3': x3, 'x2y': x2y, 'xy2': xy2, 'y3': y3,
                 }
 
-        # now go through moment_dict and create the other moments
+        # now go through moment_dict and create any other moments
         for order in order_dict:
             pq = order_dict[order]
             p = pq['p']
@@ -242,9 +247,7 @@ class Wavefront(object):
             self, stamps, coords,
             backgrounds=[], thresholds=[],
             verbosity=[], windowed=True,
-            order_dict={'x2': {'p': 2, 'q': 0},
-                        'y2': {'p': 0, 'q': 2},
-                        'xy': {'p': 1, 'q': 1}}):
+            order_dict={}):
 
         """create a bunch of
 

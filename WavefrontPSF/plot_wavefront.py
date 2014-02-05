@@ -541,7 +541,7 @@ def data_focal_plot(data, color='k',
 
     return figures, axes, scales
 
-def data_hist_plot(data, edges, scales=None):
+def data_hist_plot(data, edges, scales=None, other_keys=[]):
     """Takes data and makse a bunch of 2d histograms
 
     Parameters
@@ -582,7 +582,7 @@ def data_hist_plot(data, edges, scales=None):
 
     # plots
 
-    for key in easy_plots:
+    for key in (easy_plots + other_keys):
         if key in data:
 
             key_figure, key_axis = focal_graph()

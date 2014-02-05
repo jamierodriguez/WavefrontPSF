@@ -292,9 +292,7 @@ class FocalPlaneShell(Wavefront):
         return zernike_dictionary
 
     def plane(self, in_dict, coords,
-              windowed=True, order_dict={'x2': {'p': 2, 'q': 0},
-                                         'y2': {'p': 0, 'q': 2},
-                                         'xy': {'p': 1, 'q': 1}}):
+              windowed=True, order_dict={}):
         """create a wavefront across the focal plane
 
         Parameters
@@ -311,7 +309,7 @@ class FocalPlaneShell(Wavefront):
         order_dict : dictionary, optional
             A dictionary of dictionaries indicating the name and the powers of
             the moments calculated.
-            Default calculates the second moments.
+            Default calculates the second and third moments.
 
         Returns
         -------
@@ -356,9 +354,7 @@ class FocalPlaneShell(Wavefront):
 
     def plane_averaged(
             self, in_dict, coords, average=np.mean, boxdiv=0, subav=False,
-            windowed=True, order_dict={'x2': {'p': 2, 'q': 0},
-                                       'y2': {'p': 0, 'q': 2},
-                                       'xy': {'p': 1, 'q': 1}}):
+            windowed=True, order_dict={}):
         """create a wavefront across the focal plane and average into boxes
 
         Parameters
@@ -375,7 +371,7 @@ class FocalPlaneShell(Wavefront):
         order_dict : dictionary, optional
             A dictionary of dictionaries indicating the name and the powers of
             the moments calculated.
-            Default calculates the second moments.
+            Default calculates the second and third moments.
 
         average : function
             Function used for averaging
@@ -759,3 +755,9 @@ class FocalPlaneShell(Wavefront):
             return_dict.update({key: np.append(self.data[key],
                                                other.data[key])})
         return return_dict
+
+    def __sub__(self, other):
+        """Take other's items and subtract them to ours on a moment level ONLY.
+        NOTE: the data is NOT defined here!"""
+        pass
+

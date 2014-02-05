@@ -55,6 +55,10 @@ cpdef np.ndarray[DTYPE_t, ndim=1] find_ellipmom_1(
     cdef DTYPE_t Cxx = 0
     cdef DTYPE_t Cxy = 0
     cdef DTYPE_t Cyy = 0
+    cdef DTYPE_t Cxxx = 0
+    cdef DTYPE_t Cxxy = 0
+    cdef DTYPE_t Cxyy = 0
+    cdef DTYPE_t Cyyy = 0
     cdef DTYPE_t rho4w = 0
 
     cdef int xmin = 0
@@ -163,9 +167,16 @@ cpdef np.ndarray[DTYPE_t, ndim=1] find_ellipmom_1(
             Cxx += intensity * x_Mx ** 2
             Cxy += intensity * x_Mx * y_My
             Cyy += intensity * y_My ** 2
+            Cxxx += intensity * x_Mx ** 3
+            Cxxy += intensity * x_Mx ** 2 * y_My
+            Cxyy += intensity * x_Mx * y_My ** 2
+            Cyyy += intensity * y_My ** 3
             rho4w += intensity * rho2 * rho2
 
-    cdef np.ndarray[DTYPE_t, ndim=1] return_array = np.array([A, Bx, By, Cxx, Cxy, Cyy, rho4w], dtype=DTYPE)
+    cdef np.ndarray[DTYPE_t, ndim=1] return_array = \
+        np.array([A, Bx, By, Cxx, Cxy, Cyy, rho4w,
+                  Cxx, Cxxy, Cxyy, Cyyy
+                  ], dtype=DTYPE)
     return return_array
 
 def adaptive_moments(data):
@@ -193,7 +204,9 @@ def adaptive_moments(data):
         # print(Mx, My, Mxx, Mxy, Myy, num_iter)
 
         # Get moments
-        Amp, Bx, By, Cxx, Cxy, Cyy, rho4 = find_ellipmom_1(data, Mx, My, Mxx, Mxy, Myy)
+        Amp, Bx, By, Cxx, Cxy, Cyy, rho4, \
+            Cxxx, Cxxy, Cxyy, Cyyy \
+            = find_ellipmom_1(data, Mx, My, Mxx, Mxy, Myy)
         # print(num_iter)
         # print(Amp, Bx / Amp, By / Amp, Cxx / Amp, Cxy / Amp, Cyy / Amp, rho4 / Amp)
         # print(Mx, My, Mxx, Mxy, Myy)
@@ -253,8 +266,15 @@ def adaptive_moments(data):
 
     A = Amp
     rho4 /= Amp
+    x2 = Cxx / Amp
+    xy = Cxy / Amp
+    y2 = Cyy / Amp
+    x3 = Cxxx / Amp
+    x2y = Cxxy / Amp
+    xy2 = Cxyy / Amp
+    y3 = Cyyy / Amp
 
-    return Mx, My, Mxx, Mxy, Myy, A, rho4
+    return Mx, My, Mxx, Mxy, Myy, A, rho4, x2, xy, y2, x3, x2y, xy2, y3
 
 
 cpdef double centered_moment(

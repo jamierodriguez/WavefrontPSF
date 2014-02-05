@@ -10,8 +10,8 @@ from __future__ import print_function, division
 import numpy as np
 from focal_plane_shell import FocalPlaneShell
 import pyfits
-from decam_csv_routines import combine_decam_catalogs
-from focal_plane_routines import average_dictionary, convert_moments
+from decam_csv_routines import combine_decam_catalogs, generate_hdu_lists
+from focal_plane_routines import average_dictionary, convert_moments, mean_trim
 
 class FocalPlane(FocalPlaneShell):
     """FocalPlaneShell tied to a specific image. Comparisons and such
@@ -50,28 +50,30 @@ class FocalPlane(FocalPlaneShell):
     create_data
         Create data attribute and coords
 
-    combine_decam_catalogs
-        assemble an array from all the focal plane chips
-
     """
 
     def __init__(self,
-                 list_catalogs, list_fits_extension, list_chip,
+                 list_catalogs, list_fits_extension=None, list_chip=None,
                  max_samples_box=300, boxdiv=0, subav=0,
-                 conds='default', average=np.mean,
+                 conds='default', average=mean_trim,
                  **args):
 
         # do the old init for Wavefront
         super(FocalPlane, self).__init__(**args)
         # could put in nEle etc here
 
+
+        if not list_chip:
+            list_catalogs, list_fits_extension, list_chip = \
+                generate_hdu_lists(list_catalogs)
+        self.list_catalogs = list_catalogs
+        self.list_fits_extension = list_fits_extension
+        self.list_chip = list_chip
+
         self.average = average
         self.boxdiv = boxdiv
         self.subav = subav
         self.max_samples_box = max_samples_box
-        self.list_catalogs = list_catalogs
-        self.list_fits_extension = list_fits_extension
-        self.list_chip = list_chip
         self.coord_name = 'WIN_IMAGE'
 
         # generate recdata
@@ -224,6 +226,109 @@ class FocalPlane(FocalPlaneShell):
 
         """
 
+        recdata_return = recdata #np.copy(recdata)
+        extension_return = extension #np.copy(extension)
+        # create the bounds [[x0, x1, xn], [y0, y1, y2, yn]] .  to do this,
+        # realize that you only need to make one box (since we will filter by
+        # pixel coordinates)
+
+        conds_return = np.array([False] * extension_return.size)
+        # find out which ones are also nans etc
+        conds_finite = (
+            np.isfinite(recdata_return['Y2' + self.coord_name]) *
+            np.isfinite(recdata_return['X2' + self.coord_name]) *
+            np.isfinite(recdata_return['XY' + self.coord_name]) *
+            (recdata_return['Y2' + self.coord_name] > 0) *
+            (recdata_return['X2' + self.coord_name] > 0)
+            )
+
+        # think about reordering below:
+        box = self.decaminfo.getBounds_pixel(boxdiv=boxdiv)
+        for x in xrange(len(box[0]) - 1):
+            conds_coords_x = ((recdata_return['X' + self.coord_name] >
+                               box[0][x]) *
+                              (recdata_return['X' + self.coord_name] <
+                               box[0][x+1]))
+
+            for y in xrange(len(box[1]) - 1):
+                conds_coords_y = ((recdata_return['Y' + self.coord_name] >
+                                   box[1][y]) *
+                                  (recdata_return['Y' + self.coord_name] <
+                                   box[1][y+1]))
+
+                conds_coords = conds_coords_x * conds_coords_y
+                for i in range(1, 63):
+                    if i == 61:
+                        #n30 sucks
+                        continue
+                    extname = self.decaminfo.ccddict[i]
+
+                    conds = conds_coords * (extension_return == extname)
+
+                    # TODO: I really should never have to actually do the
+                    # following, because I shouldn't be getting nan moments!
+
+                    # conds_kill = inside chip AND not finite
+                    conds_kill = conds * ~conds_finite
+
+                    # conds_okay = inside chip AND finite
+                    conds_okay = conds * conds_finite
+
+                    # This is pretty kludgey.  We only want UP TO
+                    # max_samples_box of conds_okay, so we find the N of
+                    # conds_okay that need to be excluded
+
+                    N = np.sum(conds_okay) - max_samples_box
+                    if N > 0:
+                        true_list = [False] * N + \
+                                    [True] * (max_samples_box)
+                        np.random.shuffle(true_list)
+                        indices = np.nonzero(conds_okay)[0]
+                        for ii in xrange(len(true_list)):
+                            conds_okay[indices[ii]] = true_list[ii]
+                            # in effect, conds_okay now becomes the opposite of
+                            # those that will be excluded via max_samples
+
+                    conds_final = conds_okay
+
+                    conds_return += conds_final
+
+
+        recdata_return = recdata_return[conds_return]
+        extension_return = extension_return[conds_return]
+
+        return recdata_return, extension_return
+
+    def filter_number_in_box_old(
+            self, recdata, extension, max_samples_box, boxdiv=0):
+        """Filter such that each box has no more than max_samples_box.
+
+        Parameters
+        ----------
+        recdata : dictionary
+            contains the example sampling.
+
+        extension : list
+            Array of all the extension names
+
+        boxdiv : int
+            How many divisions we will put into the chip. Default is zero
+            divisions on each chip.
+
+        max_samples_box : int
+            The max number that should be in each box.
+
+        Returns
+        -------
+        recdata_return : dictionary
+            contains the example sampling. Filtered
+
+        extension_return : list
+            Array of all the extension names. Filtered
+
+
+        """
+
         recdata_return = np.copy(recdata)
         extension_return = np.copy(extension)
         # create the bounds [[x0, x1, xn], [y0, y1, y2, yn]] .  to do this,
@@ -293,11 +398,8 @@ class FocalPlane(FocalPlaneShell):
 
         return recdata_return, extension_return
 
-
-    def create_data(self, recdata, extension, average, boxdiv, subav):
+    def create_data_unaveraged(self, recdata, extension):
         """Create the data attribute
-
-        TODO: add order_dict param
 
         Parameters
         ----------
@@ -320,6 +422,7 @@ class FocalPlane(FocalPlaneShell):
 
         """
 
+
         coords = np.array([self.decaminfo.getPosition(
             extension[i],
             recdata['X' + self.coord_name][i],
@@ -334,11 +437,52 @@ class FocalPlane(FocalPlaneShell):
                 x2=recdata['X2' + self.coord_name].astype(np.float64),
                 y2=recdata['Y2' + self.coord_name].astype(np.float64),
                 xy=recdata['XY' + self.coord_name].astype(np.float64),
-                x3=recdata['X3' + self.coord_name].astype(np.float64),
-                x2y=recdata['X2Y' + self.coord_name].astype(np.float64),
-                xy2=recdata['XY2' + self.coord_name].astype(np.float64),
-                y3=recdata['Y3' + self.coord_name].astype(np.float64),
                 fwhm=recdata['FWHM_WORLD'].astype(np.float64) * 3600,)
+        if ('X3' + self.coord_name in recdata.dtype.names):
+            moments_unaveraged.update(dict(
+                    x3=recdata['X3' + self.coord_name].astype(np.float64),
+                    x2y=recdata['X2Y' + self.coord_name].astype(np.float64),
+                    xy2=recdata['XY2' + self.coord_name].astype(np.float64),
+                    y3=recdata['Y3' + self.coord_name].astype(np.float64),
+                    ))
+
+        return moments_unaveraged, coords
+
+    def create_data(self, recdata, extension, average, boxdiv, subav):
+        """Create the data attribute
+
+        Parameters
+        ----------
+        recdata : recarray
+            recarray with all the recdata
+
+        extension : list
+            Array of all the extension names
+
+        average : function
+            Function used to average data
+
+        boxdiv : int
+            Controls chip divisions
+
+        subav : int
+            Subtract the mean value of the entire focal plane?
+
+        Returns
+        -------
+        data : dictionary
+            dictionary of important attributes
+
+        coords : array
+            3 dimensional array of the stars used
+            The first two coordinates correspond to the X and Y locations in
+            the Focal Plane coordinate system (mm), while the third tells you
+            the extension number
+
+        """
+
+        moments_unaveraged, coords = self.create_data_unaveraged(recdata,
+                                                                 extension)
 
         # now average
         moments = average_dictionary(moments_unaveraged, average,
