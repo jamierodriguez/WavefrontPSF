@@ -18,10 +18,12 @@ from focal_plane import FocalPlane
 from decamutil_cpd import decaminfo
 
 from focal_plane_routines import MAD
+from decam_csv_routines import download_cat, download_image
 
 """
 TODO:
     [ ] Consider looking at DESDB for the 'smart' way of downloading the files.
+    [ ] Get rid of the WIN_IMAGE tags?
 
 input_list = [
     [20130906105326, 20130905, 231046, 231053],
@@ -107,16 +109,10 @@ for i in xrange(1, 63):
         continue
 
     # get cat
-    command = "wget --no-check-certificate --http-user=cpd --http-password=cpd70chips -nc -nd -nH -r -k -p -np  --cut-dirs=3 https://desar2.cosmology.illinois.edu/DESFiles/desardata/OPS/red/{0}_{3}/red/DECam_{1:08d}/DECam_{1:08d}_{2:02d}_cat.fits".format(args_dict['rid'], args_dict['expid'], i, args_dict['date'])
-    system(command)
+    download_cat(args_dict['rid'], args_dict['expid'], args_dict['date'], i)
     # get image
-    command = "wget --no-check-certificate --http-user=cpd --http-password=cpd70chips -nc -nd -nH -r -k -p -np  --cut-dirs=3 https://desar2.cosmology.illinois.edu/DESFiles/desardata/OPS/red/{0}_{3}/red/DECam_{1:08d}/DECam_{1:08d}_{2:02d}.fits.fz".format(args_dict['rid'], args_dict['expid'], i, args_dict['date'])
-    system(command)
-    # decompress image
-    command = "funpack DECam_{0:08d}_{1:02d}.fits.fz".format(args_dict['expid'], i)
-    system(command)
-    # remove old compressed image
-    remove("DECam_{0:08d}_{1:02d}.fits.fz".format(args_dict['expid'], i))
+    download_image(args_dict['rid'], args_dict['expid'], args_dict['date'], i)
+
 
     # create an FP object
     path_base = args_dict['catalogs']
@@ -348,7 +344,7 @@ for i in xrange(1, 63):
     # almost universally, any a4 > 0.3 is either a completely miscentered
     # image or a cosmic (though there are some of both that have a4 < 0.3!)
     conds = ((np.array(pyfits_dict['A4_ADAPTIVE']['array']) < 0.15) *
-            (np.array(pyfits_dict['FLUX_ADAPTIVE']['array']) > 10))
+             (np.array(pyfits_dict['FLUX_ADAPTIVE']['array']) > 10))
     # cull crazy things
     mad_keys =  ['X2WIN_IMAGE', 'XYWIN_IMAGE', 'Y2WIN_IMAGE',
                  'X3WIN_IMAGE', 'X2YWIN_IMAGE', 'XY2WIN_IMAGE', 'Y3WIN_IMAGE',

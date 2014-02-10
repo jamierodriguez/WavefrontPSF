@@ -175,7 +175,7 @@ cpdef np.ndarray[DTYPE_t, ndim=1] find_ellipmom_1(
 
     cdef np.ndarray[DTYPE_t, ndim=1] return_array = \
         np.array([A, Bx, By, Cxx, Cxy, Cyy, rho4w,
-                  Cxx, Cxxy, Cxyy, Cyyy
+                  Cxxx, Cxxy, Cxyy, Cyyy
                   ], dtype=DTYPE)
     return return_array
 

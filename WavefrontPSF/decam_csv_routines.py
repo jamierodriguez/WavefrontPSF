@@ -7,9 +7,11 @@ Description: A set of common routines for csv generation and creation.
 
 from __future__ import print_function, division
 import numpy as np
-from os import path, makedirs
+from os import path, makedirs, chdir, system, remove
+from subprocess import call
 from decamutil_cpd import decaminfo
 import pyfits
+from focal_plane_routines import print_command
 
 def extract_image_data(expids, path_image_data, path_out):
     """The big csv is huge; let's make a smaller one
@@ -453,3 +455,30 @@ def combine_decam_catalogs(list_catalogs, list_fits_extension, list_chip):
     recdata_all = np.array(recdata_all, dtype=recdata.dtype)
     ext_all = np.array(ext_all)
     return recdata_all, ext_all, recheader_all
+
+def download_cat(rid, expid, date, i):
+    # downloads to whatever the current directory is
+    command = "wget --no-check-certificate --http-user=cpd --http-password=cpd70chips -nc -nd -nH -r -k -p -np  --cut-dirs=3 https://desar2.cosmology.illinois.edu/DESFiles/desardata/OPS/red/{0}_{3}/red/DECam_{1:08d}/DECam_{1:08d}_{2:02d}_cat.fits".format(rid, expid, i, date)
+    command = ['wget', '--no-check-certificate',
+               '--http-user=cpd', '--http-password=cpd70chips',
+               '-nc', '-nd', '-nH', '-r', '-k', '-p', '-np',
+               '--cut-dirs=3',
+               "https://desar2.cosmology.illinois.edu/DESFiles/desardata/OPS/"
+               + "red/{0}_{1}/red/DECam_".format(rid, date)
+               + "{0:08d}/DECam_{0:08d}_{1:02d}_cat.fits".format(expid, i)]
+    print_command(command)
+    call(command)
+    return
+
+def download_image(rid, expid, date, i):
+    # downloads to current directory
+    command = "wget --no-check-certificate --http-user=cpd --http-password=cpd70chips -nc -nd -nH -r -k -p -np  --cut-dirs=3 https://desar2.cosmology.illinois.edu/DESFiles/desardata/OPS/red/{0}_{3}/red/DECam_{1:08d}/DECam_{1:08d}_{2:02d}.fits.fz".format(rid, expid, i, date)
+    print(command)
+    system(command)
+    # decompress image
+    command = "funpack DECam_{0:08d}_{1:02d}.fits.fz".format(expid, i)
+    system(command)
+    # remove old compressed image
+    remove("DECam_{0:08d}_{1:02d}.fits.fz".format(expid, i))
+
+    return
