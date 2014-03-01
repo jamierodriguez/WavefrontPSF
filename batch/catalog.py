@@ -28,8 +28,6 @@ TODO:
     [ ] Consider looking at DESDB for the 'smart' way of downloading the files.
     [ ] Get rid of the WIN_IMAGE tags?
 
-TODO: update code here from my notebook code
-
 input_list = [
     [20130906105326, 20130905, 231046, 231053],
     [20130906105326, 20130905, 231089, 231096],
@@ -477,9 +475,17 @@ FP = FocalPlane(list_catalogs=list_catalogs,
                 nPixels=args_dict['size'],
                 )
 
+# save data_unaveraged
+np.save(args_dict['output_directory'] +
+        'DECam_{0:08d}_'.format(args_dict['expid']) +
+        'cat_cpd_combined',
+        FP.data_unaveraged)
+
 figures, axes, scales = data_focal_plot(FP.data, boxdiv=FP.boxdiv,
                                         average=FP.average)
 for figure_key in figures:
+    axes[figure_key].set_title('{0:08d}: {1}'.format(args_dict['expid'],
+                                                     figure_key))
     figures[figure_key].savefig(args_dict['output_directory'] +
                                 'DECam_{0:08d}_'.format(args_dict['expid']) +
                                 'focal_{0}.png'.format(figure_key))
@@ -488,7 +494,11 @@ close('all')
 edges = FP.decaminfo.getEdges(FP.boxdiv)
 figures, axes, scales = data_hist_plot(FP.data_unaveraged, edges=edges)
 for figure_key in figures:
+    axes[figure_key].set_title('{0:08d}: {1}'.format(args_dict['expid'],
+                                                     figure_key))
     figures[figure_key].savefig(args_dict['output_directory'] +
                                 'DECam_{0:08d}_'.format(args_dict['expid']) +
                                 'hist_{0}.png'.format(figure_key))
 close('all')
+
+

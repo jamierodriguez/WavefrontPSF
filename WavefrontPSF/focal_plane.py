@@ -356,6 +356,8 @@ class FocalPlane(FocalPlaneShell):
                     y3=recdata['Y3' + self.coord_name].astype(np.float64),
                     a4=recdata['A4_ADAPTIVE'].astype(np.float64),
                     flux=recdata['FLUX_ADAPTIVE'].astype(np.float64),
+                    sn_flux=recdata['SN_FLUX'].astype(np.float64),
+                    chip=recdata['CHIP'].astype(np.int),
                     ))
 
         moments_unaveraged = convert_moments(moments_unaveraged)
