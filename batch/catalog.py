@@ -8,6 +8,9 @@ associated image stamp.
 """
 
 from __future__ import print_function, division
+import matplotlib
+# the agg is so I can submit for batch jobs.
+matplotlib.use('Agg')
 import numpy as np
 import pyfits
 import argparse

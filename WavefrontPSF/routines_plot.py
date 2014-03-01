@@ -719,6 +719,7 @@ def data_hist_plot(data, edges, scales=None,
             cmap = blue_red
 
         Image = key_axis.pcolor(xedges, yedges, C, cmap=cmap,
+                                origin='lower', interpolation='none',
                                 **scales[key])
         CB = key_figure.colorbar(Image, ax=key_axis)
         scales[key].update(dict(vmin = CB.vmin, vmax = CB.vmax))
