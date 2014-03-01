@@ -170,17 +170,17 @@ class decaminfo(object):
         # calculate center to center chip distances
         x_step = 33.816
         y_step = 63.89
-        x_min = -236.712
-        x_max = -x_min
-        y_min = -223.615
-        y_max = -y_min
+        x_min = -236.712 - 2 * x_step
+        x_max = -x_min + x_step
+        y_min = -223.615 - 2 * y_step
+        y_max = -y_min + y_step
 
         if boxdiv == 0:
-            x_edges = np.arange(x_min, x_max + x_step, x_step)
-            y_edges = np.arange(y_min, y_max + y_step, y_step)
+            x_edges = np.arange(x_min, x_max, x_step)
+            y_edges = np.arange(y_min, y_max, y_step)
         else:
-            x_edges = np.arange(x_min, x_max + x_step, x_step / 2 ** (boxdiv - 1))
-            y_edges = np.arange(y_min, y_max + y_step, y_step / 2 ** boxdiv)
+            x_edges = np.arange(x_min, x_max, x_step / 2 ** (boxdiv - 1))
+            y_edges = np.arange(y_min, y_max, y_step / 2 ** boxdiv)
 
         return [x_edges, y_edges]
 
@@ -405,24 +405,24 @@ if __name__ == "__main__":
 
     from matplotlib.patches import Rectangle
     from matplotlib.collections import PatchCollection
-    boxdiv = 2
-    bounds = [decaminfo().getBounds(i, boxdiv) for i in decaminfo().infoDict.keys()]
-    fig = plt.figure()
-    ax = fig.add_subplot(1,1,1)
-    ax.set_xlabel('$X$ [mm] (East)')
-    ax.set_ylabel('$Y$ [mm] (South)')
-    ax.set_xlim(-250,250)
-    ax.set_ylim(-250,250)
-    patches = []
-    for box in bounds:
-        for x in range(len(box[0]) - 1):
-            for y in range(len(box[1]) - 1):
-                height = box[1][y+1] - box[1][y]
-                width = box[0][x+1] - box[0][x]
-                art = Rectangle([box[0][x], box[1][y]], width, height)
-                patches.append(art)
-    collection = PatchCollection(patches, alpha=0.4)
-    ax.add_collection(collection)
+    for boxdiv in range(4):
+        bounds = [decaminfo().getBounds(i, boxdiv) for i in decaminfo().infoDict.keys()]
+        fig = plt.figure()
+        ax = fig.add_subplot(1,1,1)
+        ax.set_xlabel('$X$ [mm] (East)')
+        ax.set_ylabel('$Y$ [mm] (South)')
+        ax.set_xlim(-250,250)
+        ax.set_ylim(-250,250)
+        patches = []
+        for box in bounds:
+            for x in range(len(box[0]) - 1):
+                for y in range(len(box[1]) - 1):
+                    height = box[1][y+1] - box[1][y]
+                    width = box[0][x+1] - box[0][x]
+                    art = Rectangle([box[0][x], box[1][y]], width, height)
+                    patches.append(art)
+        collection = PatchCollection(patches, alpha=0.4)
+        ax.add_collection(collection)
 
     plt.show()
 

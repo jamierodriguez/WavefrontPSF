@@ -7,8 +7,10 @@ import ROOT
 ROOT.PyConfig.IgnoreCommandLineOptions = True
 
 
-def grad_func(in_dict, fit_func, h_dict,
-              stencil=[[-1. / 2, -1], [1. / 2, 1]]):
+def grad_func(in_dict, fit_func, h_dict, deriv_keys,
+              chisquared=0,
+              stencil=[[-1. / 12, 2], [2. / 3, 1],
+                       [-2. / 3, -1], [1. / 12, -2]]):
     """numerical gradient of a function
 
     Parameters
@@ -25,6 +27,12 @@ def grad_func(in_dict, fit_func, h_dict,
         Dictionary giving the h step size for each parameter, assumed to be in
         the format 'parameter_name'
 
+    deriv_keys : list
+        List of strings of the derivatives we want to calculate
+
+    chisquared : float, optional
+        Gives the value at the centered point f(x0)
+
     stencil : list, optional
         What stencil are we using. In format [[multiplicative_factor, number of
         h's]]. Default is centered two point stencil.
@@ -34,6 +42,9 @@ def grad_func(in_dict, fit_func, h_dict,
 
         Centered 2 point stencil:
         stencil = [[-1. / 2, -1], [1. / 2, 1]]
+
+        Forward 2 point:
+        stencil = [[-1, 0], [1, 1]]
 
     Returns
     -------
@@ -45,14 +56,18 @@ def grad_func(in_dict, fit_func, h_dict,
     """
 
     derivatives = {}
-    for key in in_dict:
+    for key in deriv_keys:
         h = h_dict[key]
         # calculate stencil
         fprime = 0
         for h_mod in stencil:
             prime_dict = in_dict.copy()
             prime_dict[key] += h_mod[1] * h
-            fprime += h_mod[0] * fit_func(**prime_dict) / h
+            if (h_mod[1] == 0) * (chisquared > 0):
+                # don't bother recalculating what we already have!
+                fprime += h_mod[0] * chisquared / h
+            else:
+                fprime += h_mod[0] * fit_func(**prime_dict) / h
         derivatives.update({key: fprime})
     return derivatives
 
@@ -105,6 +120,8 @@ class Minuit_Fit(object):
 
     def __init__(self, FitFunc, minuit_dict, h_dict, par_names,
                  GradFunc=grad_func,
+                 SaveFunc=None,
+                 save_iter=0,
                  force_derivatives=0,
                  verbosity=0, max_iterations=1000,
                  tolerance=0.3,
@@ -114,6 +131,8 @@ class Minuit_Fit(object):
 
         self.gFitFunc = FitFunc
         self.gGradFunc = GradFunc
+        self.gSaveFunc = SaveFunc
+        self.save_iter = save_iter
         self.verbosity = verbosity
         self.force_derivatives = force_derivatives
         self.max_iterations = max_iterations
@@ -123,6 +142,12 @@ class Minuit_Fit(object):
         self.strategy = strategy
         self.tolerance = tolerance
         self.h_dict = h_dict
+        self.chisquared = 0
+        self.state = {}
+        self.iflag = 0
+
+        # start timer
+        self.startingtime = time.clock()
 
         # setup MINUIT
         self.gMinuit = ROOT.TMinuit(self.npar)
@@ -153,7 +178,7 @@ class Minuit_Fit(object):
         Attributes born
         ---------------
         iflag
-        old_dict
+        state
         nCalls
         nCallsDerivative
 
@@ -162,21 +187,18 @@ class Minuit_Fit(object):
 
         keys = self.minuit_dict.keys()
         self.iflag = 0  # for noting changes in iflag
-        self.old_dict = {}  # for comparing across steps
+        self.state = {}  # for comparing across steps
         # Set starting values and step sizes for parameters (note that one can
         # redefine the parameters, so this method can be called multiple times)
         for ipar in range(self.npar):
             parName = self.par_names[ipar]
-            if parName in keys:
-                startingParam = self.minuit_dict[parName]
-                self.old_dict.update({parName: self.minuit_dict[parName]})
-            else:
-                startingParam = 0
+
+            startingParam = self.minuit_dict[parName]
+            self.state.update({parName: self.minuit_dict[parName]})
+
             key = 'error_{0}'.format(parName)
-            if key in keys:
-                errorParam = self.minuit_dict[key]
-            else:
-                errorParam = 1
+            errorParam = self.minuit_dict[key]
+
             key = 'limit_{0}'.format(parName)
             if key in keys:
                 loParam = self.minuit_dict[key][0]
@@ -196,6 +218,7 @@ class Minuit_Fit(object):
                     # likewise release it
                     self.gMinuit.Release(ipar)
 
+        self.chisquared = self.gFitFunc(**self.state)
         self.nCalls = 0
         self.nCallsDerivative = 0
 
@@ -226,41 +249,60 @@ class Minuit_Fit(object):
         for ipar in range(self.npar):
             in_dict.update({self.par_names[ipar]: par[ipar]})
 
-        chisquared = self.gFitFunc(**in_dict)
-        self.nCalls += 1
+        if (iflag == 4):
+            # TODO: fix this part
+            chisquared = self.gFitFunc(**in_dict)
+            self.chisquared = chisquared
 
-        # printout
-        if self.verbosity >= 2:
-            print('minuit_fit: \tChi2 = ', '{0: .4e}'.format(chisquared),
-                  '\n\t\tkey\tvalue\t\tdelta\t\terror')
-            for ipar in range(len(in_dict.keys())):
-                key = self.par_names[ipar]
-                aVal = ROOT.Double(0.23)
-                errVal = ROOT.Double(0.24)
-                self.gMinuit.GetParameter(ipar, aVal, errVal)
-                print(
-                    '\t\t', key, '\t', '{0: .4e}'.format(in_dict[key]),
-                    '\t', '{0: .4e}'.format(in_dict[key] - self.old_dict[key]),
-                    '\t', '{0: .4e}'.format(errVal))
-            self.old_dict = in_dict.copy()
-            if iflag != self.iflag:
-                print('iflag has changed from', self.iflag, 'to', iflag)
-                self.iflag = iflag
+            # printout
+            if self.verbosity >= 2:
+                print('minuit_fit: \tChi2 = ',
+                      '{0: .4e}\t{1:.4e}\t{2}'.format(chisquared,
+                          time.clock() - self.startingtime,
+                          self.nCalls + self.nCallsDerivative),
+                      '\n\t\tkey\tvalue\t\tdelta\t\terror')
+                for ipar in range(len(in_dict.keys())):
+                    key = self.par_names[ipar]
+                    aVal = ROOT.Double(0.23)
+                    errVal = ROOT.Double(0.24)
+                    self.gMinuit.GetParameter(ipar, aVal, errVal)
+                    print(
+                        '\t\t', key, '\t', '{0: .4e}'.format(in_dict[key]),
+                        '\t', '{0: .4e}'.format(in_dict[key] - self.state[key]),
+                        '\t', '{0: .4e}'.format(errVal))
+                if iflag != self.iflag:
+                    print('iflag has changed from', self.iflag, 'to', iflag)
+                    self.iflag = iflag
 
-        # return result
-        f[0] = chisquared
+            self.state = in_dict.copy()
+
+            # return result
+            f[0] = chisquared
+
+            # save the result
+            # TODO: fix this part
+            if (self.save_iter > 0) * (self.nCalls % self.save_iter == 0):
+                self.gSaveFunc(self.nCalls + self.nCallsDerivative)
+
+            self.nCalls += 1
 
         if (iflag == 2):
             if (self.gGradFunc):
+                # let deriv_keys be all the unfixed params
+                deriv_keys = []
+                for parName in self.par_names:
+                    if not self.minuit_dict['fix_{0}'.format(parName)]:
+                        deriv_keys.append(parName)
 
                 # not currently called in calcAll
                 dChi2dpar = self.gGradFunc(in_dict, self.gFitFunc,
-                                           h_dict=self.h_dict)
+                                           h_dict=self.h_dict,
+                                           deriv_keys=deriv_keys,
+                                           chisquared=self.chisquared)
                 if self.verbosity >= 2:
                     print('minuit_fit: \tdChi2dpar',
                           '\n\t\tkey\tderivative\tvalue\t\tstep')
-                    for ipar in range(len(in_dict.keys())):
-                        key = self.par_names[ipar]
+                    for key in deriv_keys:
                         print('\t\t', key,
                               '\t', '{0: .4e}'.format(dChi2dpar[key]),
                               '\t', '{0: .4e}'.format(in_dict[key]),
@@ -272,7 +314,10 @@ class Minuit_Fit(object):
                 #
                 for ipar in range(self.npar):
                     # dChi2dpar is a dictionary!
-                    gin[ipar] = dChi2dpar[self.par_names[ipar]]
+                    if self.par_names[ipar] in dChi2dpar:
+                        gin[ipar] = dChi2dpar[self.par_names[ipar]]
+                    else:
+                        gin[ipar] = 0
 
     def doFit(self):
 
@@ -305,7 +350,7 @@ class Minuit_Fit(object):
         self.gMinuit.mnexcm("SET STRATEGY", arglist, 1, ierflg)
 
         # start timer
-        self.startingtime = time.clock()
+        startingtime = time.clock()
 
         # Now ready for minimization step
         self.gMinuit.SetMaxIterations(self.max_iterations)
@@ -319,7 +364,7 @@ class Minuit_Fit(object):
 
         # done, check elapsed time
         firsttime = time.clock()
-        self.deltatime = firsttime - self.startingtime
+        self.deltatime = firsttime - startingtime
         if self.verbosity >= 1:
             print('minuit_fit: Elapsed time fit = ', self.deltatime)
 
@@ -369,7 +414,7 @@ class Minuit_Fit(object):
         nvpar, nparx, icstat = ROOT.Long(1983), ROOT.Long(1984), ROOT.Long(1985)
         self.gMinuit.mnstat(amin, edm, errdef, nvpar, nparx, icstat)
         if self.verbosity >= 1:
-            mytxt = "amin = %.3f, edm = %.3f,   effdef = %.3f,   nvpar = %.3f,  nparx = %.3f, icstat = %.3f " % (amin,edm,errdef,nvpar,nparx,icstat)
+            mytxt = "amin = %.3f, edm = %.3f,   effdef = %.3f,   nvpar = %.3f,  nparx = %.3f, icstat = %.3f " % (amin, edm, errdef, nvpar, nparx, icstat)
             print('minuit_fit: ', mytxt)
 
         output_dict.update({'mnstat': {

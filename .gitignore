@@ -7,5 +7,12 @@
 *~
 # ignore vim's temp stuff
 *.swp
-# ignore donutlib
-donutlib
+*.swo
+*.swn
+## # ignore donutlib
+## donutlib
+# ignore .o and .so
+*.o
+*.so
+# ignore build folders
+build

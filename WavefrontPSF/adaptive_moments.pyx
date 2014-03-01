@@ -61,6 +61,8 @@ cpdef np.ndarray[DTYPE_t, ndim=1] find_ellipmom_1(
     cdef DTYPE_t Cyyy = 0
     cdef DTYPE_t rho4w = 0
 
+    cdef np.ndarray[DTYPE_t, ndim=1] return_array
+
     cdef int xmin = 0
     cdef int ymin = 0
     cdef int ymax = data.shape[0]
@@ -88,12 +90,20 @@ cpdef np.ndarray[DTYPE_t, ndim=1] find_ellipmom_1(
     #
     # we are finding the limits for the iy values and then the ix values.
     cdef double y_My = sqrt(MAX_MOMENT_NSIG2 * Myy)
+    # nan check!
+    if y_My != y_My:
+        return_array = \
+            np.array([A, Bx, By, Cxx, Cxy, Cyy, rho4w,
+                      Cxxx, Cxxy, Cxyy, Cyyy
+                      ], dtype=DTYPE)
+        return return_array
+
     cdef double y1 = -y_My + My
     cdef double y2 = y_My + My
 
     # stay within image bounds
-    cdef int iy1 = max(int(ceil(y1)), ymin)
-    cdef int iy2 = min(int(floor(y2)), ymax)
+    cdef int iy1 = max(<int>(ceil(y1)), ymin)
+    cdef int iy2 = min(<int>(floor(y2)), ymax)
     cdef int y
 
     if iy1 > iy2:
@@ -125,8 +135,8 @@ cpdef np.ndarray[DTYPE_t, ndim=1] find_ellipmom_1(
         x2 = inv2a * (-b + sqrtd) + Mx
 
         # stay within image bounds
-        ix1 = max(int(ceil(x1)), xmin)
-        ix2 = min(int(floor(x2)), xmax)
+        ix1 = max(<int>(ceil(x1)), xmin)
+        ix2 = min(<int>(floor(x2)), xmax)
         # in the following two cases, ask if we somehow wanted to find
         # pixels outside the image
         if (ix1 > xmax) * (ix2 == xmax):
@@ -173,7 +183,7 @@ cpdef np.ndarray[DTYPE_t, ndim=1] find_ellipmom_1(
             Cyyy += intensity * y_My ** 3
             rho4w += intensity * rho2 * rho2
 
-    cdef np.ndarray[DTYPE_t, ndim=1] return_array = \
+    return_array = \
         np.array([A, Bx, By, Cxx, Cxy, Cyy, rho4w,
                   Cxxx, Cxxy, Cxyy, Cyyy
                   ], dtype=DTYPE)
@@ -264,6 +274,11 @@ def adaptive_moments(data):
 
         num_iter += 1
 
+    # we made it! do a final calculation
+    Amp, Bx, By, Cxx, Cxy, Cyy, rho4, \
+        Cxxx, Cxxy, Cxyy, Cyyy \
+        = find_ellipmom_1(data, Mx, My, Mxx, Mxy, Myy)
+
     A = Amp
     rho4 /= Amp
     x2 = Cxx / Amp
@@ -351,12 +366,16 @@ cpdef double centered_moment(
     #
     # we are finding the limits for the iy values and then the ix values.
     cdef double y_My = sqrt(MAX_MOMENT_NSIG2 * Myy)
+    # nan check!
+    if y_My != y_My:
+        return 0
+
     cdef double y1 = -y_My + My
     cdef double y2 = y_My + My
 
     # stay within image bounds
-    cdef int iy1 = max(int(ceil(y1)), ymin)
-    cdef int iy2 = min(int(floor(y2)), ymax)
+    cdef int iy1 = max(<int>(ceil(y1)), ymin)
+    cdef int iy2 = min(<int>(floor(y2)), ymax)
     cdef int y
     if iy1 > iy2:
         print('iy1 > iy2', y1, ymin, y2, ymax, iy1, iy2)
@@ -391,8 +410,8 @@ cpdef double centered_moment(
         x2 = inv2a * (-b + sqrtd) + Mx
 
         # stay within image bounds
-        ix1 = max(int(ceil(x1)), xmin)
-        ix2 = min(int(floor(x2)), xmax)
+        ix1 = max(<int>(ceil(x1)), xmin)
+        ix2 = min(<int>(floor(x2)), xmax)
         # in the following two cases, ask if we somehow wanted to find
         # pixels outside the image
         if (ix1 > xmax) * (ix2 == xmax):

@@ -3,6 +3,7 @@
 File: wavefront.py
 Author: Chris Davis
 Description: Module for generating PSF objects and their moments.
+
 """
 
 from __future__ import print_function, division
@@ -11,7 +12,7 @@ from donutlib.makedonut import makedonut
 from adaptive_moments import adaptive_moments, centered_moment
 from os import path, makedirs
 import pickle
-
+from routines_moments import convert_moments
 
 class Wavefront(object):
     """Class with the ability to generate stars as well as their images.  Given
@@ -35,8 +36,7 @@ class Wavefront(object):
     Methods
     -------
     save
-        save this whole object, sans make_donut. Should inherit OK -- I ought
-        to double check that #TODO.
+        save this whole object, sans make_donut. Should inherit OK
 
     stamp
         takes the zernike polynomials and creates a 2d image array
@@ -50,19 +50,28 @@ class Wavefront(object):
 
     """
 
-    def __init__(self, number_electrons=1e6, background=0, randomFlag=0,
+    def __init__(self, number_electrons=1e6, background=4000, randomFlag=0,
                  nbin=256, nPixels=32, pixelOverSample=8, scaleFactor=1.,
                  **args):
 
         self.number_electrons = number_electrons
         self.background = background
-        self.input_dict = {
-            "nbin": nbin,  # 64,  # 256,  # 128,
-            "nPixels": nPixels,  # 16,  # 32,  # 32,
-            "pixelOverSample": pixelOverSample,  # 4,  # 8,  # 4,
-            "scaleFactor": scaleFactor,  # 2.,  # 1.,  # 2.,
-            "randomFlag": randomFlag,
-            }
+        if nPixels == 32:
+            self.input_dict = {
+                "nbin": 256,  # 128,
+                "nPixels": 32,  # 32,
+                "pixelOverSample": 8,  # 4,
+                "scaleFactor": 1.,  # 2.,
+                "randomFlag": randomFlag,
+                }
+        elif nPixels == 16:
+            self.input_dict = {
+                "nbin": 64,  # 256,  # 128,
+                "nPixels": 16,  # 32,  # 32,
+                "pixelOverSample": 4,  # 8,  # 4,
+                "scaleFactor": 2.,  # 1.,  # 2.,
+                "randomFlag": randomFlag,
+                }
         self.make_donut = makedonut(**self.input_dict)
 
     def save(self, out_path):
@@ -333,5 +342,7 @@ class Wavefront(object):
             entry = return_dict[key]
             if type(entry) == list:
                 return_dict.update({key: np.array(entry)})
+
+        return_dict = convert_moments(return_dict)
 
         return return_dict

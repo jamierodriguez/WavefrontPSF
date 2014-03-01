@@ -32,3 +32,4 @@ TODO
 - module to check (once again) how the wavefront changes for very small
   variations in focal plane parameters
 - easier way to set up fits
+- reorganize compile code vs scripts (special directory for c code?)

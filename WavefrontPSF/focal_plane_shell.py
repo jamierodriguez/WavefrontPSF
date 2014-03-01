@@ -9,10 +9,9 @@ from __future__ import print_function, division
 import numpy as np
 from wavefront import Wavefront
 from hexapodtoZernike_cpd import hexapodtoZernike
-from donutana_cpd import donutana
+from donutlib.donutana import donutana
 from decamutil_cpd import decaminfo
-from focal_plane_routines import fwhm_to_rzero, average_dictionary, \
-    variance_dictionary, convert_moments
+from routines import average_dictionary
 
 
 class FocalPlaneShell(Wavefront):
@@ -324,8 +323,6 @@ class FocalPlaneShell(Wavefront):
 
         if 'rzero' in in_dict.keys():
             rzero = in_dict['rzero']
-        elif 'fwhm' in in_dict.keys():
-            rzero = fwhm_to_rzero(in_dict['fwhm'])
         else:
             # set the atmospheric contribution to some nominal level
             rzero = 0.14
@@ -398,9 +395,7 @@ class FocalPlaneShell(Wavefront):
         moments = average_dictionary(moments_unaveraged, average,
                                      boxdiv=boxdiv, subav=subav)
 
-        poles = convert_moments(moments)
-
-        return poles
+        return moments
 
     def zernikes(self, coords, in_dict):
         """create a list of zernikes at these coordinate locations
@@ -431,210 +426,39 @@ class FocalPlaneShell(Wavefront):
 
         zernike_corrections_in = self.zernike_corrections_from_dictionary(
             in_dict)
-        #TODO: why the copy?
         zernike_corrections = np.copy(zernike_corrections_in)
 
         # add in the cross reference correction
         zernike_corrections = zernike_corrections + \
             self.reference_correction[:len(zernike_corrections)]
 
-        # make the function
-        correction = self.zernike_corrections(zernike_corrections,
-                                              self.da)
-
-        # make the final polynomials
-        zernikes = []
-        for coord in coords:
-            # TODO: double check this new method works
-            ## zernike = [
-            ##     correctioni[0](
-            ##         self.ccddict[int(coord[2])],
-            ##         [coord[0]], [coord[1]])
-            ##     + correctioni[1]
-            ##     + correctioni[2] * coord[1]
-            ##     + correctioni[3] * coord[0]
-            ##     for correctioni in correction]
-            zernike = [correctioni(self.decaminfo.ccddict[int(coord[2])],
-                                   coord[0], coord[1])
-                       for correctioni in correction]
-            zernikes.append(zernike)
-        zernikes = np.array(zernikes).tolist()
-        return zernikes
-
-    def zernike_corrections(self, zernike_corrections_in, da):
-        """Create a list of functions for getting each zernike polynomial on
-        the focal plane.
-
-        Parameters
-        ----------
-        zernike_corrections_in : array
-            An array with the z delta and theta corrections to the reference
-            mesh.
-
-        da : object
-            Aaron's donutana object. Needed to access the refmesh functions.
-
-        Returns
-        -------
-        zernike_corrections : list of functions
-            A list of functions, ith corresponding to a fuction to calculate
-            the (i+1)th zernike polynomial coefficient.
-
-        Notes
-        -----
-        The way I did it (with the evals) feels really kludgey.
-        """
-
         numfac = 0.0048481  # rad / arcsec um/mm
-        zernike_corrections = []
-        zdelta = zernike_corrections_in[:, 0]
-        zthetax = zernike_corrections_in[:, 1]
-        zthetay = zernike_corrections_in[:, 2]
+        zdelta = zernike_corrections[:, 0]
+        zthetax = zernike_corrections[:, 1]
+        zthetay = zernike_corrections[:, 2]
         z_length = len(zdelta)
 
-        def empty(a, b, c):
-            return 0
+        zernikes = [[0] * 3 +
 
-        def ran(a, b, c):
-            # for z2 and z3
-            N = 30.   # to move +- 15 microns
-            return N * (np.random.random() - 0.5) / 8.4
+            [self.da.meshDict['zMesh'].doInterp(
+            self.decaminfo.ccddict[int(coord[2])], [coord[0]], [coord[1]])
+            / 172. +
+            zdelta[4 - 1] / 172. +
+            coord[1] * numfac / 172. * zthetax[4 - 1] +
+            coord[0] * numfac / 172. * zthetay[4 - 1]] +
 
-        # TODO: THIS IS AWFUL
-        # a list of functions used for getting the zernike polynomials on the
-        # focal plane
-        def z11func(ext_name, coordx, coordy):
-            z11 = da.z11RefMesh.doInterp(ext_name, [coordx], [coordy]) + \
-                zdelta[10] + coordy * zthetax[10] + coordx * zthetay[10]
-            return z11
+            [self.da.meshDict['z{0}Mesh'.format(iZ)].doInterp(
+            self.decaminfo.ccddict[int(coord[2])], [coord[0]], [coord[1]]) +
+            zdelta[iZ - 1] +
+            coord[1] * zthetax[iZ - 1] +
+            coord[0] * zthetay[iZ - 1]
+            for iZ in range(5, z_length + 1)]
 
-        def z10func(ext_name, coordx, coordy):
-            z10 = da.z10RefMesh.doInterp(ext_name, [coordx], [coordy]) + \
-                zdelta[9] + coordy * zthetax[9] + coordx * zthetay[9]
-            return z10
+            for coord in coords]
 
-        def z9func(ext_name, coordx, coordy):
-            z9 = da.z9RefMesh.doInterp(ext_name, [coordx], [coordy]) + \
-                zdelta[8] + coordy * zthetax[8] + coordx * zthetay[8]
-            return z9
+        zernikes = np.array(zernikes).tolist()
 
-        def z8func(ext_name, coordx, coordy):
-            z8 = da.z8RefMesh.doInterp(ext_name, [coordx], [coordy]) + \
-                zdelta[7] + coordy * zthetax[7] + coordx * zthetay[7]
-            return z8
-
-        def z7func(ext_name, coordx, coordy):
-            z7 = da.z7RefMesh.doInterp(ext_name, [coordx], [coordy]) + \
-                zdelta[6] + coordy * zthetax[6] + coordx * zthetay[6]
-            return z7
-
-        def z6func(ext_name, coordx, coordy):
-            z6 = da.z6RefMesh.doInterp(ext_name, [coordx], [coordy]) + \
-                zdelta[5] + coordy * zthetax[5] + coordx * zthetay[5]
-            return z6
-
-        def z5func(ext_name, coordx, coordy):
-            z5 = da.z5RefMesh.doInterp(ext_name, [coordx], [coordy]) + \
-                zdelta[4] + coordy * zthetax[4] + coordx * zthetay[4]
-            return z5
-
-        # include the 172. for proper unit conversions
-        def z4func(ext_name, coordx, coordy):
-            z4 = da.zRefMesh.doInterp(ext_name, [coordx], [coordy]) / 172. + \
-                zdelta[3] / 172. + \
-                zthetax[3] * numfac / 172. * coordy + \
-                zthetay[3] * numfac / 172. * coordx
-
-            return z4
-
-        # z3 and z2 are calculated so that the artificial stars are at the same
-        # centroid as the coordinates; z2 and z3 are used to shift the
-        # artificial star coordinate system to line up with the DECam pixels.
-        def z3func(ext_name, coordx, coordy):
-            # <x_i> = -0.56477 * zi + 7.87479
-            # so zi = (<x_i> - 7.87479) / -0.56477
-            # where the coords are in pixel and boxed
-            pixel = self.decaminfo.getPixel(ext_name, coordx, coordy)
-            # convert pixel to be in center of 16 x 16 box with
-            # x -> p with int(p) = 7
-            # so p = x - int(x) + 7
-            # the following is 7 for nPixels = 16
-            pixel_offset = int(self.input_dict['nPixels'] / 2 - 1)
-            coord = pixel[1] - int(pixel[1]) + pixel_offset
-
-            # in order to incorporate z7 correction, need to calculate z7
-            if z_length > 6:
-                z7 = z7func(ext_name, coordx, coordy)
-            else:
-                z7 = 0
-
-            # TODO:
-            # this equation has only been fitted for 16 x 16
-            z3 = (coord - 0.87479 - pixel_offset) / -0.56477 - 2 * z7 + \
-                zdelta[2] + coordy * zthetax[2] + coordx * zthetay[2]
-
-            return z3
-
-        def z2func(ext_name, coordx, coordy):
-            # <x_i> = -0.56477 * zi + 7.87479
-            # so zi = (<x_i> - 7.87479) / -0.56477
-            # where the coords are in pixel and boxed
-            pixel = self.decaminfo.getPixel(ext_name, coordx, coordy)
-            # convert pixel to be in center of 16 x 16 box with
-            # x -> p with int(p) = 7
-            # so p = x - int(x) + 7
-            pixel_offset = int(self.input_dict['nPixels'] / 2 - 1)
-            coord = pixel[0] - int(pixel[0]) + pixel_offset
-
-            # in order to incorporate z8 correction, need to calculate z8
-            if z_length > 7:
-                z8 = z8func(ext_name, coordx, coordy)
-            else:
-                z8 = 0
-
-            # TODO:
-            # this equation has only been fitted for 16 x 16;
-            z2 = (coord - 0.87479 - pixel_offset) / -0.56477 - 2 * z8 + \
-                zdelta[1] + coordy * zthetax[1] + coordx * zthetay[1]
-
-            return z2
-
-        # piston contributes nothing
-        def z1func(ext_name, coordx, coordy):
-
-            z1 = 0 + zdelta[0] + coordy * zthetax[0] + coordx * zthetay[0]
-
-            return z1
-
-        # TODO: double check this new method works
-        ## for i in range(len(zernike_corrections_in)):
-        ##     if i == 0:
-        ##         zcorri = [empty, zdelta[i], zthetax[i], zthetay[i]]
-        ##     elif i < 3:
-        ##         if self.input_dict['randomFlag']:
-        ##             # if randomness is enabled, allow z2 and z3 to vary
-        ##             # slightly
-        ##             zcorri = [ran, zdelta[i], zthetax[i], zthetay[i]]
-        ##         else:
-        ##             zcorri = [empty, zdelta[i], zthetax[i], zthetay[i]]
-        ##     elif i == 3:
-        ##         # correct z4 term for mm input
-        ##         zcorri = [z4func,
-        ##                   zdelta[i] / 172.,
-        ##                   zthetax[i] * numfac / 172.,
-        ##                   zthetay[i] * numfac / 172.]
-        ##     else:
-        ##         # this is totally a terrible way of doing this,
-        ##         # full of safety
-        ##         # issues
-        ##         zcorri = [eval("da.z{0}RefMesh.doInterp".format(i+1)),
-        ##                   zdelta[i], zthetax[i], zthetay[i]]
-        ##     zernike_corrections.append(zcorri)
-
-        zernike_corrections = [eval("z{0}func".format(i+1))
-                               for i in range(z_length)]
-
-        return zernike_corrections
+        return zernikes
 
     def random_coordinates(self, max_samples_box=5, boxdiv=0):
         """A method for generating coordinates by sampling over boxes
@@ -741,23 +565,49 @@ class FocalPlaneShell(Wavefront):
 
         return success
 
-    def __add__(self, other):
-        """Take other's items and append them to this one's data attribute.
-        NOTE: data is NOT defined here!"""
+    def compare(self, data_a, data_b, var_dict, chi_weights):
+        """Compare another data object
 
-        other_keys = other.data.keys()
-        # pop the keys that are not in self:
-        self_keys = self.data.keys()
-        keys = [key for key in other_keys if key in self_keys]
+        Parameters
+        ----------
+        data_a, data_b : dictionary of lists
+            Entries which we will compare. Must be same size!
 
-        return_dict = {}
-        for key in keys:
-            return_dict.update({key: np.append(self.data[key],
-                                               other.data[key])})
-        return return_dict
+        var_dict : dictionary of lists
+            Entries correspond to variances at each point
 
-    def __sub__(self, other):
-        """Take other's items and subtract them to ours on a moment level ONLY.
-        NOTE: the data is NOT defined here!"""
-        pass
+        chi_weights: dictionary
+            What parameters are we comparing? Must be in data_a and data_b
+
+        Returns
+        -------
+        chi_dict : dictionary
+            Dictionary of chi2 for each point for each weight, plus a 'chi2'
+            parameter that is the total value of the chi2.
+
+        """
+        chi_dict = {'chi2': 0}
+        for key in chi_weights.keys():
+            val_a = data_a[key]
+            val_b = data_b[key]
+            weight = chi_weights[key]
+            if 'var_{0}'.format(key) in var_dict.keys():
+                var = var_dict['var_{0}'.format(key)]
+            else:
+                print('No variance for', key, '!')
+                var = 1
+
+            chi2 = np.square(val_a - val_b) / var
+
+            # update chi_dict
+            chi_dict.update({key: chi2})
+            chi_dict['chi2'] = chi_dict['chi2'] + np.sum(weight * chi2)
+
+        # check whether chi_dict['chi2'] is an allowable number (finite
+        # positive)
+        if (chi_dict['chi2'] < 0) + (np.isnan(chi_dict['chi2'])):
+            # if it isn't, make it really huge
+            chi_dict['chi2'] = 1e20
+
+        return chi_dict
 
