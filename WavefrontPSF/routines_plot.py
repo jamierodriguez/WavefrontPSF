@@ -404,6 +404,7 @@ def data_focal_plot(data, color='k',
                     scales=None,
                     figures=None,
                     axes=None,
+                    defaults=True,
                     keys=[]):
 
     """Takes data and makes a bunch of wavefront plots
@@ -453,14 +454,15 @@ def data_focal_plot(data, color='k',
     if not scales:
         scales = {}
         for key in (keys):
-            if key == 'e':
-                keyval = 1.25e-3
-            elif key == 'w':
-                keyval = 2.5e-2
-            elif key == 'zeta':
-                keyval = 2.5e-4
-            elif key == 'delta':
-                keyval = 2.5e-4
+            if defaults:
+                if key == 'e':
+                    keyval = 1.25e-3
+                elif key == 'w':
+                    keyval = 2.5e-2
+                elif key == 'zeta':
+                    keyval = 2.5e-4
+                elif key == 'delta':
+                    keyval = 2.5e-4
             else:
                 keyval = -1
             scales.update({key: keyval})
@@ -583,6 +585,7 @@ def data_focal_plot(data, color='k',
 
 def data_hist_plot(data, edges, scales=None,
                    figures=None, axes=None,
+                   defaults=True,
                    keys=[]):
     """Takes data and makse a bunch of 2d histograms
 
@@ -628,8 +631,23 @@ def data_hist_plot(data, edges, scales=None,
         for key in keys:
             if (key in data) + (key + '1' in data) + (key == 'number'):
                 #scales.update({key : dict(vmin=None, vmax=None)})
-                if key == 'e0':
-                    scales.update({key: dict(vmin=0.1, vmax=0.3)})
+                if defaults:
+                    if key == 'e0':
+                        scales.update({key: dict(vmin=0.1, vmax=0.3)})
+                    elif key == 'e1':
+                        scales.update({key: dict(vmin=0.1, vmax=0.3)})
+                    elif key == 'e2':
+                        scales.update({key: dict(vmin=0.1, vmax=0.3)})
+                    elif key == 'zeta1':
+                        scales.update({key: dict(vmin=0.1, vmax=0.3)})
+                    elif key == 'zeta2':
+                        scales.update({key: dict(vmin=0.1, vmax=0.3)})
+                    elif key == 'delta1':
+                        scales.update({key: dict(vmin=0.1, vmax=0.3)})
+                    elif key == 'delta2':
+                        scales.update({key: dict(vmin=0.1, vmax=0.3)})
+                    elif key == 'a4':
+                        scales.update({key: dict(vmin=0.1, vmax=0.3)})
                 else:
                     scales.update({key : {}})
 

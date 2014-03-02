@@ -8,23 +8,17 @@ associated image stamp.
 """
 
 from __future__ import print_function, division
-import matplotlib
-# the agg is so I can submit for batch jobs.
-matplotlib.use('Agg')
+
 import numpy as np
 import pyfits
 import argparse
-from matplotlib.pyplot import close
-from subprocess import call
-from os import path, makedirs, chdir, system, remove
+from os import path, makedirs, chdir, remove
 
 from focal_plane import FocalPlane
 from decamutil_cpd import decaminfo
 
 from routines import MAD
-from routines_files import download_cat, download_image, generate_hdu_lists, \
-        generate_hdu_lists_sex
-from routines_plot import process_image, data_focal_plot, data_hist_plot
+from routines_files import download_cat, download_image
 
 """
 TODO:
@@ -118,7 +112,7 @@ def check_centered_peak(stamp_in,
                         background, threshold,
                         xwin_image, ywin_image,
                         x2win_image, xywin_image, y2win_image,
-                        return_stamps = False):
+                        return_stamps=False):
 
     # filter via background and threshold
     stamp = stamp_in.copy()
@@ -458,51 +452,3 @@ for i in xrange(1, 63):
     if i != 1:
         # remove image
         remove("DECam_{0:08d}_{1:02d}.fits".format(args_dict['expid'], i))
-
-##############################################################################
-# create images for the catalog
-##############################################################################
-
-# find the locations of the catalog files
-list_catalogs, list_fits_extension, list_chip = \
-        generate_hdu_lists(args_dict['expid'], args_dict['catalogs'])
-
-
-FP = FocalPlane(list_catalogs=list_catalogs,
-                list_fits_extension=list_fits_extension,
-                list_chip=list_chip,
-                path_mesh=args_dict['path_mesh'],
-                mesh_name=args_dict['mesh_name'],
-                boxdiv=2,
-                max_samples_box=20000,
-                conds=args_dict['conds'],
-                nPixels=args_dict['size'],
-                )
-
-# save data_unaveraged
-np.save(args_dict['output_directory'] +
-        'DECam_{0:08d}_'.format(args_dict['expid']) +
-        'cat_cpd_combined',
-        FP.data_unaveraged)
-
-figures, axes, scales = data_focal_plot(FP.data, boxdiv=FP.boxdiv,
-                                        average=FP.average)
-for figure_key in figures:
-    axes[figure_key].set_title('{0:08d}: {1}'.format(args_dict['expid'],
-                                                     figure_key))
-    figures[figure_key].savefig(args_dict['output_directory'] +
-                                'DECam_{0:08d}_'.format(args_dict['expid']) +
-                                'focal_{0}.png'.format(figure_key))
-close('all')
-
-edges = FP.decaminfo.getEdges(FP.boxdiv)
-figures, axes, scales = data_hist_plot(FP.data_unaveraged, edges=edges)
-for figure_key in figures:
-    axes[figure_key].set_title('{0:08d}: {1}'.format(args_dict['expid'],
-                                                     figure_key))
-    figures[figure_key].savefig(args_dict['output_directory'] +
-                                'DECam_{0:08d}_'.format(args_dict['expid']) +
-                                'hist_{0}.png'.format(figure_key))
-close('all')
-
-
