@@ -453,7 +453,17 @@ def data_focal_plot(data, color='k',
     if not scales:
         scales = {}
         for key in (keys):
-            scales.update({key: -1})
+            if key == 'e':
+                keyval = 1.25e-3
+            elif key == 'w':
+                keyval = 2.5e-2
+            elif key == 'zeta':
+                keyval = 2.5e-4
+            elif key == 'delta':
+                keyval = 2.5e-4
+            else:
+                keyval = -1
+            scales.update({key: keyval})
 
     if ('x_box' in data) * ('y_box' in data):
         x = data['x_box']
@@ -618,7 +628,10 @@ def data_hist_plot(data, edges, scales=None,
         for key in keys:
             if (key in data) + (key + '1' in data) + (key == 'number'):
                 #scales.update({key : dict(vmin=None, vmax=None)})
-                scales.update({key : {}})
+                if key == 'e0':
+                    scales.update({key: dict(vmin=0.1, vmax=0.3)})
+                else:
+                    scales.update({key : {}})
 
     if ('x_box' in data) * ('y_box' in data):
         x = data['x_box']

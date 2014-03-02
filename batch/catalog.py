@@ -30,6 +30,7 @@ from routines_plot import process_image, data_focal_plot, data_hist_plot
 TODO:
     [ ] Consider looking at DESDB for the 'smart' way of downloading the files.
     [ ] Get rid of the WIN_IMAGE tags?
+    [ ] Create a basic set of scales for both parameters
 
 input_list = [
     [20130906105326, 20130905, 231046, 231053],
