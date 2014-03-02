@@ -635,19 +635,19 @@ def data_hist_plot(data, edges, scales=None,
                     if key == 'e0':
                         scales.update({key: dict(vmin=0.1, vmax=0.3)})
                     elif key == 'e1':
-                        scales.update({key: dict(vmin=0.1, vmax=0.3)})
+                        scales.update({key: dict(vmin=-0.05, vmax=0.05)})
                     elif key == 'e2':
-                        scales.update({key: dict(vmin=0.1, vmax=0.3)})
+                        scales.update({key: dict(vmin=-0.025, vmax=0.025)})
                     elif key == 'zeta1':
-                        scales.update({key: dict(vmin=0.1, vmax=0.3)})
+                        scales.update({key: dict(vmin=-0.0025, vmax=0.0025)})
                     elif key == 'zeta2':
-                        scales.update({key: dict(vmin=0.1, vmax=0.3)})
+                        scales.update({key: dict(vmin=-0.002, vmax=0.002)})
                     elif key == 'delta1':
-                        scales.update({key: dict(vmin=0.1, vmax=0.3)})
+                        scales.update({key: dict(vmin=-0.008, vmax=0.008)})
                     elif key == 'delta2':
-                        scales.update({key: dict(vmin=0.1, vmax=0.3)})
+                        scales.update({key: dict(vmin=-0.008, vmax=0.008)})
                     elif key == 'a4':
-                        scales.update({key: dict(vmin=0.1, vmax=0.3)})
+                        scales.update({key: dict(vmin=0.01, vmax=0.07)})
                 else:
                     scales.update({key : {}})
 
@@ -740,14 +740,15 @@ def data_hist_plot(data, edges, scales=None,
         ##         'vmax': np.max(C) + center_value})
 
         # set the cmap
-        if ((key in separable_pos_plots) + (key in double_plots)):
-            cmap = blue_red
-        elif np.all(C >= 0):
-            cmap = reds
-        elif np.all(C <= 0):
-            cmap = blues_r
-        else:
-            cmap = blue_red
+        ## if ((key in separable_pos_plots) + (key in double_plots)):
+        ##     cmap = blue_red
+        ## elif np.all(C >= 0):
+        ##     cmap = reds
+        ## elif np.all(C <= 0):
+        ##     cmap = blues_r
+        ## else:
+        ##     cmap = blue_red
+        cmap = blue_red
 
         Image = key_axis.pcolor(xedges, yedges, C, cmap=cmap,
                                 origin='lower', interpolation='none',
