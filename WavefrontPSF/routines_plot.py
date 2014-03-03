@@ -456,13 +456,15 @@ def data_focal_plot(data, color='k',
         for key in (keys):
             if defaults:
                 if key == 'e':
-                    keyval = 1.25e-3
+                    keyval = 5e-4
                 elif key == 'w':
-                    keyval = 2.5e-2
+                    keyval = 1.0e-2
                 elif key == 'zeta':
-                    keyval = 2.5e-4
+                    keyval = 7.5e-5
                 elif key == 'delta':
-                    keyval = 2.5e-4
+                    keyval = 1.25e-4
+                else:
+                    keyval = -1
             else:
                 keyval = -1
             scales.update({key: keyval})
@@ -648,6 +650,8 @@ def data_hist_plot(data, edges, scales=None,
                         scales.update({key: dict(vmin=-0.008, vmax=0.008)})
                     elif key == 'a4':
                         scales.update({key: dict(vmin=0.01, vmax=0.07)})
+                    else:
+                        scales.update({key : {}})
                 else:
                     scales.update({key : {}})
 
@@ -751,7 +755,8 @@ def data_hist_plot(data, edges, scales=None,
         cmap = blue_red
 
         Image = key_axis.pcolor(xedges, yedges, C, cmap=cmap,
-                                origin='lower', interpolation='none',
+                                ## origin='lower',
+                                ## interpolation='none',
                                 **scales[key])
         CB = key_figure.colorbar(Image, ax=key_axis)
         scales[key].update(dict(vmin = CB.vmin, vmax = CB.vmax))
