@@ -637,9 +637,9 @@ def data_hist_plot(data, edges, scales=None,
                     if key == 'e0':
                         scales.update({key: dict(vmin=0.1, vmax=0.3)})
                     elif key == 'e1':
-                        scales.update({key: dict(vmin=-0.05, vmax=0.05)})
+                        scales.update({key: dict(vmin=-0.035, vmax=0.035)})
                     elif key == 'e2':
-                        scales.update({key: dict(vmin=-0.025, vmax=0.025)})
+                        scales.update({key: dict(vmin=-0.035, vmax=0.035)})
                     elif key == 'zeta1':
                         scales.update({key: dict(vmin=-0.0025, vmax=0.0025)})
                     elif key == 'zeta2':
@@ -767,7 +767,7 @@ def data_hist_plot(data, edges, scales=None,
     return figures, axes, scales
 
 def plot_star(recdata, figure=None, axis=None, nPixels=32,
-              weighted=False):
+              weighted=False, process=True):
     """Intelligently plot a star
 
     Parameters
@@ -808,9 +808,13 @@ def plot_star(recdata, figure=None, axis=None, nPixels=32,
         figure = plt.figure(figsize=(12, 12), dpi=300)
         axis = figure.add_subplot(111, aspect='equal')
 
-    stamp = process_image(recdata, weighted=weighted, nPixels=nPixels)
+    if process:
+        stamp = process_image(recdata, weighted=weighted, nPixels=nPixels)
 
-    stamp = np.where(stamp == 0, np.nan, stamp)
+        stamp = np.where(stamp == 0, np.nan, stamp)
+    else:
+        stamp = recdata['STAMP']
+        stamp = stamp.reshape(nPixels, nPixels)
 
     im = axis.imshow(stamp)
     plt.colorbar(im)

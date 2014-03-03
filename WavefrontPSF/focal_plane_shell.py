@@ -12,7 +12,7 @@ from hexapodtoZernike_cpd import hexapodtoZernike
 from donutlib.donutana import donutana
 from decamutil_cpd import decaminfo
 from routines import average_dictionary
-
+from os import path
 
 class FocalPlaneShell(Wavefront):
     """Wavefront object that now has coordinates and the ability to generate an
@@ -88,9 +88,19 @@ class FocalPlaneShell(Wavefront):
         # do the old init for Wavefront
         super(FocalPlaneShell, self).__init__(**args)
 
-        self.path_mesh = path_mesh
+        if path.exists(path_mesh):
+            self.path_mesh = path_mesh
+        elif path.exists('/u/ec/roodman/Astrophysics/Donuts/Meshes/'):
+            print('Your path_mesh is incorrect! Trying default ki-ls at',
+                    '/u/ec/roodman/Astrophysics/Donuts/Meshes/')
+            self.path_mesh = '/u/ec/roodman/Astrophysics/Donuts/Meshes/'
+        elif path.exists('/Users/cpd/Desktop/Meshes/'):
+            print('Your path_mesh is incorrect! Trying your computer at',
+                    '/Users/cpd/Desktop/Meshes/')
+            self.path_mesh = '/Users/cpd/Desktop/Meshes/'
+
         self.mesh_name = mesh_name
-        self.da = self.init_da(path_mesh=path_mesh, mesh_name=mesh_name)
+        self.da = self.init_da(path_mesh=self.path_mesh, mesh_name=mesh_name)
 
         self.verbosity = verbosity
         self.history = []

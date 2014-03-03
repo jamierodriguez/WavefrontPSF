@@ -10,6 +10,7 @@ from __future__ import print_function, division
 import numpy as np
 from focal_plane_shell import FocalPlaneShell
 import pyfits
+from os import path
 from routines_files import combine_decam_catalogs, generate_hdu_lists
 from routines import average_dictionary, mean_trim
 from routines_moments import convert_moments
@@ -70,8 +71,18 @@ class FocalPlane(FocalPlaneShell):
 
         if not list_chip:
             # assume list_catalogs is expid
-            list_catalogs, list_fits_extension, list_chip = \
-                generate_hdu_lists(list_catalogs)
+            if path.exists('/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript/'):
+                list_catalogs, list_fits_extension, list_chip = \
+                    generate_hdu_lists(list_catalogs)
+            elif path.exists('/Users/cpd/Desktop/Images/'):
+                list_catalogs, list_fits_extension, list_chip = \
+                    generate_hdu_lists(list_catalogs,
+                        path_base='/Users/cpd/Desktop/Images/')
+            elif path.exists('/Volumes/Seagate/Images/'):
+                list_catalogs, list_fits_extension, list_chip = \
+                    generate_hdu_lists(list_catalogs,
+                        path_base='/Volumes/Seagate/Images/')
+
         self.list_catalogs = list_catalogs
         self.list_fits_extension = list_fits_extension
         self.list_chip = list_chip
