@@ -48,7 +48,7 @@ parser.add_argument("-n",
 parser.add_argument("-o",
                     dest="output_directory",
                     default="/nfs/slac/g/ki/ki18/cpd/focus/november_8/",
-                    help="where will the outputs go (modulo image number)")
+                    help="where will the outputs go")
 parser.add_argument("-s",
                     dest="max_samples_box",
                     default=500,

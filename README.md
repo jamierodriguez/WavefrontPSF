@@ -1,10 +1,7 @@
 Wavefront PSF
 =============
 
-Calculate the Wavefront of the DECam system. This is effectively a major update
-of my old DECamOptics folder, written with the goal of sharing with other
-folks.
-
+Calculate the Wavefront of the DECam system and fit a PSF to an image.
 
 Changelog
 ---------
@@ -25,11 +22,4 @@ Changelog
 
   Initial commit. Libraries, some 'finished' code.
 
-TODO
-----
 
-- tests
-- module to check (once again) how the wavefront changes for very small
-  variations in focal plane parameters
-- easier way to set up fits
-- reorganize compile code vs scripts (special directory for c code?)

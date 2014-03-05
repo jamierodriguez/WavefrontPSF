@@ -7,6 +7,7 @@ Description: Include the locations of the moments (both fitted and comparison)
 This file will take the results and plot them as well as collate everything
 together into csv files.
 
+TODO: Update plane_keys
 """
 
 from __future__ import print_function, division
@@ -37,7 +38,7 @@ parser.add_argument("-i",
 parser.add_argument("-o",
                     dest="output_directory",
                     default="/nfs/slac/g/ki/ki18/cpd/focus/november_8/",
-                    help="where will the outputs go (modulo image number)")
+                    help="where will the outputs go")
 options = parser.parse_args()
 
 args_dict = vars(options)

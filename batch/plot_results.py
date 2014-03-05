@@ -19,12 +19,13 @@ matplotlib.use('Agg')
 matplotlib.rc('image', interpolation='none', origin='lower', cmap = 'gray_r')
 import argparse
 import numpy as np
-from routines_plot import focal_plane_plot, collect_images
+from routines_plot import 
 from routines_files import collect_dictionary_results, collect_fit_results
 from routines import \
     ellipticity_variance_to_whisker_variance, ellipticity_to_whisker
 from matplotlib.pyplot import close
 from os import path, makedirs
+from decamutil_cpd import decaminfo
 
 # take as give that we have list_fitted_plane list_comparison_plane,
 # list_minuit_results
@@ -85,202 +86,34 @@ for iterator in xrange(len(args_dict['expid'])):
     fitted_dict = np.load(path_fitted).item()
 
     # plots
-    out_plots = args_dict['output_directory'] + '{0:08d}/'.format(expid)
+    out_plots = args_dict['output_directory']
     if not path.exists(out_plots):
         makedirs(out_plots)
-    # e0
-    path_e0_plot = out_plots + 'e0.png'
-    # do the comparison first
-    x_comparison = comparison_dict['x_box']
-    y_comparison = comparison_dict['y_box']
-    u_comparison = np.array([0] * len(x_comparison))
-    v_comparison = comparison_dict['e0']
-    u_var_comparison = comparison_dict['var_e0']  # this is hackish
-    v_var_comparison = comparison_dict['var_e0']
-    u_ave_comparison = 0
-    v_ave_comparison = np.mean(v_comparison)
-    r = np.sqrt(u_comparison**2 + v_comparison**2)
-    scale_val = np.maximum(r.min(), r.mean() - 2 * r.std())
-    figure_e0, axis_e0 = focal_plane_plot(
-        x=x_comparison, y=y_comparison,
-        u=u_comparison, v=v_comparison,
-        u_ave=u_ave_comparison, v_ave=v_ave_comparison,
-        u_var=u_var_comparison, v_var=v_var_comparison,
-        color='r',
-        scale=8 / scale_val,
-        artpatch=2,
-        offset_x=-2)
-    # do the fitted
-    x_fitted = fitted_dict['x_box']
-    y_fitted = fitted_dict['y_box']
-    u_fitted = np.array([0] * len(x_fitted))
-    v_fitted = fitted_dict['e0']
-    u_var_fitted = fitted_dict['var_e0']  # this is hackish
-    v_var_fitted = fitted_dict['var_e0']
-    u_ave_fitted = 0
-    v_ave_fitted = np.mean(v_fitted)
-    figure_e0, axis_e0 = focal_plane_plot(
-        x=x_fitted, y=y_fitted,
-        u=u_fitted, v=v_fitted,
-        u_ave=u_ave_fitted, v_ave=v_ave_fitted,
-        u_var=u_var_fitted, v_var=v_var_fitted,
-        focal_figure=figure_e0,
-        focal_axis=axis_e0,
-        color='k',
-        scale=8 / scale_val,
-        artpatch=2,
-        offset_x=2)
-    axis_e0.set_title('{0:08d}, {1}, {2:.2e}'.format(
-        expid, ierflg, amin))
-    figure_e0.savefig(path_e0_plot)
-    close()
 
-    #TODO: do a sub_mean version?
+    figures, axes, scales = data_focal_plot(comparison_dict, color='r')
+    figures, axes, scales = data_focal_plot(fitted_dict, color='b',
+                                            figures=figures,
+                                            axes=axes,
+                                            scales=scales)
+    for fig_key in figures:
+        figures[fig_key].savefig(out_plots + '{0:08d}_'.format(expid) +
+                                 fig_key + '-focal.png')
+    close('all')
 
-    # ellipticity
-    path_ellipticity_plot = out_plots + 'ellipticity.png'
-    # do the comparison first
-    x_comparison = comparison_dict['x_box']
-    y_comparison = comparison_dict['y_box']
-    u_comparison = comparison_dict['e1']
-    v_comparison = comparison_dict['e2']
-    u_var_comparison = comparison_dict['var_e1']
-    v_var_comparison = comparison_dict['var_e2']
-    u_ave_comparison = np.mean(u_comparison)
-    v_ave_comparison = np.mean(v_comparison)
-    r = np.sqrt(u_comparison**2 + v_comparison**2)
-    scale_val = np.min(r.min(), r.mean() - 2 * r.std())
-    figure_ellipticity, axis_ellipticity = focal_plane_plot(
-        x=x_comparison, y=y_comparison,
-        u=u_comparison, v=v_comparison,
-        u_ave=u_ave_comparison, v_ave=v_ave_comparison,
-        u_var=u_var_comparison, v_var=v_var_comparison,
-        color='r',
-        scale=2 * 10 / 2e-3,  # 2x here is to make our quiverkey 20 mm
-        whisker_width=3,
-        artpatch=1)
-    # do the fitted
-    x_fitted = fitted_dict['x_box']
-    y_fitted = fitted_dict['y_box']
-    u_fitted = fitted_dict['e1']
-    v_fitted = fitted_dict['e2']
-    u_var_fitted = fitted_dict['var_e1']
-    v_var_fitted = fitted_dict['var_e2']
-    u_ave_fitted = np.mean(u_fitted)
-    v_ave_fitted = np.mean(v_fitted)
-    figure_ellipticity, axis_ellipticity = focal_plane_plot(
-        x=x_fitted, y=y_fitted,
-        u=u_fitted, v=v_fitted,
-        u_ave=u_ave_fitted, v_ave=v_ave_fitted,
-        u_var=u_var_fitted, v_var=v_var_fitted,
-        focal_figure=figure_ellipticity,
-        focal_axis=axis_ellipticity,
-        color='k',
-        scale=2 * 10 / 2e-3,  # 2x here is to make our quiverkey 20 pixels
-        whisker_width=3,
-        artpatch=1)
-    axis_ellipticity.set_title('{0:08d}, {1}, {2:.2e}'.format(
-        expid, ierflg, amin))
-    figure_ellipticity.savefig(path_ellipticity_plot)
-    close()
-
-    # whisker
-    path_whisker_plot = out_plots + 'whisker.png'
-    # convert ellipticity to whisker
-    u_var_comparison, v_var_comparison = \
-        ellipticity_variance_to_whisker_variance(
-            u_comparison, v_comparison, u_var_comparison, v_var_comparison)
-    u_comparison, v_comparison, w, phi = ellipticity_to_whisker(
-        u_comparison, v_comparison)
-    # vector whisker
-    u_ave_comparison, v_ave_comparison, w, phi = ellipticity_to_whisker(
-        u_ave_comparison, v_ave_comparison)
-    figure_whisker, axis_whisker = focal_plane_plot(
-        x=x_comparison, y=y_comparison,
-        u=u_comparison, v=v_comparison,
-        u_ave=u_ave_comparison, v_ave=v_ave_comparison,
-        u_var=u_var_comparison, v_var=v_var_comparison,
-        color='r',
-        scale=10 / 5e-2,
-        artpatch=2)
-
-    # do fitted
-    u_var_fitted, v_var_fitted = \
-        ellipticity_variance_to_whisker_variance(
-            u_fitted, v_fitted, u_var_fitted, v_var_fitted)
-    u_fitted, v_fitted, w, phi = ellipticity_to_whisker(
-        u_fitted, v_fitted)
-    # vector whisker
-    u_ave_fitted, v_ave_fitted, w, phi = ellipticity_to_whisker(
-        u_ave_fitted, v_ave_fitted)
-    figure_whisker, axis_whisker = focal_plane_plot(
-        x=x_fitted, y=y_fitted,
-        u=u_fitted, v=v_fitted,
-        u_ave=u_ave_fitted, v_ave=v_ave_fitted,
-        u_var=u_var_fitted, v_var=v_var_fitted,
-        focal_figure=figure_whisker,
-        focal_axis=axis_whisker,
-        color='k',
-        scale=10 / 5e-2,
-        artpatch=2)
-    axis_whisker.set_title('{0:08d}, {1}, {2:.2e}'.format(
-        expid, ierflg, amin))
-    figure_whisker.savefig(path_whisker_plot)
-    close()
-
-    # whisker rotated
-    path_whisker_rotated_plot = out_plots + 'whisker_rotated.png'
-    # do the comparison first
-    x_comparison = comparison_dict['x_box']
-    y_comparison = comparison_dict['y_box']
-    figure_whisker_rotated, axis_whisker_rotated = focal_plane_plot(
-        x=x_comparison, y=y_comparison,
-        u=np.array([0] * len(x_comparison)),
-        v=np.array([1] * len(x_comparison)),
-        u_ave=0, v_ave=1,
-        u_var=[], v_var=[],
-        color='r',
-        scale=13 / 1,
-        quiverkey_dict={'title': r'',
-                        'value': 2},
-        artpatch=2,
-        offset_x=0)
-
-    # do the fitted
-
-    theta = np.arctan2(u_comparison, v_comparison)
-    mag = np.sqrt(np.square(u_comparison) + np.square(v_comparison))
-    u_fitted_prime = (np.cos(theta) * u_fitted -
-                      np.sin(theta) * v_fitted) / mag
-    v_fitted_prime = (np.sin(theta) * u_fitted +
-                      np.cos(theta) * v_fitted) / mag
-
-    theta_ave = np.arctan2(u_ave_comparison, v_ave_comparison)
-    mag_ave = np.sqrt(np.square(u_ave_comparison) +
-                      np.square(v_ave_comparison))
-    u_ave_fitted_prime = (np.cos(theta_ave) * u_ave_fitted -
-                          np.sin(theta_ave) * v_ave_fitted) / mag_ave
-    v_ave_fitted_prime = (np.sin(theta_ave) * u_ave_fitted +
-                          np.cos(theta_ave) * v_ave_fitted) / mag_ave
-
-    x_fitted = fitted_dict['x_box']
-    y_fitted = fitted_dict['y_box']
-    figure_whisker_rotated, axis_whisker_rotated = focal_plane_plot(
-        x=x_fitted, y=y_fitted,
-        u=u_fitted_prime, v=v_fitted_prime,
-        u_ave=u_ave_fitted_prime, v_ave=v_ave_fitted_prime,
-        u_var=[], v_var=[],
-        focal_figure=figure_whisker_rotated,
-        focal_axis=axis_whisker_rotated,
-        color='k',
-        scale=13 / 1,
-        quiverkey_dict={'title': r'',
-                        'value': 2},
-        artpatch=2,
-        offset_x=0)
-    axis_whisker_rotated.set_title('{0:08d}, {1}, {2:.2e}'.format(
-        expid, ierflg, amin))
-    figure_whisker_rotated.savefig(path_whisker_rotated_plot)
-    close()
-
+    xedges = np.unique(fitted_dict['x_box'])
+    dx = xedges[1] - xedges[0]
+    xedges = np.append(xedges - dx, xedges[-1] + dx)
+    yedges = np.unique(fitted_dict['y_box'])
+    dy = yedges[1] - yedges[0]
+    yedges = np.append(yedges - dy, yedges[-1] + dy)
+    edges = [xedges, yedges]
+    figures, axes, scales = data_hist_plot(fitted_dict, edges)
+    for fig_key in figures:
+        figures[fig_key].savefig(out_plots + '{0:08d}_'.format(expid) +
+                                 fig_key + '-hist.png')
+    close('all')
+    figures, axes, scales = data_contour_plot(fitted_dict, edges)
+    for fig_key in figures:
+        figures[fig_key].savefig(out_plots + '{0:08d}_'.format(expid) +
+                                 fig_key + '-contours.png')
     close('all')

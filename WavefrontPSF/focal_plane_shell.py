@@ -105,20 +105,32 @@ class FocalPlaneShell(Wavefront):
         self.verbosity = verbosity
         self.history = []
 
-        # TODO: incorporate some way of varying the mesh correction
         # NOTE: THIS DEPENDS ON THE MESH YOU CHOOSE TO USE.
         self.reference_correction = -1 * np.array([
             [0, 0, 0],
             [0, 0, 0],
             [0, 0, 0],
-            [1690, 0.496, 6.14],
-            [-0.0115, 0.00232, 0.000538],
-            [-0.11, 0.000627, 0.000801],
-            [0.0113, -0.000329, 9.68e-5],
-            [-0.145, 0.000396, 0.00024],
-            [-0.0884, 0.000365, 0.000158],
-            [0.0452, 0.000159, 0.000191],
+            [1700, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
             [0, 0, 0]])
+        ## # Science20120915s1v3_134239
+        ## self.reference_correction = -1 * np.array([
+        ##     [0, 0, 0],
+        ##     [0, 0, 0],
+        ##     [0, 0, 0],
+        ##     [1690, 0.496, 6.14],
+        ##     [-0.0115, 0.00232, 0.000538],
+        ##     [-0.11, 0.000627, 0.000801],
+        ##     [0.0113, -0.000329, 9.68e-5],
+        ##     [-0.145, 0.000396, 0.00024],
+        ##     [-0.0884, 0.000365, 0.000158],
+        ##     [0.0452, 0.000159, 0.000191],
+        ##     [0, 0, 0]])
 
         # decaminfo stuff (since it's useful)
         self.decaminfo = decaminfo()
@@ -470,7 +482,8 @@ class FocalPlaneShell(Wavefront):
 
         return zernikes
 
-    def random_coordinates(self, max_samples_box=5, boxdiv=0):
+    def random_coordinates(self, max_samples_box=5, boxdiv=0, chip=0,
+                           border=30):
         """A method for generating coordinates by sampling over boxes
 
         Parameters
@@ -482,6 +495,13 @@ class FocalPlaneShell(Wavefront):
         boxdiv : int, optional
             How many divisions we will put into the chip. Default is zero
             divisions on each chip.
+
+        chip : int, optional
+            What chip are we making the coordinates for? If 0, do for entire
+            plane.
+
+        border : float, optional
+            How far away from the border will we sample? Unit is pixels.
 
         Returns
         -------
@@ -496,11 +516,29 @@ class FocalPlaneShell(Wavefront):
         # sample over [a,b) is
         # (b - a ) * np.random.random_sample(max_samples_box) + a
         coords_final = []
-        for ext_num in range(1, 63):
+
+        if chip == 0:
+            ext_num_list = range(1, 63)
+        else:
+            ext_num_list = [chip]
+        for ext_num in ext_num_list:
             ext_name = self.decaminfo.ccddict[ext_num]
-            if ext_num == 61:
+            if ((ext_num == 61) * (chip != 61)):
                 # N30 is bad
                 continue
+
+            ## # TODO: include the boxdiv part
+            ## xpix = np.random.random_sample(max_samples_box) * \
+            ##     (2048 - 2 * border) + border
+            ## ypix = np.random.random_sample(max_samples_box) * \
+            ##     (4096 - 2 * border) + border
+
+            ## coords = [list(self.decaminfo.getPosition(
+            ##     ext_name, xpix[i], ypix[i])) + [ext_num]
+            ##     for i in xrange(max_samples_box)]
+
+            ## coords_final += coords
+
             boundaries = self.decaminfo.getBounds(ext_name, boxdiv=boxdiv)
             for x in xrange(len(boundaries[0]) - 1):
                 for y in xrange(len(boundaries[1]) - 1):

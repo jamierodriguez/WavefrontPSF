@@ -7,7 +7,7 @@ Description: A set of common routines for csv generation and creation.
 
 from __future__ import print_function, division
 import numpy as np
-from os import path, makedirs, system, remove
+from os import path, makedirs, system, remove, chdir
 from subprocess import call
 from decamutil_cpd import decaminfo
 import pyfits
@@ -456,29 +456,103 @@ def combine_decam_catalogs(list_catalogs, list_fits_extension, list_chip):
     ext_all = np.array(ext_all)
     return recdata_all, ext_all, recheader_all
 
-def download_cat(rid, expid, date, i):
-    # downloads to whatever the current directory is
-    command = "wget --no-check-certificate --http-user=cpd --http-password=cpd70chips -nc -nd -nH -r -k -p -np  --cut-dirs=3 https://desar2.cosmology.illinois.edu/DESFiles/desardata/OPS/red/{0}_{3}/red/DECam_{1:08d}/DECam_{1:08d}_{2:02d}_cat.fits".format(rid, expid, i, date)
-    command = ['wget', '--no-check-certificate',
-               '--http-user=cpd', '--http-password=cpd70chips',
-               '-nc', '-nd', '-nH', '-r', '-k', '-p', '-np',
-               '--cut-dirs=3',
-               "https://desar2.cosmology.illinois.edu/DESFiles/desardata/OPS/"
-               + "red/{0}_{1}/red/DECam_".format(rid, date)
-               + "{0:08d}/DECam_{0:08d}_{1:02d}_cat.fits".format(expid, i)]
-    print_command(command)
-    call(command)
-    return
+## def download_cat(rid, expid, date, i):
+##     # downloads to whatever the current directory is
+##     command = "wget --no-check-certificate --http-user=cpd --http-password=cpd70chips -nc -nd -nH -r -k -p -np  --cut-dirs=3 https://desar2.cosmology.illinois.edu/DESFiles/desardata/OPS/red/{0}_{3}/red/DECam_{1:08d}/DECam_{1:08d}_{2:02d}_cat.fits".format(rid, expid, i, date)
+##     command = ['wget', '--no-check-certificate',
+##                '--http-user=cpd', '--http-password=cpd70chips',
+##                '-nc', '-nd', '-nH', '-r', '-k', '-p', '-np',
+##                '--cut-dirs=3',
+##                "https://desar2.cosmology.illinois.edu/DESFiles/desardata/OPS/"
+##                + "red/{0}_{1}/red/DECam_".format(rid, date)
+##                + "{0:08d}/DECam_{0:08d}_{1:02d}_cat.fits".format(expid, i)]
+##     print_command(command)
+##     call(command)
+##     return
+## 
+## def download_image(rid, expid, date, i):
+##     # downloads to current directory
+##     command = "wget --no-check-certificate --http-user=cpd --http-password=cpd70chips -nc -nd -nH -r -k -p -np  --cut-dirs=3 https://desar2.cosmology.illinois.edu/DESFiles/desardata/OPS/red/{0}_{3}/red/DECam_{1:08d}/DECam_{1:08d}_{2:02d}.fits.fz".format(rid, expid, i, date)
+##     print(command)
+##     system(command)
+##     # decompress image
+##     command = "funpack DECam_{0:08d}_{1:02d}.fits.fz".format(expid, i)
+##     system(command)
+##     # remove old compressed image
+##     remove("DECam_{0:08d}_{1:02d}.fits.fz".format(expid, i))
+## 
+##     return
 
-def download_image(rid, expid, date, i):
-    # downloads to current directory
-    command = "wget --no-check-certificate --http-user=cpd --http-password=cpd70chips -nc -nd -nH -r -k -p -np  --cut-dirs=3 https://desar2.cosmology.illinois.edu/DESFiles/desardata/OPS/red/{0}_{3}/red/DECam_{1:08d}/DECam_{1:08d}_{2:02d}.fits.fz".format(rid, expid, i, date)
-    print(command)
-    system(command)
-    # decompress image
-    command = "funpack DECam_{0:08d}_{1:02d}.fits.fz".format(expid, i)
-    system(command)
-    # remove old compressed image
-    remove("DECam_{0:08d}_{1:02d}.fits.fz".format(expid, i))
+def download_desdm(expid, dataDirectory,
+                   tag='Y1N_FIRSTCUT',
+                   download_catalog=True,
+                   download_image=True,
+                   download_psfcat=True,
+                   download_background=False,
+                   ccd=None, verbose=True):
+    username = "cpd"
+    password = "cpd70chips"
 
-    return
+    # make directory if it doesn't exist
+    if not path.exists(dataDirectory):
+        makedirs(dataDirectory)
+
+    # move there!
+    chdir(dataDirectory)
+
+
+    # exposure table has expnum, and id, and this id is called exposureid in
+    # the image table
+    # image table has exposureid, id, run and imagetype
+    # runtag table has the run and tag
+    # filepath table has the id and filepath
+    #
+    cmd = 'trivialAccess -u %s -p %s -d dessci -c "select f.path from filepath f, image i, exposure e, runtag t where f.id = i.id and i.run = t.run and t.tag = \'%s\' and e.expnum = %d and i.imagetype = \'red\' and i.exposureid = e.id' % (username, password, tag, expid)
+
+    if (ccd is not None):
+        cmd = cmd + ' and i.ccd = %d' % (ccd)
+
+    outname = "tempfilelist_%d.out" % (expid)
+    cmd = cmd + '" > %s' % (outname)
+
+    if verbose:
+        print(cmd)
+
+    call(cmd,shell=True)
+
+    lines = [line.rstrip('\r\n') for line in open(outname)]
+    junk = lines.pop(0)
+
+
+    for line in lines:
+        imfiles=[]
+        catfiles=[]
+        psfcatfiles=[]
+        bkgfiles=[]
+
+        parts=line.split('.fits')
+        imfiles.append('https://desar2.cosmology.illinois.edu/DESFiles/desardata/' + parts[0]+'.fits.fz')
+        catfiles.append('https://desar2.cosmology.illinois.edu/DESFiles/desardata/' + parts[0]+'_cat.fits')
+        psfcatfiles.append('https://desar2.cosmology.illinois.edu/DESFiles/desardata/' + parts[0]+'_psfcat.fits')
+        bkgfiles.append('https://desar2.cosmology.illinois.edu/DESFiles/desardata/' + parts[0]+'_bkg.fits.fz')
+
+        for i in range(0,len(imfiles)):
+            if not (download_catalog + download_image +
+                    download_psfcat + download_background):
+                print('You are not downloading anything!!!')
+            else:
+                cmd = 'wget --user='+username+' --password='+password+' --no-check-certificate'
+                if download_image:
+                    cmd += ' ' + imfiles[i]
+                if download_catalog:
+                    cmd += ' ' + catfiles[i]
+                if download_psfcat:
+                    cmd += ' ' + psfcatfiles[i]
+                if download_background:
+                    cmd += ' ' + bkgfiles[i]
+
+                if verbose:
+                    print(cmd)
+
+                call(cmd, shell=True)
+

@@ -17,51 +17,16 @@ from os import path, makedirs, chdir, remove
 from focal_plane import FocalPlane
 from decamutil_cpd import decaminfo
 
+from routines_files import download_desdm
 from routines import MAD
-from routines_files import download_cat, download_image
 
 """
 TODO:
-    [ ] Consider looking at DESDB for the 'smart' way of downloading the files.
     [ ] Get rid of the WIN_IMAGE tags?
     [ ] Create a basic set of scales for both parameters
 
-input_list = [
-    [20130906105326, 20130905, 231046, 231053],
-    [20130906105326, 20130905, 231089, 231096],
-    [20130911103044, 20130910, 232608, 232849],
-    [20130913151017, 20130912, 233377, 233571],
-    [20130913151017, 20130912, 233584, 233642],
-    ]
-
-rid, date, minImage, maxImage = input_list[0]
-
-
-# remake the catalogs...
-expids = np.arange(231046, 231053)
-expids = np.append(expids, range(231089, 231096))
-expids = np.append(expids, range(232608, 232849))
-expids = np.append(expids, range(233377, 233571))
-expids = np.append(expids, range(233584, 233642))
-
-rids = [20130906105326] * (231053 - 231046) + \
-       [20130906105326] * (231096 - 231089) + \
-       [20130911103044] * (232849 - 232608) + \
-       [20130913151017] * (233571 - 233377) + \
-       [20130913151017] * (233642 - 233584)
-
-dates = [20130905] * (231053 - 231046) + \
-        [20130905] * (231096 - 231089) + \
-        [20130910] * (232849 - 232608) + \
-        [20130912] * (233571 - 233377) + \
-        [20130912] * (233642 - 233584)
-
-ith = np.argwhere(expid == expids)[0]
-rid = rids[ith]
-date = dates[ith]
-
-
 """
+
 ##############################################################################
 # argparse
 ##############################################################################
@@ -85,16 +50,6 @@ parser.add_argument("-o",
                     dest="output_directory",
                     default='/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript/',
                     help="where will the outputs go")
-parser.add_argument("-t",
-                    dest="catalogs",
-                    default='/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript/',
-                    help='directory containing the catalogs')
-parser.add_argument("-rid",
-                    dest="rid",
-                    help="Run ID")
-parser.add_argument("-d",
-                    dest="date",
-                    help="Date")
 parser.add_argument("-s",
                     dest="size",
                     type=int,
@@ -163,41 +118,28 @@ def check_recdata(recdata, return_stamps=True):
     return val
 
 ##############################################################################
-# download the image and catalog
-##############################################################################
-
-# from wgetscript:
-dataDirectory = args_dict['catalogs'] + \
-    "{0:08d}".format(args_dict['expid'])
-dataDirectoryExp = path.expandvars(dataDirectory)
-
-# make directory if it doesn't exist
-if not path.exists(dataDirectoryExp):
-    makedirs(dataDirectoryExp)
-
-# move there!
-chdir(dataDirectoryExp)
-
-##############################################################################
 # create the new catalogs
 ##############################################################################
+list_catalogs_base = \
+    path.expandvars(args_dict['output_directory'])
 for i in xrange(1, 63):
 
     if i == 61:
         # screw N30
         continue
 
-    # get cat
-    download_cat(args_dict['rid'], args_dict['expid'], args_dict['date'], i)
-    # get image
-    download_image(args_dict['rid'], args_dict['expid'], args_dict['date'], i)
+    # get cat and image
+    download_desdm(args_dict['expid'], list_catalogs_base, ccd=i)
 
+    ## # get cat
+    ## download_cat(args_dict['rid'], args_dict['expid'], args_dict['date'], i)
+    ## # get image
+    ## download_image(args_dict['rid'], args_dict['expid'], args_dict['date'], i)
 
     # create an FP object
-    path_base = args_dict['catalogs']
-    list_catalogs_base = \
-        path_base + '{0:08d}/DECam_{0:08d}_'.format(args_dict['expid'])
-    list_catalogs = [list_catalogs_base + '{0:02d}_cat.fits'.format(i)]
+    list_catalogs = [list_catalogs_base +
+                     'DECam_{0:08d}_{1:02d}_cat.fits'.format(
+                         args_dict['expid'], i)]
     list_chip = [[decaminfo().ccddict[i]]]
     list_fits_extension = [[2]]
 
@@ -213,10 +155,14 @@ for i in xrange(1, 63):
                     )
 
     # now use the catalog here to make a new catalog
-    image = pyfits.getdata(list_catalogs_base + '{0:02d}.fits'.format(i),
-                           ext=0)
-    header = pyfits.getheader(list_catalogs_base + '{0:02d}.fits'.format(i),
-                              ext=0)
+    image = pyfits.getdata(list_catalogs_base +
+                           'DECam_{0:08d}_{1:02d}.fits.fz'.format(
+                           args_dict['expid'], i),
+                           ext=1)
+    header = pyfits.getheader(list_catalogs_base +
+                              'DECam_{0:08d}_{1:02d}.fits.fz'.format(
+                              args_dict['expid'], i),
+                              ext=1)
     gain = np.mean([header['GAINA'], header['GAINB']])
     gain_std = np.std([header['GAINA'], header['GAINB']])
     # generate dictionary of columns
@@ -359,7 +305,7 @@ for i in xrange(1, 63):
         'STAMP':      dict(name='STAMP',
                            array=[],
                            format='{0}D'.format(args_dict['size'] ** 2),
-                           unit='count')
+                           unit='count',),
         })
 
     # go through each entry and make stamps and other parameters
@@ -442,13 +388,16 @@ for i in xrange(1, 63):
     for key in pyfits_dict:
         pyfits_dict[key]['array'] = np.array(pyfits_dict[key]['array'])[conds]
         columns.append(pyfits.Column(**pyfits_dict[key]))
+
+    # TODO: I ought to include the old 1st extension (with image header info)
     tbhdu = pyfits.new_table(columns)
 
-    tbhdu.writeto(args_dict['output_directory'] + \
+    tbhdu.writeto(list_catalogs_base + \
                   'DECam_{0:08d}_'.format(args_dict['expid']) + \
                   '{0:02d}_cat_cpd.fits'.format(i),
                   clobber=True)
 
     if i != 1:
         # remove image
-        remove("DECam_{0:08d}_{1:02d}.fits".format(args_dict['expid'], i))
+        remove(list_catalogs_base +
+               "DECam_{0:08d}_{1:02d}.fits.fz".format(args_dict['expid'], i))

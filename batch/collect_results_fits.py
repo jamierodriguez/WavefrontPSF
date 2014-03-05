@@ -15,6 +15,7 @@ TODO: why is my expid negative?
 TODO: add thing in front for plane parameter? say plane_
 TODO: worth it to sort my columns instead of whatever craziness python does?
 TODO: my fitted and image parameters are the same?!
+TODO: Update plane_keys
 """
 
 from __future__ import print_function, division
@@ -44,7 +45,7 @@ parser.add_argument("-i",
 parser.add_argument("-o",
                     dest="output_directory",
                     default="/nfs/slac/g/ki/ki18/cpd/focus/november_8/",
-                    help="where will the outputs go (modulo image number)")
+                    help="where will the outputs go")
 parser.add_argument("-b",
                     dest="boxdiv",
                     default=0,

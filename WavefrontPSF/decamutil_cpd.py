@@ -163,16 +163,16 @@ class decaminfo(object):
         ix, iy = self.getPixel(extname, xPos, yPos)
         return ix, iy
 
-    def getEdges(self,boxdiv=0):
+    def getEdges(self, boxdiv=0):
         '''
         Get the pixel edges across entire focal plane
         '''
         # calculate center to center chip distances
         x_step = 33.816
         y_step = 63.89
-        x_min = -236.712 - 2 * x_step
+        x_min = -236.712
         x_max = -x_min + x_step
-        y_min = -223.615 - 2 * y_step
+        y_min = -223.615
         y_max = -y_min + y_step
 
         if boxdiv == 0:
@@ -185,7 +185,7 @@ class decaminfo(object):
         return [x_edges, y_edges]
 
 
-    def getBounds(self,extname,boxdiv=0):
+    def getBounds(self, extname, boxdiv=0):
         '''
         Give the coordinates of two opposite corners in mm
         '''

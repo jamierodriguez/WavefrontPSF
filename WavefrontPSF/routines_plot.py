@@ -18,7 +18,7 @@ from routines_moments import ellipticity_to_whisker
 # color scheme:
 # blues_r for all <0 data, reds for all >0 data
 from colors import blue_red, blues_r, reds
-
+BASE_SIZE = 12
 def focal_graph():
     """Convenience for the creation of my focal plane graphics
 
@@ -29,7 +29,7 @@ def focal_graph():
     focal_axis : axis object
 
     """
-    focal_figure = plt.figure(figsize=(12, 12), dpi=300)
+    focal_figure = plt.figure(figsize=(BASE_SIZE, BASE_SIZE), dpi=300)
     focal_axis = focal_figure.add_subplot(111,
                                           aspect='equal')
     focal_axis = focal_graph_axis(focal_axis)
@@ -48,6 +48,41 @@ def focal_graph_axis(focal_axis):
     focal_axis.set_xlim(-250, 250)
     focal_axis.set_ylim(-250, 250)
     return focal_axis
+
+def histogramize(x, y, z, bins):
+    counts, xedges_counts, yedges_counts = np.histogram2d(x, y, bins=bins)
+
+    weighted_counts, xedges, yedges = np.histogram2d(x, y,
+        weights=z, bins=bins)
+
+    C = weighted_counts.T / counts.T
+    C = np.where(counts.T == 0, np.nanmin(C), C)
+    #C = np.ma.masked_invalid(weighted_counts.T / counts.T)
+
+
+    X, Y = np.meshgrid(0.5 * (xedges[:-1] + xedges[1:]),
+                       0.5 * (yedges[:-1] + yedges[1:]))
+
+    return C, X, Y
+
+def contour3d(x, y, z, bins, stride=2):
+
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')
+    Z, X, Y = histogramize(x, y, z, bins)
+    ax = focal_graph_axis(ax)
+
+    ax.plot_surface(X, Y, Z, rstride=stride, cstride=stride,
+                    alpha=0.3, cmap=blue_red)
+
+    # add other plots
+    ## cset = ax.contour(X, Y, Z, zdir='x', offset=-250, cmap=blue_red)
+    ## cset = ax.contour(X, Y, Z, zdir='y', offset=250, cmap=blue_red)
+    cset = ax.add_collection3d(plt.pcolor(X, Y, Z, cmap=blue_red),
+                               zs=Z.min(), zdir='z')
+    ax.set_zlim(Z.min(), Z.max())
+    ax.view_init(elev=40, azim=-10)
+    return fig, ax
 
 def wedge_collection(X, Y, U, V,
                      U_var, V_var,
@@ -399,8 +434,8 @@ def collect_images(
                 call(command, bufsize=0)
 
 def data_focal_plot(data, color='k',
-                    boxdiv=1,
                     average=np.mean,
+                    scalefactor=1,
                     scales=None,
                     figures=None,
                     axes=None,
@@ -417,14 +452,16 @@ def data_focal_plot(data, color='k',
     color : string
         Color of the focal plots we make
 
-    boxdiv : int; deprecated
-        Divisions of chips
-
     average : function
         Function to be used for determining the average
 
     scales : dictionary of floats
         The values we use to make our plots
+
+    scalefactor : float
+        How much do we wish to change the size of the whiskers?
+        greater than 1 = bigger
+        less than 1 = smaller
 
     keys : list of keys
         Contains a list of the keys we want figures for.
@@ -456,13 +493,13 @@ def data_focal_plot(data, color='k',
         for key in (keys):
             if defaults:
                 if key == 'e':
-                    keyval = 5e-4
+                    keyval = 5e-4 / scalefactor
                 elif key == 'w':
-                    keyval = 1.0e-2
+                    keyval = 1.0e-2 / scalefactor
                 elif key == 'zeta':
-                    keyval = 7.5e-5
+                    keyval = 7.5e-5 / scalefactor
                 elif key == 'delta':
-                    keyval = 1.25e-4
+                    keyval = 1.25e-4 / scalefactor
                 else:
                     keyval = -1
             else:
@@ -623,7 +660,10 @@ def data_hist_plot(data, edges, scales=None,
         for key in keys:
             if (key in data) + (key + '1' in data) + (key == 'number'):
                 #(keys + easy_plots + posneg_plots + double_plots):
-                fig, ax = focal_graph()
+                fig = plt.figure(figsize=(1.5 * BASE_SIZE, BASE_SIZE),
+                                 dpi=300)
+                ax = fig.add_subplot(111, aspect='equal')
+                ax = focal_graph_axis(ax)
                 figures.update({key: fig})
                 axes.update({key: ax})
 
@@ -643,7 +683,7 @@ def data_hist_plot(data, edges, scales=None,
                     elif key == 'zeta1':
                         scales.update({key: dict(vmin=-0.0025, vmax=0.0025)})
                     elif key == 'zeta2':
-                        scales.update({key: dict(vmin=-0.002, vmax=0.002)})
+                        scales.update({key: dict(vmin=-0.0025, vmax=0.0025)})
                     elif key == 'delta1':
                         scales.update({key: dict(vmin=-0.008, vmax=0.008)})
                     elif key == 'delta2':
@@ -766,6 +806,203 @@ def data_hist_plot(data, edges, scales=None,
 
     return figures, axes, scales
 
+def data_contour_plot(data, edges, scales=None,
+                   figures=None, axes=None,
+                   defaults=True,
+                   keys=[]):
+    """Takes data and makse a bunch of 2d histograms
+
+    Parameters
+    ----------
+    data : dictionary of arrays
+        Contains the relevant parameters which we are making these graphs
+
+    edges : list or array
+        Contains the x edges in edges[0] and y edges in edges[1]
+
+    keys : list of keys
+        Contains a list of the keys we want figures for. Can include OTHER
+        objects OTHER than the ones normally made.
+
+    Returns
+    -------
+    figures, axes : dictionaries of matplotlib objects
+        The figures and axes made from this function.
+
+    """
+
+    easy_plots = ['flux', 'number']
+    separable_pos_plots = ['e0', 'whisker', 'fwhm', 'a4']
+    posneg_plots = ['e1', 'e2', 'delta1', 'delta2', 'zeta1', 'zeta2']
+    double_plots = ['e', 'w', 'zeta', 'delta']
+    if len(keys) == 0:
+        keys = easy_plots + separable_pos_plots + posneg_plots + double_plots
+
+    if (not figures) * (not axes):
+        figures = {}
+        axes = {}
+        for key in keys:
+            if (key in data) + (key + '1' in data) + (key == 'number'):
+                #(keys + easy_plots + posneg_plots + double_plots):
+                fig = plt.figure(figsize=(BASE_SIZE * 1.5, BASE_SIZE),
+                                 dpi=300)
+                ax = fig.gca(projection='3d')
+                ax = focal_graph_axis(ax)
+
+                figures.update({key: fig})
+                axes.update({key: ax})
+
+    if not scales:
+        scales = {}
+
+        for key in keys:
+            if (key in data) + (key + '1' in data) + (key == 'number'):
+                #scales.update({key : dict(vmin=None, vmax=None)})
+                if defaults:
+                    if key == 'e0':
+                        scales.update({key: dict(vmin=0.1, vmax=0.3)})
+                    elif key == 'e1':
+                        scales.update({key: dict(vmin=-0.035, vmax=0.035)})
+                    elif key == 'e2':
+                        scales.update({key: dict(vmin=-0.035, vmax=0.035)})
+                    elif key == 'zeta1':
+                        scales.update({key: dict(vmin=-0.0025, vmax=0.0025)})
+                    elif key == 'zeta2':
+                        scales.update({key: dict(vmin=-0.0025, vmax=0.0025)})
+                    elif key == 'delta1':
+                        scales.update({key: dict(vmin=-0.008, vmax=0.008)})
+                    elif key == 'delta2':
+                        scales.update({key: dict(vmin=-0.008, vmax=0.008)})
+                    elif key == 'a4':
+                        scales.update({key: dict(vmin=0.01, vmax=0.07)})
+                    else:
+                        scales.update({key : {}})
+                else:
+                    scales.update({key : {}})
+
+    if ('x_box' in data) * ('y_box' in data):
+        x = data['x_box']
+        y = data['y_box']
+    else:
+        x = data['x']
+        y = data['y']
+
+    # plots
+    # get the counts
+    counts, xedges, yedges = np.histogram2d(x, y, bins=edges)
+
+    for key in keys:
+        if (key in data) * (key in (easy_plots +
+                                    separable_pos_plots +
+                                    posneg_plots)):
+
+            if key == 'e0prime':
+                scales[key] = scales['e0'].copy()
+            key_figure = figures[key]
+            key_axis = axes[key]
+            key_axis.set_title(key)
+            ## (counts, xedges, yedges, Image) = key_axis.hist2d(
+            ##     x, y, bins=edges, weights=data[key], **scales[key])
+            r = data[key]
+            weighted_counts, xedges, yedges = np.histogram2d(
+                x, y, weights=r, bins=edges)
+            ## Image = key_axis.imshow(weighted_counts.T / counts.T,
+            ##     extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]],
+            ##     **scales[key])
+            C2 = np.ma.masked_invalid(weighted_counts.T / counts.T)
+            C = weighted_counts.T / counts.T
+
+        elif (key + '1' in data) * (key + '2' in data) * (key in double_plots):
+            u = data[key + '1']
+            v = data[key + '2']
+
+            key_figure = figures[key]
+            key_axis = axes[key]
+            key_axis.set_title(key)
+            r = np.sqrt(u ** 2 + v ** 2)
+            ## (counts, xedges, yedges, Image) = key_axis.hist2d(
+            ##     x, y, bins=edges, weights=r, **scales[key])
+            weighted_counts, xedges, yedges = np.histogram2d(
+                x, y, weights=r, bins=edges)
+            ## Image = key_axis.imshow(weighted_counts.T / counts.T,
+            ##     extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]],
+            ##     **scales[key])
+            C2 = np.ma.masked_invalid(weighted_counts.T / counts.T)
+            C = weighted_counts.T / counts.T
+
+        # get the ones not in double, easy, or posneg
+        elif (key in data):
+
+            key_figure = figures[key]
+            key_axis = axes[key]
+            key_axis.set_title(key)
+            ## (counts, xedges, yedges, Image) = key_axis.hist2d(
+            ##     x, y, bins=edges, weights=data[key], **scales[key])
+            r = data[key]
+            weighted_counts, xedges, yedges = np.histogram2d(
+                x, y, weights=r, bins=edges)
+            ## Image = key_axis.imshow(weighted_counts.T / counts.T,
+            ##     extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]],
+            ##     **scales[key])
+            C2 = np.ma.masked_invalid(weighted_counts.T / counts.T)
+            C = weighted_counts.T / counts.T
+
+        elif (key == 'number'):
+            key_figure = figures[key]
+            key_axis = axes[key]
+            key_axis.set_title(key)
+            ## (counts, xedges, yedges, Image) = key_axis.hist2d(
+            ##     x, y, bins=edges, weights=data[key], **scales[key])
+            ## Image = key_axis.imshow(counts.T,
+            ##     extent=[xedges_counts[0], xedges_counts[-1],
+            ##             yedges_counts[0], yedges_counts[-1]],
+            ##     **scales[key])
+            C = counts.T
+            C2 = C
+
+        else:
+            continue
+
+        if not ('vmin' in scales[key]):
+            scales[key].update({'vmin': np.nanmin(C),
+                                'vmax': np.nanmax(C)})
+        elif not scales[key]['vmin']:
+            # 'vmin' in scales[key]
+            scales[key].update({'vmin': np.nanmin(C),
+                                'vmax': np.nanmax(C)})
+
+        C = np.where(counts.T == 0, scales[key]['vmin'], C)
+        #C = np.where(C < Cmin, Cmin, C)
+
+        cmap = blue_red
+        X, Y = np.meshgrid(0.5 * (xedges[:-1] + xedges[1:]),
+                           0.5 * (yedges[:-1] + yedges[1:]))
+
+        Image = key_axis.plot_surface(X, Y, C, rstride=1, cstride=1,
+                                      alpha=0.5, cmap=blue_red,
+                                      linewidth=0.25, antialiased=True,
+                                      **scales[key])
+        Image2 = key_axis.pcolor(xedges, yedges, C2,
+                                 cmap=blue_red, **scales[key])
+
+        # put in the same plane as the bottom of the mesh
+        cset = key_axis.add_collection3d(Image2,
+                                         zs=scales[key]['vmin'], zdir='z')
+
+        CB = key_figure.colorbar(Image2, ax=key_axis)
+        scales[key].update(dict(vmin = CB.vmin, vmax = CB.vmax))
+
+        key_axis.set_zlim(scales[key]['vmin'], scales[key]['vmax'])
+        key_axis.view_init(elev=30, azim=-10)
+
+
+
+        figures.update({key: key_figure})
+        axes.update({key: key_axis})
+
+    return figures, axes, scales
+
+
 def plot_star(recdata, figure=None, axis=None, nPixels=32,
               weighted=False, process=True):
     """Intelligently plot a star
@@ -805,7 +1042,7 @@ def plot_star(recdata, figure=None, axis=None, nPixels=32,
 
     # make the figure
     if (not figure) * (not axis):
-        figure = plt.figure(figsize=(12, 12), dpi=300)
+        figure = plt.figure(figsize=(BASE_SIZE, BASE_SIZE), dpi=300)
         axis = figure.add_subplot(111, aspect='equal')
 
     if process:
@@ -902,7 +1139,7 @@ def save_func(steps,
 
     # compare
     fig, axs = plt.subplots(nrows=2, ncols=4, sharex='all', sharey='all',
-                            figsize=(12*4, 12*2))
+                            figsize=(BASE_SIZE * 4, BASE_SIZE * 2))
     figures = {'e': fig, 'w': fig, 'zeta': fig, 'delta': fig}
     focal_keys = figures.keys()
     for ij in range(axs.shape[0]):

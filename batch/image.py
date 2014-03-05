@@ -18,7 +18,7 @@ from os import path, makedirs
 
 from focal_plane import FocalPlane
 from routines_files import generate_hdu_lists
-from routines_plot import data_focal_plot, data_hist_plot
+from routines_plot import data_focal_plot, data_hist_plot, data_contour_plot
 
 ##############################################################################
 # argparse
@@ -108,4 +108,14 @@ for figure_key in figures:
     figures[figure_key].savefig(args_dict['output_directory'] +
                                 'DECam_{0:08d}_'.format(args_dict['expid']) +
                                 'hist_{0}.png'.format(figure_key))
+close('all')
+
+figures, axes, scales = data_contour_plot(FP.data_unaveraged, edges=edges,
+                                          scales=scales)
+for figure_key in figures:
+    axes[figure_key].set_title('{0:08d}: {1}'.format(args_dict['expid'],
+                                                     figure_key))
+    figures[figure_key].savefig(args_dict['output_directory'] +
+                                'DECam_{0:08d}_'.format(args_dict['expid']) +
+                                'contour_{0}.png'.format(figure_key))
 close('all')
