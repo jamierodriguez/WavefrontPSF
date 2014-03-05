@@ -27,7 +27,7 @@ class FocalPlaneShell(Wavefront):
         name of the specific types of meshes we want
         we have reference corrections for "Science20120915seq1_134239"
         but not for the latest "Science20130325s1v2_190406"
-
+        Use: Science-20130325s1-v1i2_All
     da
         aaron's donutana object
 
@@ -80,8 +80,8 @@ class FocalPlaneShell(Wavefront):
     """
 
     def __init__(self,
-                 path_mesh='/u/ec/roodman/Astrophysics/Donuts/Meshes/',
-                 mesh_name="Science20120915s1v3_134239",
+                 path_mesh='/u/ec/roodman/Astrophysics/Donuts/ComboMeshes/',
+                 mesh_name='Science-20130325s1-v1i2_All',
                  verbosity=['history'],
                  **args):
 
@@ -110,14 +110,19 @@ class FocalPlaneShell(Wavefront):
             [0, 0, 0],
             [0, 0, 0],
             [0, 0, 0],
-            [1700, 0, 0],
+            [1690, 0, 0],
             [0, 0, 0],
             [0, 0, 0],
             [0, 0, 0],
             [0, 0, 0],
             [0, 0, 0],
             [0, 0, 0],
-            [0, 0, 0]])
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+            ])
         ## # Science20120915s1v3_134239
         ## self.reference_correction = -1 * np.array([
         ##     [0, 0, 0],
@@ -158,25 +163,35 @@ class FocalPlaneShell(Wavefront):
         #mesh_name = "Science20120915seq1_134239"
         sensorSet = "ScienceOnly"
         method = "idw"
+        nInterpGrid = 32
+        if mesh_name == 'Science-20130325s1-v1i2_All':
+            methodVal = (250, 1.0)  # use 250 NN, 1.0 mm offset distance
+        else:
+            methodVal = (20, 1.0)
 
         in_dict = {"zPointsFile": path_mesh + "z4Mesh_" +
                                  mesh_name + ".dat",
                   "sensorSet": sensorSet,
                   "doTrefoil": True,
+                  "doSpherical": True,
+                  "doQuadrefoil": False,
                   "unVignettedOnly": False,
                   "interpMethod": method,
+                  "methodVal": methodVal,
+                  "nInterpGrid": nInterpGrid,
                   "histFlag": False,  # True,
-                  "debugFlag": False,  # True,
+                  "debugFlag": True,  # True,
                   "donutCutString": ""}
 
-        for zi in range(5, 12):
+        for zi in range(4, 12):
             try:
                 in_dict.update({'z{0}PointsFile'.format(zi):
                                path_mesh + 'z{0}Mesh_'.format(zi) +
                                mesh_name + '.dat'})
             except IOError:
                 continue
-
+        ## for key in sorted(in_dict.keys()):
+        ##     print(key, in_dict[key])
         da = donutana(**in_dict)
         return da
 

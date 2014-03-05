@@ -122,6 +122,8 @@ class donutana(object):
             for ccd in self.info.keys():
                 ccdinfo = self.info[ccd]
                 if  not ccdinfo["FAflag"]:
+                    if ccd == 'N30':
+                        continue
                     self.coordList.append(ccd)
         elif  self.paramDict["sensorSet"] == "Both":
             for ccd in self.info.keys():
