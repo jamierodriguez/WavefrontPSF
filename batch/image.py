@@ -31,14 +31,6 @@ parser.add_argument("-e",
                     dest="expid",
                     type=int,
                     help="what image number will we fit now?")
-parser.add_argument("-m",
-                    dest="path_mesh",
-                    default='/u/ec/roodman/Astrophysics/Donuts/ComboMeshes/',
-                    help="where is the meshes are located")
-parser.add_argument("-n",
-                    dest="mesh_name",
-                    default="Science-20130325s1-v1i2_All",
-                    help="Name of mesh used.")
 parser.add_argument("-o",
                     dest="output_directory",
                     default='/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript/',
@@ -72,8 +64,6 @@ list_catalogs, list_fits_extension, list_chip = \
 FP = FocalPlane(list_catalogs=list_catalogs,
                 list_fits_extension=list_fits_extension,
                 list_chip=list_chip,
-                path_mesh=args_dict['path_mesh'],
-                mesh_name=args_dict['mesh_name'],
                 boxdiv=2,
                 max_samples_box=20000,
                 conds=args_dict['conds'],
