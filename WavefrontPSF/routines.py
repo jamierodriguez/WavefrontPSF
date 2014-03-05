@@ -140,7 +140,9 @@ def minuit_dictionary(keys, h_base=1e-1):
                 minuit_dict.update({
                     'limit_{0}'.format(key): (-0.0075, 0.0075)})
                 h_dict.update({key: 5e-4 * h_base})
-        elif (key == 'e1') + (key == 'e2'):
+        elif ((key == 'e1') + (key == 'e2') +
+              (key == 'delta1') + (key == 'delta2') +
+              (key == 'zeta1') + (key == 'zeta2')):
             # looking at the common mode terms
             minuit_dict.update({key: 0})
             minuit_dict.update({'error_{0}'.format(key): 0.005})

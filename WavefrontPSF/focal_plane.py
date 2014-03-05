@@ -8,15 +8,15 @@ Description: Class for focal plane shell tied to specific image.
 
 from __future__ import print_function, division
 import numpy as np
-from focal_plane_shell import FocalPlaneShell
+from wavefront import Wavefront
 import pyfits
 from os import path
 from routines_files import combine_decam_catalogs, generate_hdu_lists
 from routines import average_dictionary, mean_trim
 from routines_moments import convert_moments
 
-class FocalPlane(FocalPlaneShell):
-    """FocalPlaneShell tied to a specific image. Comparisons and such
+class FocalPlane(Wavefront):
+    """Wavefront tied to a specific image. Comparisons and such
     possible.
 
     Attributes
@@ -59,9 +59,6 @@ class FocalPlane(FocalPlaneShell):
                  max_samples_box=300, boxdiv=0, subav=0,
                  conds='default', average=mean_trim,
                  coord_name='WIN_IMAGE',
-                 chi_weights={'e0': 1,
-                              'e1': 1,
-                              'e2': 1,},
                  **args):
 
         # do the old init for Wavefront
@@ -89,7 +86,6 @@ class FocalPlane(FocalPlaneShell):
 
         self.average = average
         self.boxdiv = boxdiv
-        self.chi_weights = chi_weights
         self.conds = conds
         self.coord_name = coord_name
         self.max_samples_box = max_samples_box
@@ -429,6 +425,3 @@ class FocalPlane(FocalPlaneShell):
                                                other.data[key])})
         return return_dict
 
-    def __sub__(self, other):
-        return self.compare(other, self.data,
-                            self.data, self.chi_weights)

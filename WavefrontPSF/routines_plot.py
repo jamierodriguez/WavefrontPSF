@@ -11,6 +11,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.patches import Wedge
 from matplotlib.collections import PatchCollection
+from mpl_toolkits.mplot3d import Axes3D  # necessary for 3d projection!
 from subprocess import call
 from os import path, makedirs
 from routines_moments import ellipticity_to_whisker
@@ -68,7 +69,7 @@ def histogramize(x, y, z, bins):
 def contour3d(x, y, z, bins, stride=2):
 
     fig = plt.figure()
-    ax = fig.gca(projection='3d')
+    ax = fig.add_subplot(111, projection='3d')
     Z, X, Y = histogramize(x, y, z, bins)
     ax = focal_graph_axis(ax)
 
@@ -846,7 +847,8 @@ def data_contour_plot(data, edges, scales=None,
                 #(keys + easy_plots + posneg_plots + double_plots):
                 fig = plt.figure(figsize=(BASE_SIZE * 1.5, BASE_SIZE),
                                  dpi=300)
-                ax = fig.gca(projection='3d')
+                #ax = fig.gca(projection='3d')
+                ax = fig.add_subplot(111, projection='3d')
                 ax = focal_graph_axis(ax)
 
                 figures.update({key: fig})
@@ -1148,13 +1150,14 @@ def save_func(steps,
 
     axes = {'e': axs[0,0], 'w': axs[0,1], 'delta': axs[1,0], 'zeta': axs[1,1]}
     figures, axes, scales = data_focal_plot(reference_plane,
-                                            color='r', boxdiv=boxdiv,
+                                            color='r',
                                             figures=figures, axes=axes,
                                             keys=focal_keys,
+                                            defaults=False,
                                             )
     # plot the comparison
     figures, axes, scales = data_focal_plot(plane,
-                                            color='b', boxdiv=boxdiv,
+                                            color='b',
                                             figures=figures, axes=axes,
                                             scales=scales,
                                             keys=focal_keys,
@@ -1173,7 +1176,8 @@ def save_func(steps,
             plane, edges,
             figures=figures_hist,
             axes=axes_hist,
-            keys=['e0subs', 'e0', 'e0prime'])
+            keys=['e0subs', 'e0', 'e0prime'],
+            default=False,)
 
     # make tables for param and delta and chi2
     colLabels = ("Parameter", "Value", "Delta")
@@ -1208,7 +1212,8 @@ def save_func(steps,
     # add condition to do histograms
     if steps % 10 == 0:
         # do reference to get scales
-        figures, axes, scales = data_hist_plot(reference_plane, edges)
+        figures, axes, scales = data_hist_plot(reference_plane, edges,
+                                               defaults=False)
         ## figures.savefig(output_directory +
         ##    '{0:04d}_reference_histograms.pdf'.format(steps))
         # do current

@@ -40,11 +40,11 @@ parser.add_argument("-e",
                     help="what image number will we fit now?")
 parser.add_argument("-m",
                     dest="path_mesh",
-                    default='/u/ec/roodman/Astrophysics/Donuts/Meshes/',
+                    default='/u/ec/roodman/Astrophysics/Donuts/ComboMeshes/',
                     help="where is the meshes are located")
 parser.add_argument("-n",
                     dest="mesh_name",
-                    default="Science20120915s1v3_134239",
+                    default="Science-20130325s1-v1i2_All",
                     help="Name of mesh used.")
 parser.add_argument("-o",
                     dest="output_directory",

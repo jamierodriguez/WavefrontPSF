@@ -67,7 +67,7 @@ def grad_func(in_dict, fit_func, h_dict, deriv_keys,
                 # don't bother recalculating what we already have!
                 fprime += h_mod[0] * chisquared / h
             else:
-                fprime += h_mod[0] * fit_func(**prime_dict) / h
+                fprime += h_mod[0] * fit_func(prime_dict) / h
         derivatives.update({key: fprime})
     return derivatives
 
@@ -251,7 +251,7 @@ class Minuit_Fit(object):
 
         if (iflag == 4):
             # TODO: fix this part
-            chisquared = self.gFitFunc(**in_dict)
+            chisquared = self.gFitFunc(in_dict)
             self.chisquared = chisquared
 
             # printout

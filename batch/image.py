@@ -33,11 +33,11 @@ parser.add_argument("-e",
                     help="what image number will we fit now?")
 parser.add_argument("-m",
                     dest="path_mesh",
-                    default='/u/ec/roodman/Astrophysics/Donuts/Meshes/',
+                    default='/u/ec/roodman/Astrophysics/Donuts/ComboMeshes/',
                     help="where is the meshes are located")
 parser.add_argument("-n",
                     dest="mesh_name",
-                    default="Science20120915s1v3_134239",
+                    default="Science-20130325s1-v1i2_All",
                     help="Name of mesh used.")
 parser.add_argument("-o",
                     dest="output_directory",
@@ -90,7 +90,7 @@ np.save(args_dict['output_directory'] +
         'cat_cpd_combined',
         FP.data_unaveraged)
 
-figures, axes, scales = data_focal_plot(FP.data, boxdiv=FP.boxdiv,
+figures, axes, scales = data_focal_plot(FP.data,
                                         average=FP.average)
 for figure_key in figures:
     axes[figure_key].set_title('{0:08d}: {1}'.format(args_dict['expid'],

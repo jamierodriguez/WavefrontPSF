@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-File: focal_plane_shell.py
+File: focal_plane_fit.py
 Author: Chris Davis
 Description: Class for creating wavefronts on a generic focal plane.
 """
@@ -10,11 +10,10 @@ import numpy as np
 from wavefront import Wavefront
 from hexapodtoZernike_cpd import hexapodtoZernike
 from donutlib.donutana import donutana
-from decamutil_cpd import decaminfo
 from routines import average_dictionary
 from os import path
 
-class FocalPlaneShell(Wavefront):
+class FocalPlaneFit(Wavefront):
     """Wavefront object that now has coordinates and the ability to generate an
     entire wavefront.
 
@@ -86,7 +85,7 @@ class FocalPlaneShell(Wavefront):
                  **args):
 
         # do the old init for Wavefront
-        super(FocalPlaneShell, self).__init__(**args)
+        super(FocalPlaneFit, self).__init__(**args)
 
         if path.exists(path_mesh):
             self.path_mesh = path_mesh
@@ -110,7 +109,7 @@ class FocalPlaneShell(Wavefront):
             [0, 0, 0],
             [0, 0, 0],
             [0, 0, 0],
-            [1690, 0, 0],
+            [0, 0, 0],
             [0, 0, 0],
             [0, 0, 0],
             [0, 0, 0],
@@ -137,8 +136,6 @@ class FocalPlaneShell(Wavefront):
         ##     [0.0452, 0.000159, 0.000191],
         ##     [0, 0, 0]])
 
-        # decaminfo stuff (since it's useful)
-        self.decaminfo = decaminfo()
 
     def init_da(self, path_mesh, mesh_name):
 

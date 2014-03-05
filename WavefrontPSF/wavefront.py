@@ -13,6 +13,7 @@ from adaptive_moments import adaptive_moments, centered_moment
 from os import path, makedirs
 import pickle
 from routines_moments import convert_moments
+from decamutil_cpd import decaminfo
 
 class Wavefront(object):
     """Class with the ability to generate stars as well as their images.  Given
@@ -73,6 +74,8 @@ class Wavefront(object):
                 "randomFlag": randomFlag,
                 }
         self.make_donut = makedonut(**self.input_dict)
+        # decaminfo stuff (since it's useful)
+        self.decaminfo = decaminfo()
 
     def save(self, out_path):
         """Take the data and save it!

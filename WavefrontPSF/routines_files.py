@@ -253,7 +253,8 @@ def generate_path_results(expids, path_base):
 
 
 def generate_hdu_lists_sex(
-        expid, path_base='/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript/'):
+        expid,
+        path_base='/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript/00232732/'):
     """quick and dirty way of getting the hdu list format I am now using
 
     Parameters
@@ -282,7 +283,7 @@ def generate_hdu_lists_sex(
     """
 
     list_catalogs_base = \
-        path_base + '{0:08d}/DECam_{0:08d}_'.format(expid)
+        path_base + 'DECam_{0:08d}_'.format(expid)
     list_catalogs = [list_catalogs_base + '{0:02d}_cat.fits'.format(i)
                      for i in xrange(1, 63)]
     list_catalogs.pop(60)
@@ -295,7 +296,8 @@ def generate_hdu_lists_sex(
     return list_catalogs, list_fits_extension, list_chip
 
 def generate_hdu_lists(
-        expid, path_base='/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript/'):
+        expid,
+        path_base='/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript/00232732/'):
     """quick and dirty way of getting the hdu list format I am now using
 
     Parameters
@@ -324,7 +326,7 @@ def generate_hdu_lists(
     """
 
     list_catalogs_base = \
-        path_base + '{0:08d}/DECam_{0:08d}_'.format(expid)
+        path_base + 'DECam_{0:08d}_'.format(expid)
     list_catalogs = [list_catalogs_base + '{0:02d}_cat_cpd.fits'.format(i)
                      for i in xrange(1, 63)]
     list_catalogs.pop(60)
@@ -487,7 +489,7 @@ def download_desdm(expid, dataDirectory,
                    tag='Y1N_FIRSTCUT',
                    download_catalog=True,
                    download_image=True,
-                   download_psfcat=True,
+                   download_psfcat=False,
                    download_background=False,
                    ccd=None, verbose=True):
     username = "cpd"
