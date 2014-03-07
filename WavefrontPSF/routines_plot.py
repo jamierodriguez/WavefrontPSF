@@ -692,6 +692,15 @@ def data_hist_plot(data, edges, scales=None,
                         scales.update({key: dict(vmin=-0.008, vmax=0.008)})
                     elif key == 'a4':
                         scales.update({key: dict(vmin=0.01, vmax=0.07)})
+                    elif 'pull' in key:
+                        scales.update({key: dict(vmin=-0.3, vmax=0.3)})
+                    elif '_fit' in key:
+                        scales.update({key : {}})
+                        entries = key.split('_')
+                        for entry in entries:
+                            if entry != 'fit':
+                                if entry in scales:
+                                    scales.update({key: scales[entry]})
                     else:
                         scales.update({key : {}})
                 else:
@@ -1260,7 +1269,7 @@ def save_func_hists(steps,
                             figsize=(BASE_SIZE * 3, BASE_SIZE * nrows))
 
     # skip first row
-    for ij in range(1, axs.shape[0]):
+    for ij in range(axs.shape[0]):
         for jk in range(axs.shape[1]):
             axs[ij][jk] = focal_graph_axis(axs[ij][jk])
 
@@ -1296,6 +1305,17 @@ def save_func_hists(steps,
     table.scale(1, 2)
 
     # use third spot for some kind of chi2 or parameter variation?
+    # use it for a chi2 value!
+    chi2 = 0
+    for key in chi_weights:
+        chi2 += chi_weights[key] * chisquared_history[-1][key]
+    for ij in xrange(len(chi2)):
+        axs[0, 2].text(plane['x_box'][ij], plane['y_box'][ij],
+                       '{0:.3e}'.format(chi2[ij]),
+                       fontsize=12,
+                       horizontalalignment='center',
+                       verticalalignment='center',
+                       )
 
     for ij in xrange(len(chi_weights.keys())):
         key = sorted(chi_weights.keys())[ij]

@@ -16,3 +16,7 @@
 *.so
 # ignore build folders
 build
+
+# ignore the Makefile and swig file in donutlib
+donutlib/donutengine.py
+donutlib/Makefile
