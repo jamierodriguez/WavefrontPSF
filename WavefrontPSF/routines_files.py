@@ -287,11 +287,21 @@ def generate_hdu_lists_sex(
     list_catalogs = [list_catalogs_base + '{0:02d}_cat.fits'.format(i)
                      for i in xrange(1, 63)]
     list_catalogs.pop(60)
+    # ccd 2 went bad too.
+    if expid > 258804:
+        list_catalogs.pop(1)
 
     list_chip = [[decaminfo().ccddict[i]] for i in xrange(1, 63)]
     list_chip.pop(60)
+    # ccd 2 went bad too.
+    if expid > 258804:
+        list_chip.pop(1)
 
-    list_fits_extension = [[2]] * (63-2)
+    # ccd 2 went bad too.
+    if expid > 258804:
+        list_fits_extension = [[2]] * (63-3)
+    else:
+        list_fits_extension = [[2]] * (63-2)
 
     return list_catalogs, list_fits_extension, list_chip
 
@@ -330,11 +340,21 @@ def generate_hdu_lists(
     list_catalogs = [list_catalogs_base + '{0:02d}_cat_cpd.fits'.format(i)
                      for i in xrange(1, 63)]
     list_catalogs.pop(60)
+    # ccd 2 went bad too.
+    if expid > 258804:
+        list_catalogs.pop(1)
 
     list_chip = [[decaminfo().ccddict[i]] for i in xrange(1, 63)]
     list_chip.pop(60)
+    # ccd 2 went bad too.
+    if expid > 258804:
+        list_chip.pop(1)
 
-    list_fits_extension = [[1]] * (63-2)
+    # ccd 2 went bad too.
+    if expid > 258804:
+        list_fits_extension = [[1]] * (63-3)
+    else:
+        list_fits_extension = [[1]] * (63-2)
 
     return list_catalogs, list_fits_extension, list_chip
 
@@ -485,7 +505,7 @@ def combine_decam_catalogs(list_catalogs, list_fits_extension, list_chip):
 ## 
 ##     return
 
-def download_desdm(expid, dataDirectory,
+def download_desdm_filelist(expid, dataDirectory,
                    tag='Y1N_FIRSTCUT',
                    download_catalog=True,
                    download_image=True,
@@ -502,6 +522,7 @@ def download_desdm(expid, dataDirectory,
     # move there!
     chdir(dataDirectory)
 
+    outname = "tempfilelist_%d.out" % (expid)
 
     # exposure table has expnum, and id, and this id is called exposureid in
     # the image table
@@ -522,11 +543,42 @@ def download_desdm(expid, dataDirectory,
 
     call(cmd,shell=True)
 
+def download_desdm(expid, dataDirectory,
+                   tag='Y1N_FIRSTCUT',
+                   download_catalog=True,
+                   download_image=True,
+                   download_psfcat=False,
+                   download_background=False,
+                   ccd=None, verbose=True):
+    username = "cpd"
+    password = "cpd70chips"
+
+    # make directory if it doesn't exist
+    if not path.exists(dataDirectory):
+        makedirs(dataDirectory)
+
+    # move there!
+    chdir(dataDirectory)
+
+    outname = "tempfilelist_%d.out" % (expid)
+    if not path.exists(outname):
+        download_desdm_filelist(expid, dataDirectory,
+                   tag,
+                   download_catalog,
+                   download_image,
+                   download_psfcat,
+                   download_background,
+                   ccd, verbose)
+
     lines = [line.rstrip('\r\n') for line in open(outname)]
     junk = lines.pop(0)
 
 
-    for line in lines:
+    for line in sorted(lines):
+        if ccd is not None:
+            # only use the line that contains that ccd
+            if '{0:08d}_{1:02d}'.format(expid, ccd) not in line:
+                continue
         imfiles=[]
         catfiles=[]
         psfcatfiles=[]

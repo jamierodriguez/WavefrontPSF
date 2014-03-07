@@ -353,8 +353,16 @@ class FocalPlane(Wavefront):
                 x2=recdata['X2' + self.coord_name].astype(np.float64),
                 y2=recdata['Y2' + self.coord_name].astype(np.float64),
                 xy=recdata['XY' + self.coord_name].astype(np.float64),
-                fwhm=recdata['FWHM_WORLD'].astype(np.float64) * 3600,
                 flux_radius=recdata['FLUX_RADIUS'].astype(np.float64),)
+        if 'FWHM_WORLD' in recdata.dtype.names:
+            moments_unaveraged.update(dict(
+                fwhm=recdata['FWHM_WORLD'].astype(np.float64) * 3600,
+                ))
+        if 'FWHM_IMAGE' in recdata.dtype.names:
+            moments_unaveraged.update(dict(
+                fwhm=recdata['FWHM_IMAGE'].astype(np.float64),
+                ))
+
         if ('X3' + self.coord_name in recdata.dtype.names):
             moments_unaveraged.update(dict(
                     x3=recdata['X3' + self.coord_name].astype(np.float64),

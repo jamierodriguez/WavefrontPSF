@@ -17,7 +17,7 @@ from os import path, makedirs, chdir, remove
 from focal_plane import FocalPlane
 from decamutil_cpd import decaminfo
 
-from routines_files import download_desdm
+from routines_files import download_desdm, download_desdm_filelist
 from routines import MAD
 
 """
@@ -51,6 +51,11 @@ parser.add_argument("-f",
                     dest="conds",
                     default='default',
                     help="String for filter conditions")
+parser.add_argument("-a",
+                    dest="all",
+                    default=0,
+                    type=int,
+                    help="Download all catalogs at once?")
 options = parser.parse_args()
 
 args_dict = vars(options)
@@ -114,6 +119,12 @@ def check_recdata(recdata, return_stamps=True):
 ##############################################################################
 list_catalogs_base = \
     path.expandvars(args_dict['output_directory'])
+
+if args_dict['all'] > 0:
+    download_desdm(args_dict['expid'], list_catalogs_base, ccd=None)
+else:
+    download_desdm_filelist(args_dict['expid'], list_catalogs_base, ccd=None)
+
 for i in xrange(1, 63):
 
     if i == 61:
@@ -121,7 +132,8 @@ for i in xrange(1, 63):
         continue
 
     # get cat and image
-    download_desdm(args_dict['expid'], list_catalogs_base, ccd=i)
+    if args_dict['all'] == 0:
+        download_desdm(args_dict['expid'], list_catalogs_base, ccd=i)
 
     ## # get cat
     ## download_cat(args_dict['rid'], args_dict['expid'], args_dict['date'], i)
@@ -270,10 +282,10 @@ for i in xrange(1, 63):
                            array=[],
                            format='1D',
                            unit='pixel**3',),
-        'FWHM_WORLD': dict(name='FWHM_WORLD',
+        'FWHM_IMAGE': dict(name='FWHM_IMAGE',
                            array=[],
                            format='1D',
-                           unit='deg',),
+                           unit='pixel',),
 
         'THRESHOLD':      dict(name='THRESHOLD',
                            array=[],
@@ -341,8 +353,8 @@ for i in xrange(1, 63):
             moment_dict['x2y'])
         pyfits_dict['XY2WIN_IMAGE']['array'].append(
             moment_dict['xy2'])
-        pyfits_dict['FWHM_WORLD']['array'].append(
-            moment_dict['fwhm'] * 0.27 / 3600)
+        pyfits_dict['FWHM_IMAGE']['array'].append(
+            moment_dict['fwhm'])
 
         pyfits_dict['WHISKER']['array'].append(
             moment_dict['whisker'])
@@ -359,7 +371,7 @@ for i in xrange(1, 63):
     # cull crazy things
     mad_keys =  ['X2WIN_IMAGE', 'XYWIN_IMAGE', 'Y2WIN_IMAGE',
                  'X3WIN_IMAGE', 'X2YWIN_IMAGE', 'XY2WIN_IMAGE', 'Y3WIN_IMAGE',
-                 'A4_ADAPTIVE', 'WHISKER', 'FWHM_WORLD', 'FLUX_RADIUS']
+                 'A4_ADAPTIVE', 'WHISKER', 'FWHM_IMAGE', 'FLUX_RADIUS']
     for key in mad_keys:
         conds *= MAD(pyfits_dict[key]['array'], sigma=5)[0]
     # cut in the stamps

@@ -93,7 +93,7 @@ def average_function(data, average=np.mean, average_type='default'):
     return a_i
 
 
-def minuit_dictionary(keys, h_base=1e-1):
+def minuit_dictionary(keys, h_base=1e-3):
     # based on what params you want to fit to, create a minuit dictionary
     # with errors and initial values and everything
     minuit_dict = {}
@@ -275,11 +275,11 @@ def MAD(data, sigma=3):
 
     return conds_mad, mad
 
-def mean_trim(data, sigma=3):
+def mean_trim(data, sigma=3, axis=0):
     conds, mad = MAD(data, sigma=sigma)
     return np.mean(data[conds])
 
-def variance_trim(data, sigma=3):
+def variance_trim(data, sigma=3, axis=0):
     conds, mad = MAD(data, sigma=sigma)
     return np.var(data[conds])
 
@@ -288,3 +288,29 @@ def get_data(data, i):
     for key in data.keys():
         ret.update({key: data[key][i]})
     return ret
+
+
+def vary_one_parameter(parameter,
+                       FitFunc,
+                       minuit_dict,
+                       N=21):
+
+    if minuit_dict['error_{0}'.format(parameter)] > 0:
+        err = minuit_dict['error_{0}'.format(parameter)]
+        mid = minuit_dict[parameter]
+        parameters = np.linspace(mid - 5 * err,
+                                 mid + 5 * err,
+                                 N)
+    else:
+        parameters = np.linspace(
+            minuit_dict['limit_{0}'.format(parameter)][0],
+            minuit_dict['limit_{0}'.format(parameter)][1],
+            N)
+    chi2 = []
+    for par in parameters:
+        in_dict = {key: minuit_dict[key] for key in minuit_dict}
+        in_dict.update({parameter: par})
+        chi2_i = FitFunc(in_dict)
+        chi2.append(chi2_i)
+    return chi2, parameters
+

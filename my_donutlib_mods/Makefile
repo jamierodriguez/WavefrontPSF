@@ -3,10 +3,11 @@
 #
 OS := $(shell uname)
 
+# my laptop's OS is 'Darwin'
 CC = gcc
 CXX = g++
 SWIGFLAGS = -python -c++ -w490 -I$cwd
-
+XRAY_SOFTDIR = /afs/slac/g/ki/software/
 #	CFLAGS = -Wall -ansi -g
 	CFLAGS =  -Wall -ansi -O3  -m64 -funroll-loops -fomit-frame-pointer -ffast-math -mfpmath=sse -msse2 -mtune=native -fPIC
 	LD = gcc

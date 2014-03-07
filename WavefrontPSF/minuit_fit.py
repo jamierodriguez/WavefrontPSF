@@ -9,8 +9,7 @@ ROOT.PyConfig.IgnoreCommandLineOptions = True
 
 def grad_func(in_dict, fit_func, h_dict, deriv_keys,
               chisquared=0,
-              stencil=[[-1. / 12, 2], [2. / 3, 1],
-                       [-2. / 3, -1], [1. / 12, -2]]):
+              stencil=[[-1. / 2, -1], [1. / 2, 1]]):
     """numerical gradient of a function
 
     Parameters
@@ -67,7 +66,7 @@ def grad_func(in_dict, fit_func, h_dict, deriv_keys,
                 # don't bother recalculating what we already have!
                 fprime += h_mod[0] * chisquared / h
             else:
-                fprime += h_mod[0] * fit_func(prime_dict) / h
+                fprime += h_mod[0] * fit_func(prime_dict)['chi2'] / h
         derivatives.update({key: fprime})
     return derivatives
 
@@ -218,7 +217,7 @@ class Minuit_Fit(object):
                     # likewise release it
                     self.gMinuit.Release(ipar)
 
-        self.chisquared = self.gFitFunc(**self.state)
+        self.chisquared = self.gFitFunc(self.state)['chi2']
         self.nCalls = 0
         self.nCallsDerivative = 0
 
@@ -251,7 +250,7 @@ class Minuit_Fit(object):
 
         if (iflag == 4):
             # TODO: fix this part
-            chisquared = self.gFitFunc(in_dict)
+            chisquared = self.gFitFunc(in_dict)['chi2']
             self.chisquared = chisquared
 
             # printout

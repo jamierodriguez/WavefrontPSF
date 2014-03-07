@@ -4,6 +4,7 @@ File: routines_plot.py
 Author: Chris Davis
 Description: Methods for plotting various wavefront configurations.
 
+TODO: add routine for correlation and covariance plots to replace number with parameter name along axes
 """
 
 from __future__ import print_function, division
@@ -649,9 +650,9 @@ def data_hist_plot(data, edges, scales=None,
     """
 
     easy_plots = ['flux', 'number']
-    separable_pos_plots = ['e0', 'whisker', 'fwhm', 'a4']
+    separable_pos_plots = ['e0', 'fwhm', 'a4']
     posneg_plots = ['e1', 'e2', 'delta1', 'delta2', 'zeta1', 'zeta2']
-    double_plots = ['e', 'w', 'zeta', 'delta']
+    double_plots = ['e', 'zeta', 'delta']
     if len(keys) == 0:
         keys = easy_plots + separable_pos_plots + posneg_plots + double_plots
 
@@ -833,9 +834,9 @@ def data_contour_plot(data, edges, scales=None,
     """
 
     easy_plots = ['flux', 'number']
-    separable_pos_plots = ['e0', 'whisker', 'fwhm', 'a4']
+    separable_pos_plots = ['e0', 'fwhm', 'a4']
     posneg_plots = ['e1', 'e2', 'delta1', 'delta2', 'zeta1', 'zeta2']
-    double_plots = ['e', 'w', 'zeta', 'delta']
+    double_plots = ['e', 'zeta', 'delta']
     if len(keys) == 0:
         keys = easy_plots + separable_pos_plots + posneg_plots + double_plots
 
@@ -995,7 +996,7 @@ def data_contour_plot(data, edges, scales=None,
         scales[key].update(dict(vmin = CB.vmin, vmax = CB.vmax))
 
         key_axis.set_zlim(scales[key]['vmin'], scales[key]['vmax'])
-        key_axis.view_init(elev=30, azim=-10)
+        key_axis.view_init(elev=30, azim=-75)
 
 
 
@@ -1144,7 +1145,7 @@ def save_func(steps,
                             figsize=(BASE_SIZE * 4, BASE_SIZE * 2))
     figures = {'e': fig, 'w': fig, 'zeta': fig, 'delta': fig}
     focal_keys = figures.keys()
-    for ij in range(axs.shape[0]):
+    for ij in range(1, axs.shape[0]):
         for jk in range(axs.shape[1]):
             axs[ij][jk] = focal_graph_axis(axs[ij][jk])
 
@@ -1177,7 +1178,7 @@ def save_func(steps,
             figures=figures_hist,
             axes=axes_hist,
             keys=['e0subs', 'e0', 'e0prime'],
-            default=False,)
+            defaults=False,)
 
     # make tables for param and delta and chi2
     colLabels = ("Parameter", "Value", "Delta")
@@ -1212,10 +1213,12 @@ def save_func(steps,
     # add condition to do histograms
     if steps % 10 == 0:
         # do reference to get scales
-        figures, axes, scales = data_hist_plot(reference_plane, edges,
+        figures_, axes_, scales = data_hist_plot(reference_plane, edges,
                                                defaults=False)
         ## figures.savefig(output_directory +
         ##    '{0:04d}_reference_histograms.pdf'.format(steps))
+        plt.close('all')
+        del figures_, axes_
         # do current
         figures, axes, scales = data_hist_plot(plane, edges, scales=scales)
         for fig_key in figures.keys():
@@ -1225,3 +1228,95 @@ def save_func(steps,
         plt.close('all')
         del figures, axes, scales
 
+def save_func_hists(steps,
+              state_history, chisquared_history,
+              chi_weights,
+              plane, reference_plane,
+              output_directory,
+              edges,
+              boxdiv=1):
+    """
+    Parameters
+    ----------
+
+    steps : int
+        Number of steps
+
+    state_history : dictionary of lists
+        List the values
+
+    Notes
+    -----
+    When using this with minuit_fit, create another encapsulating function
+    that only depends on the steps parameter.
+    """
+
+    # compare
+    nrows = 1
+    for key in chi_weights:
+        if chi_weights[key] > 0:
+            nrows += 1
+    fig, axs = plt.subplots(nrows=nrows, ncols=3, sharex='all', sharey='all',
+                            figsize=(BASE_SIZE * 3, BASE_SIZE * nrows))
+
+    # skip first row
+    for ij in range(1, axs.shape[0]):
+        for jk in range(axs.shape[1]):
+            axs[ij][jk] = focal_graph_axis(axs[ij][jk])
+
+    # make tables for param and delta and chi2
+    colLabels = ("Parameter", "Value", "Delta")
+    cellText = [[key, '{0:.3e}'.format(state_history[-1][key]),
+                 '{0:.3e}'.format(state_history[-1][key]
+                                  - state_history[-2][key])]
+                 for key in sorted(state_history[-1].keys())]
+    axs[0,0].axis('off')
+    table = axs[0,0].table(cellText=cellText, colLabels=colLabels,
+                           loc='center')
+    table.auto_set_font_size(False)
+    table.set_fontsize(24)
+    table.scale(1, 2)
+
+    # add in chi2s
+    cellText = [[key,
+                  '{0:.3e}'.format(np.sum(chisquared_history[-1][key])),
+                  '{0:.3e}'.format(np.sum(chisquared_history[-1][key]
+                                          - chisquared_history[-2][key]))]
+                 for key in sorted(chisquared_history[-1].keys())]
+
+    chi2delta = chisquared_history[-1]['chi2'] - chisquared_history[-2]['chi2']
+    cellText += [['total chi2',
+                  '{0:.3e}'.format(chisquared_history[-1]['chi2']),
+                  '{0:.3e}'.format(chi2delta)]]
+    axs[0,1].axis('off')
+    table = axs[0,1].table(cellText=cellText, colLabels=colLabels,
+                           loc='center')
+    table.auto_set_font_size(False)
+    table.set_fontsize(24)
+    table.scale(1, 2)
+
+    # use third spot for some kind of chi2 or parameter variation?
+
+    for ij in xrange(len(chi_weights.keys())):
+        key = sorted(chi_weights.keys())[ij]
+        if chi_weights[key] > 0:
+            figures = {key: fig,
+                       '{0}_fit'.format(key): fig,
+                       '{0}_pull'.format(key): fig}
+            axes = {key: axs[1 + ij, 0],
+                    '{0}_fit'.format(key): axs[1 + ij, 1],
+                    '{0}_pull'.format(key): axs[1 + ij, 2]}
+            data = {'x_box': plane['x_box'],
+                    'y_box': plane['y_box'],
+                    key: reference_plane[key],
+                    '{0}_fit'.format(key): plane[key],
+                    '{0}_pull'.format(key): (plane[key] - reference_plane[key])
+                                            / reference_plane[key]}
+            _ = data_hist_plot(data, edges, keys=figures.keys(),
+                               figures=figures, axes=axes,
+                               defaults=False)
+
+    plt.tight_layout()
+    fig.savefig(output_directory + '{0:04d}.pdf'.format(steps))
+    plt.close('all')
+    del fig, axs
