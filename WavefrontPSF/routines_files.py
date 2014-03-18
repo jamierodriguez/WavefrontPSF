@@ -283,7 +283,7 @@ def generate_hdu_lists_sex(
     """
 
     list_catalogs_base = \
-        path_base + 'DECam_{0:08d}_'.format(expid)
+            path_base + '{0:08d}/DECam_{0:08d}_'.format(expid)
     list_catalogs = [list_catalogs_base + '{0:02d}_cat.fits'.format(i)
                      for i in xrange(1, 63)]
     list_catalogs.pop(60)
@@ -336,7 +336,7 @@ def generate_hdu_lists(
     """
 
     list_catalogs_base = \
-        path_base + 'DECam_{0:08d}_'.format(expid)
+        path_base + '{0:08d}/DECam_{0:08d}_'.format(expid)
     list_catalogs = [list_catalogs_base + '{0:02d}_cat_cpd.fits'.format(i)
                      for i in xrange(1, 63)]
     list_catalogs.pop(60)
@@ -610,3 +610,7 @@ def download_desdm(expid, dataDirectory,
 
                 call(cmd, shell=True)
 
+def make_directory(directory):
+    # I got tired of these two lines
+    if not path.exists(directory):
+        makedirs(directory)

@@ -147,6 +147,8 @@ class Minuit_Fit(object):
 
         # start timer
         self.startingtime = time.clock()
+        self.migrad_ierflg = -1
+        self.deltatime = -1
 
         # setup MINUIT
         self.gMinuit = ROOT.TMinuit(self.npar)

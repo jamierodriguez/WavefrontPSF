@@ -147,8 +147,8 @@ def extract_hexapod_from_zernike_corrections(zernike_corrections):
 
 
 if __name__ == '__main__':
-    print('dx = 100', '\nz05x, z05y, z06x, z07d, z08d = \n', hexapodtoZernike(100, 0, 0, 0))
-    print('dy = 100', '\nz05x, z05y, z06x, z07d, z08d = \n', hexapodtoZernike(0, 100, 0, 0))
+    print('dx = 1000', '\nz05x, z05y, z06x, z07d, z08d = \n', hexapodtoZernike(1000, 0, 0, 0))
+    print('dy = 1000', '\nz05x, z05y, z06x, z07d, z08d = \n', hexapodtoZernike(0, 1000, 0, 0))
     print('xt = 100', '\nz05x, z05y, z06x, z07d, z08d = \n', hexapodtoZernike(0, 0, 100, 0))
     print('yt = 100', '\nz05x, z05y, z06x, z07d, z08d = \n', hexapodtoZernike(0, 0, 0, 100))
 

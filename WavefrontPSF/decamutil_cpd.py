@@ -277,6 +277,8 @@ class decaminfo(object):
         with boxdiv < 2, the chips are divided into 2 squares each
         of size ~ (30.72 mm) ** 2
         each box div after that breaks them by another half
+
+        # TODO: redo this with np.digitize; (see np.histogramdd)
         '''
 
         bounds = []

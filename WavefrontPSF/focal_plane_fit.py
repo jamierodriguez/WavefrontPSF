@@ -12,6 +12,8 @@ from hexapodtoZernike_cpd import hexapodtoZernike
 from donutlib.donutana import donutana
 from routines import average_dictionary
 from os import path
+from analytic_moments import analytic_data
+from routines_moments import convert_moments
 
 class FocalPlaneFit(Wavefront):
     """Wavefront object that now has coordinates and the ability to generate an
@@ -81,6 +83,7 @@ class FocalPlaneFit(Wavefront):
     def __init__(self,
                  path_mesh='/u/ec/roodman/Astrophysics/Donuts/ComboMeshes/',
                  mesh_name='Science-20130325s1-v1i2_All',
+                 methodVal=(),
                  verbosity=['history'],
                  **args):
 
@@ -99,10 +102,15 @@ class FocalPlaneFit(Wavefront):
             self.path_mesh = '/Users/cpd/Desktop/Meshes/'
 
         self.mesh_name = mesh_name
-        self.da = self.init_da(path_mesh=self.path_mesh, mesh_name=mesh_name)
+        self.methodVal = methodVal
+        self.da = self.init_da(path_mesh=self.path_mesh,
+                               mesh_name=self.mesh_name,
+                               methodVal=self.methodVal)
 
         self.verbosity = verbosity
         self.history = []
+
+        self.jitter_modes = ['e1', 'e2', 'delta1', 'delta2', 'zeta1', 'zeta2']
 
         # NOTE: THIS DEPENDS ON THE MESH YOU CHOOSE TO USE.
         self.reference_correction = -1 * np.array([
@@ -137,7 +145,7 @@ class FocalPlaneFit(Wavefront):
         ##     [0, 0, 0]])
 
 
-    def init_da(self, path_mesh, mesh_name):
+    def init_da(self, path_mesh, mesh_name, methodVal=()):
 
         """Load up the donutana interpolation routine
 
@@ -161,10 +169,12 @@ class FocalPlaneFit(Wavefront):
         sensorSet = "ScienceOnly"
         method = "idw"
         nInterpGrid = 32
-        if mesh_name == 'Science-20130325s1-v1i2_All':
-            methodVal = (250, 1.0)  # use 250 NN, 1.0 mm offset distance
-        else:
-            methodVal = (20, 1.0)
+        if len(methodVal) != 2:
+            if mesh_name == 'Science-20130325s1-v1i2_All':
+                #methodVal = (250, 1.0)  # use 250 NN, 1.0 mm offset distance
+                methodVal = (20, 1.0)  # use 250 NN, 1.0 mm offset distance
+            else:
+                methodVal = (4, 1.0)
 
         in_dict = {"zPointsFile": path_mesh + "z4Mesh_" +
                                  mesh_name + ".dat",
@@ -361,7 +371,7 @@ class FocalPlaneFit(Wavefront):
             # set the atmospheric contribution to some nominal level
             rzero = 0.14
 
-        zernikes = self.zernikes(coords, in_dict)
+        zernikes = self.zernikes(in_dict, coords)
         N = len(zernikes)
         rzeros = [rzero] * N
         backgrounds = [self.background] * N
@@ -380,6 +390,10 @@ class FocalPlaneFit(Wavefront):
                                          verbosity=self.verbosity,
                                          windowed=windowed,
                                          order_dict=order_dict)
+
+        for jitter_mode in self.jitter_modes:
+            if (jitter_mode in moments) * (jitter_mode in in_dict):
+                moments[jitter_mode] += in_dict[jitter_mode]
 
         return moments
 
@@ -431,7 +445,38 @@ class FocalPlaneFit(Wavefront):
 
         return moments
 
-    def zernikes(self, coords, in_dict):
+    def analytic_plane(self, in_dict, coords):
+        if 'history' in self.verbosity:
+            self.history.append(in_dict.copy())
+        if 'rzero' in in_dict.keys():
+            rzero = in_dict['rzero']
+        else:
+            # set the atmospheric contribution to some nominal level
+            rzero = 0.14
+
+        zernikes = np.array(self.zernikes(in_dict, coords))
+
+        plane = analytic_data(zernikes, rzero, coords=coords)
+
+        for jitter_mode in self.jitter_modes:
+            if (jitter_mode in plane) * (jitter_mode in in_dict):
+                plane[jitter_mode] += in_dict[jitter_mode]
+
+        plane = convert_moments(plane)
+
+        return plane
+
+    def analytic_plane_averaged(self, in_dict, coords, average=np.mean,
+                                boxdiv=0, subav=False):
+
+        plane_unaveraged = self.analytic_plane(in_dict, coords)
+
+        plane = average_dictionary(plane_unaveraged, average,
+                                   boxdiv=boxdiv, subav=subav)
+
+        return plane
+
+    def zernikes(self, in_dict, coords):
         """create a list of zernikes at these coordinate locations
 
         Parameters
@@ -489,6 +534,28 @@ class FocalPlaneFit(Wavefront):
             for iZ in range(5, z_length + 1)]
 
             for coord in coords]
+
+        ## coord2 = np.array([self.decaminfo.ccddict[int(coord[2])]
+        ##                    for coord in coords])
+
+        ## zernikes = [[0] * 3 +
+
+        ##     [self.da.meshDict['zMesh'].doInterp(
+        ##         coord2, coords[:,0], coords[:,1])
+        ##     / 172. +
+        ##     zdelta[4 - 1] / 172. +
+        ##     coords[:,1] * numfac / 172. * zthetax[4 - 1] +
+        ##     coords[:,0] * numfac / 172. * zthetay[4 - 1]] +
+
+        ##     [self.da.meshDict['z{0}Mesh'.format(iZ)].doInterp(
+        ##         coord2, coords[:,0], coords[:,1]) +
+        ##     zdelta[iZ - 1] +
+        ##     coords[:,1] * zthetax[iZ - 1] +
+        ##     coords[:,0] * zthetay[iZ - 1]
+        ##     for iZ in range(5, z_length + 1)]
+
+        ##     for coord in coords]
+
 
         zernikes = np.array(zernikes).tolist()
 

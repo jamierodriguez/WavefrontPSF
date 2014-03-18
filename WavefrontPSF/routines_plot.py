@@ -16,11 +16,13 @@ from mpl_toolkits.mplot3d import Axes3D  # necessary for 3d projection!
 from subprocess import call
 from os import path, makedirs
 from routines_moments import ellipticity_to_whisker
+from routines import MAD
 
 # color scheme:
 # blues_r for all <0 data, reds for all >0 data
 from colors import blue_red, blues_r, reds
 BASE_SIZE = 12
+DPI=300
 def focal_graph():
     """Convenience for the creation of my focal plane graphics
 
@@ -31,7 +33,7 @@ def focal_graph():
     focal_axis : axis object
 
     """
-    focal_figure = plt.figure(figsize=(BASE_SIZE, BASE_SIZE), dpi=300)
+    focal_figure = plt.figure(figsize=(BASE_SIZE, BASE_SIZE), dpi=DPI)
     focal_axis = focal_figure.add_subplot(111,
                                           aspect='equal')
     focal_axis = focal_graph_axis(focal_axis)
@@ -67,23 +69,23 @@ def histogramize(x, y, z, bins):
 
     return C, X, Y
 
-def contour3d(x, y, z, bins, stride=2):
+def contour3d(x, y, z, bins, stride=1):
 
-    fig = plt.figure()
+    fig = plt.figure(figsize=(BASE_SIZE, BASE_SIZE))
     ax = fig.add_subplot(111, projection='3d')
     Z, X, Y = histogramize(x, y, z, bins)
-    ax = focal_graph_axis(ax)
+    ## ax = focal_graph_axis(ax)
 
     ax.plot_surface(X, Y, Z, rstride=stride, cstride=stride,
-                    alpha=0.3, cmap=blue_red)
+                    alpha=0.5, cmap=blue_red, linewidth=0.25, antialiased=True)
 
     # add other plots
     ## cset = ax.contour(X, Y, Z, zdir='x', offset=-250, cmap=blue_red)
     ## cset = ax.contour(X, Y, Z, zdir='y', offset=250, cmap=blue_red)
-    cset = ax.add_collection3d(plt.pcolor(X, Y, Z, cmap=blue_red),
+    cset = ax.add_collection3d(ax.pcolor(X, Y, Z, cmap=blue_red),
                                zs=Z.min(), zdir='z')
     ax.set_zlim(Z.min(), Z.max())
-    ax.view_init(elev=40, azim=-10)
+    ax.view_init(elev=30, azim=-75)
     return fig, ax
 
 def wedge_collection(X, Y, U, V,
@@ -654,7 +656,7 @@ def data_hist_plot(data, edges, scales=None,
     posneg_plots = ['e1', 'e2', 'delta1', 'delta2', 'zeta1', 'zeta2']
     double_plots = ['e', 'zeta', 'delta']
     if len(keys) == 0:
-        keys = easy_plots + separable_pos_plots + posneg_plots + double_plots
+        keys = easy_plots + separable_pos_plots + posneg_plots
 
     if (not figures) * (not axes):
         figures = {}
@@ -663,7 +665,7 @@ def data_hist_plot(data, edges, scales=None,
             if (key in data) + (key + '1' in data) + (key == 'number'):
                 #(keys + easy_plots + posneg_plots + double_plots):
                 fig = plt.figure(figsize=(1.5 * BASE_SIZE, BASE_SIZE),
-                                 dpi=300)
+                                 dpi=DPI)
                 ax = fig.add_subplot(111, aspect='equal')
                 ax = focal_graph_axis(ax)
                 figures.update({key: fig})
@@ -672,8 +674,21 @@ def data_hist_plot(data, edges, scales=None,
     if not scales:
         scales = {}
 
-        for key in keys:
+        for key in sorted(keys):
             if (key in data) + (key + '1' in data) + (key == 'number'):
+                # filter out outliers when considering vmin and vmax
+                if key in data:
+                    conds = MAD(data[key], sigma=5)[0]
+                    if np.sum(conds) != 0:
+                        vals = data[key][conds]
+                        vmin = vals.min() * 0.99
+                        vmax = vals.max() * 1.01
+                    else:
+                        vmin = None
+                        vmax = None
+                else:
+                    vmin = None
+                    vmax = None
                 #scales.update({key : dict(vmin=None, vmax=None)})
                 if defaults:
                     if key == 'e0':
@@ -702,9 +717,11 @@ def data_hist_plot(data, edges, scales=None,
                                 if entry in scales:
                                     scales.update({key: scales[entry]})
                     else:
-                        scales.update({key : {}})
+                        scales.update({key : dict(vmin=vmin,
+                                                  vmax=vmax)})
                 else:
-                    scales.update({key : {}})
+                    scales.update({key : dict(vmin=vmin,
+                                              vmax=vmax)})
 
     if ('x_box' in data) * ('y_box' in data):
         x = data['x_box']
@@ -856,7 +873,7 @@ def data_contour_plot(data, edges, scales=None,
             if (key in data) + (key + '1' in data) + (key == 'number'):
                 #(keys + easy_plots + posneg_plots + double_plots):
                 fig = plt.figure(figsize=(BASE_SIZE * 1.5, BASE_SIZE),
-                                 dpi=300)
+                                 dpi=DPI)
                 #ax = fig.gca(projection='3d')
                 ax = fig.add_subplot(111, projection='3d')
                 ax = focal_graph_axis(ax)
@@ -1054,7 +1071,7 @@ def plot_star(recdata, figure=None, axis=None, nPixels=32,
 
     # make the figure
     if (not figure) * (not axis):
-        figure = plt.figure(figsize=(BASE_SIZE, BASE_SIZE), dpi=300)
+        figure = plt.figure(figsize=(BASE_SIZE, BASE_SIZE), dpi=DPI)
         axis = figure.add_subplot(111, aspect='equal')
 
     if process:
@@ -1243,7 +1260,8 @@ def save_func_hists(steps,
               plane, reference_plane,
               output_directory,
               edges,
-              boxdiv=1):
+              boxdiv=1,
+              defaults=False):
     """
     Parameters
     ----------
@@ -1275,10 +1293,16 @@ def save_func_hists(steps,
 
     # make tables for param and delta and chi2
     colLabels = ("Parameter", "Value", "Delta")
-    cellText = [[key, '{0:.3e}'.format(state_history[-1][key]),
-                 '{0:.3e}'.format(state_history[-1][key]
-                                  - state_history[-2][key])]
-                 for key in sorted(state_history[-1].keys())]
+    if len(state_history) == 1:
+        cellText = [[key, '{0:.3e}'.format(state_history[-1][key]),
+                     '{0:.3e}'.format(state_history[-1][key])]
+                     for key in sorted(state_history[-1].keys())]
+    else:
+        cellText = [[key, '{0:.3e}'.format(state_history[-1][key]),
+                     '{0:.3e}'.format(state_history[-1][key]
+                                      - state_history[-2][key])]
+                     for key in sorted(state_history[-1].keys())]
+
     axs[0,0].axis('off')
     table = axs[0,0].table(cellText=cellText, colLabels=colLabels,
                            loc='center')
@@ -1287,13 +1311,22 @@ def save_func_hists(steps,
     table.scale(1, 2)
 
     # add in chi2s
-    cellText = [[key,
-                  '{0:.3e}'.format(np.sum(chisquared_history[-1][key])),
-                  '{0:.3e}'.format(np.sum(chisquared_history[-1][key]
-                                          - chisquared_history[-2][key]))]
-                 for key in sorted(chisquared_history[-1].keys())]
+    if len(chisquared_history) == 1:
+        cellText = [[key,
+                      '{0:.3e}'.format(np.sum(chisquared_history[-1][key])),
+                      '{0:.3e}'.format(np.sum(chisquared_history[-1][key]))]
+                     for key in sorted(chisquared_history[-1].keys())]
+        chi2delta = chisquared_history[-1]['chi2']
+    else:
+        cellText = [[key,
+                      '{0:.3e}'.format(np.sum(chisquared_history[-1][key])),
+                      '{0:.3e}'.format(np.sum(chisquared_history[-1][key]
+                                              - chisquared_history[-2][key]))]
+                     for key in sorted(chisquared_history[-1].keys())]
 
-    chi2delta = chisquared_history[-1]['chi2'] - chisquared_history[-2]['chi2']
+        chi2delta = chisquared_history[-1]['chi2'] - \
+                    chisquared_history[-2]['chi2']
+
     cellText += [['total chi2',
                   '{0:.3e}'.format(chisquared_history[-1]['chi2']),
                   '{0:.3e}'.format(chi2delta)]]
@@ -1311,8 +1344,8 @@ def save_func_hists(steps,
         chi2 += chi_weights[key] * chisquared_history[-1][key]
     for ij in xrange(len(chi2)):
         axs[0, 2].text(plane['x_box'][ij], plane['y_box'][ij],
-                       '{0:.3e}'.format(chi2[ij]),
-                       fontsize=12,
+                       '{0:.2e}'.format(chi2[ij]),
+                       fontsize=8,
                        horizontalalignment='center',
                        verticalalignment='center',
                        )
@@ -1322,21 +1355,20 @@ def save_func_hists(steps,
         if chi_weights[key] > 0:
             figures = {key: fig,
                        '{0}_fit'.format(key): fig,
-                       '{0}_pull'.format(key): fig}
+                       '{0}_chi2'.format(key): fig}
             axes = {key: axs[1 + ij, 0],
                     '{0}_fit'.format(key): axs[1 + ij, 1],
-                    '{0}_pull'.format(key): axs[1 + ij, 2]}
+                    '{0}_chi2'.format(key): axs[1 + ij, 2]}
             data = {'x_box': plane['x_box'],
                     'y_box': plane['y_box'],
                     key: reference_plane[key],
                     '{0}_fit'.format(key): plane[key],
-                    '{0}_pull'.format(key): (plane[key] - reference_plane[key])
-                                            / reference_plane[key]}
+                    '{0}_chi2'.format(key): chisquared_history[-1][key]}
             _ = data_hist_plot(data, edges, keys=figures.keys(),
                                figures=figures, axes=axes,
-                               defaults=False)
+                               defaults=defaults)
 
     plt.tight_layout()
-    fig.savefig(output_directory + '{0:04d}.pdf'.format(steps))
+    fig.savefig(output_directory + '{0:04d}.png'.format(steps))
     plt.close('all')
     del fig, axs

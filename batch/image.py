@@ -109,3 +109,6 @@ for figure_key in figures:
                                 'DECam_{0:08d}_'.format(args_dict['expid']) +
                                 'contour_{0}.png'.format(figure_key))
 close('all')
+
+# TODO: other images (distribution of e0 vs median value of a chip, etc)
+

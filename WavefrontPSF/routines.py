@@ -22,11 +22,15 @@ def print_command(command):
 
 def average_dictionary(
         data, average,
-        boxdiv=1, subav=False):
+        boxdiv=1, subav=False,
+        xcoord='x', ycoord='y',
+        keys=[]):
     returndict = {}
-    x = data['x']
-    y = data['y']
-    for name in data.keys():
+    if len(keys) == 0:
+        keys = data.keys()
+    x = data[xcoord]
+    y = data[ycoord]
+    for name in keys:
         zin = data[name]
         # subtract average if desired
         if subav:
@@ -103,7 +107,7 @@ def minuit_dictionary(keys, h_base=1e-3):
         if key == 'rzero':
             minuit_dict.update({key: 0.125})
             minuit_dict.update({'error_{0}'.format(key): 0.005})
-            minuit_dict.update({'limit_{0}'.format(key): (0.07, 0.4)})
+            minuit_dict.update({'limit_{0}'.format(key): (0.1, 0.24)})
             h_dict.update({key: 0.005 * h_base})
             #minuit_dict.update({'fix_rzero':False})
         elif key == 'fwhm':
@@ -158,7 +162,7 @@ def minuit_dictionary(keys, h_base=1e-3):
             # hexapod:
             minuit_dict.update({key: 0})
             minuit_dict.update({'error_{0}'.format(key): 50})
-            minuit_dict.update({'limit_{0}'.format(key): (-2000, 2000)})
+            minuit_dict.update({'limit_{0}'.format(key): (-1000, 1000)})
             h_dict.update({key: 50 * h_base})
 
     return minuit_dict, h_dict

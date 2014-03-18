@@ -56,7 +56,7 @@ class FocalPlane(Wavefront):
 
     def __init__(self,
                  list_catalogs, list_fits_extension=None, list_chip=None,
-                 max_samples_box=300, boxdiv=0, subav=0,
+                 max_samples_box=10000, boxdiv=0, subav=0,
                  conds='default', average=mean_trim,
                  coord_name='WIN_IMAGE',
                  **args):
@@ -79,6 +79,33 @@ class FocalPlane(Wavefront):
                 list_catalogs, list_fits_extension, list_chip = \
                     generate_hdu_lists(list_catalogs,
                         path_base='/Volumes/Seagate/Images/')
+        elif type(list_catalogs) == list:
+            if len(list_catalogs) > 0:
+                if type(list_catalogs[0]) == int:
+                    # we have a list of expids!
+                    expids = list_catalogs
+                    list_catalogs = []
+                    list_fits_extension = []
+                    list_chip = []
+                    for expid in expid:
+                        if path.exists(
+                            '/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript/'):
+                            temp = \
+                                generate_hdu_lists(expid,
+                                    path_base='/nfs/slac/g/ki/ki18/' +
+                                              'cpd/catalogs/wgetscript/')
+                        elif path.exists('/Users/cpd/Desktop/Images/'):
+                            temp = \
+                                generate_hdu_lists(expid,
+                                    path_base='/Users/cpd/Desktop/Images/')
+                        elif path.exists('/Volumes/Seagate/Images/'):
+                            temp = \
+                                generate_hdu_lists(expid,
+                                    path_base='/Volumes/Seagate/Images/')
+                        list_catalogs += temp[0]
+                        list_fits_extension += temp[1]
+                        list_chip += temp[2]
+
 
         self.list_catalogs = list_catalogs
         self.list_fits_extension = list_fits_extension
@@ -203,7 +230,7 @@ class FocalPlane(Wavefront):
 
             # add an SN cut
             SN = 2.5 / np.log(10) / recdata['MAGERR_AUTO']
-            conds_SN = (SN > 20) * (SN < 100)
+            conds_SN = (SN > 20) #* (SN < 100)
             conds *= conds_SN
         else:
             # evaluate the string

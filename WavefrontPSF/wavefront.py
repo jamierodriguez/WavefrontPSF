@@ -77,6 +77,10 @@ class Wavefront(object):
         # decaminfo stuff (since it's useful)
         self.decaminfo = decaminfo()
 
+    def edges(self, boxdiv):
+        edges = self.decaminfo.getEdges(boxdiv)
+        return edges
+
     def save(self, out_path):
         """Take the data and save it!
 
@@ -308,9 +312,11 @@ class Wavefront(object):
 
         # create return_dict
         return_dict = dict(x=[], y=[])
-                           #zernikes=zernikes)
+
         if 'stamp' in verbosity:
             return_dict.update(dict(stamp=[]))
+        if 'zernikes' in verbosity:
+            return_dict.update(dict(zernikes=zernikes))
         # add terms from order_dict
         for order in order_dict:
             return_dict.update({order: []})
