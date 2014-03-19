@@ -864,7 +864,7 @@ def data_contour_plot(data, edges, scales=None,
     posneg_plots = ['e1', 'e2', 'delta1', 'delta2', 'zeta1', 'zeta2']
     double_plots = ['e', 'zeta', 'delta']
     if len(keys) == 0:
-        keys = easy_plots + separable_pos_plots + posneg_plots + double_plots
+        keys = easy_plots + separable_pos_plots + posneg_plots
 
     if (not figures) * (not axes):
         figures = {}
