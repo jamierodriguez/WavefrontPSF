@@ -166,7 +166,8 @@ def FitFunc(in_dict):
 
     chi2 = FPF.compare(poles_i, data_compare, var_dict=data_compare,
                        chi_weights=FPF.chi_weights)
-    chi2hist.append(chi2)
+    if len(FPF.history) % save_iter == 0:
+        chi2hist.append(chi2)
 
     return chi2
 
