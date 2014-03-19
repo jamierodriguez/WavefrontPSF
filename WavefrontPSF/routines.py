@@ -19,6 +19,34 @@ def print_command(command):
     print(string)
     return string
 
+def convert_dictionary(dictionary):
+    # convert dictionary into rec array
+    # assumes all entries are float64 and same length
+    names = ''
+    formats = ''
+    for i in xrange(len(dictionary.keys())):
+        names += sorted(dictionary.keys())[i]
+        shape_i = np.shape(dictionary[sorted(dictionary.keys())[i]])
+        if len(shape_i) > 1:
+            strshape = str(shape_i[1:])
+        else:
+            strshape = ''
+
+        dtype_i = str(np.array(dictionary[sorted(dictionary.keys())[i]]).dtype)
+        formats += strshape + dtype_i
+        if i != len(dictionary.keys()):
+            names += ','
+            formats += ','
+    test = []
+    # this has to be able to be sped up!
+    for j in xrange(len(dictionary[sorted(dictionary.keys())[i]])):
+        inner = []
+        for i in sorted(dictionary.keys()):
+            inner.append(dictionary[i][j])
+        test.append(tuple(inner))
+    test = np.rec.array(test, formats=formats, names=names)
+
+    return test
 
 def average_dictionary(
         data, average,
@@ -27,7 +55,10 @@ def average_dictionary(
         keys=[]):
     returndict = {}
     if len(keys) == 0:
-        keys = data.keys()
+        if type(data) == dict:
+            keys = data.keys()
+        elif type(data) == np.core.records.recarray:
+            keys = data.dtype.names
     x = data[xcoord]
     y = data[ycoord]
     for name in keys:

@@ -273,6 +273,17 @@ np.save(output_directory + 'minuit_results', minuit_results)
 # also save the coordinates
 np.save(output_directory + 'coords_sample', coords_sample)
 
+# save a plane!
+in_dict = minuit_results['args']
+poles_i = plane_func(in_dict, coords=coords_sample,
+                     average=average, boxdiv=boxdiv,
+                     subav=subav)
+
+poles_i = convert_moments(poles_i)
+
+np.save(output_directory + 'plane_fit', poles_i)
+np.save(output_directory + 'plane_compare', data_compare)
+
 if verbose:
     for key in sorted(minuit_results['args']):
         print(key, p_init[key], minuit_results['args'][key],
@@ -303,24 +314,21 @@ if verbose:
     # refrence histograms
     figures, axes, scales = data_hist_plot(data_compare, edges)
     for fig in figures:
+        axes[fig].set_title('{0:08d}: {1}'.format(expid, fig))
         figures[fig].savefig(output_directory +
            '{0:04d}_reference_histograms_{1}.png'.format(nCalls, fig))
     plt.close('all')
     # refrence_sample histograms
     figures, axes, scales = data_hist_plot(data_unaveraged_compare, edges)
     for fig in figures:
+        axes[fig].set_title('{0:08d}: {1}'.format(expid, fig))
         figures[fig].savefig(output_directory +
            '{0:04d}_sampled_histograms_{1}.png'.format(nCalls, fig))
     plt.close('all')
-    in_dict = minuit_results['args']
-    poles_i = plane_func(in_dict, coords=coords_sample,
-                         average=average, boxdiv=boxdiv,
-                         subav=subav)
-
-    poles_i = convert_moments(poles_i)
     # final histograms
     figures, axes, scales = data_hist_plot(poles_i, edges)
     for fig in figures:
+        axes[fig].set_title('{0:08d}: {1}'.format(expid, fig))
         figures[fig].savefig(output_directory +
            '{0:04d}_fit_histograms_{1}.png'.format(nCalls, fig))
     plt.close('all')
@@ -331,6 +339,7 @@ if verbose:
                                             figures=figures, axes=axes,
                                             scales=scales)
     for fig in figures:
+        axes[fig].set_title('{0:08d}: {1}'.format(expid, fig))
         figures[fig].savefig(output_directory +
            '{0:04d}_focal_plot_{1}.png'.format(nCalls, fig))
     plt.close('all')
@@ -349,6 +358,7 @@ if verbose:
         else:
             plt.plot(x, np.log10(y), label=key)
     plt.legend()
+    plt.title('{0:08d}: chi2'.format(expid))
     fig.savefig(output_directory + '{0:04d}_chi2hist'.format(nCalls) + '.png')
     plt.close('all')
 
@@ -360,7 +370,7 @@ if verbose:
         for i in x:
             y.append(np.sum(FPF.history[i][key]))
         plt.plot(x, y, label=key)
-        plt.title('{0}'.format(key))
+        plt.title('{0:08d}: {1}'.format(expid, key))
         fig.savefig(output_directory + '{0:04d}_{1}_history'.format(nCalls,
                                                                     key)
                     + '.png')
@@ -381,7 +391,7 @@ if verbose:
             else:
                 plt.semilogy(parameters, chi2par, '-', label=key)
         plt.legend()
-        plt.title(parameter)
+        plt.title('{0:08d}: {1}'.format(expid, parameter))
         fig.savefig(output_directory + '{0:04d}_vary_'.format(nCalls) +
                     parameter + '.png')
         plt.close('all')
