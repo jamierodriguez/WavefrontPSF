@@ -10,7 +10,8 @@ import numpy as np
 from os import path, makedirs, system, remove, chdir
 from subprocess import call
 from decamutil_cpd import decaminfo
-import pyfits
+#import pyfits
+from astropy.io import fits as pyfits
 from routines import print_command
 
 def extract_image_data(expids, path_image_data, path_out):
@@ -254,7 +255,7 @@ def generate_path_results(expids, path_base):
 
 def generate_hdu_lists_sex(
         expid,
-        path_base='/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript/00232732/'):
+        path_base='/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript/'):
     """quick and dirty way of getting the hdu list format I am now using
 
     Parameters
@@ -307,7 +308,7 @@ def generate_hdu_lists_sex(
 
 def generate_hdu_lists(
         expid,
-        path_base='/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript/00232732/'):
+        path_base='/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript/'):
     """quick and dirty way of getting the hdu list format I am now using
 
     Parameters

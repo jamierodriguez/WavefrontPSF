@@ -9,7 +9,6 @@ Description: Class for focal plane shell tied to specific image.
 from __future__ import print_function, division
 import numpy as np
 from wavefront import Wavefront
-import pyfits
 from os import path
 from routines_files import combine_decam_catalogs, generate_hdu_lists
 from routines import average_dictionary, mean_trim

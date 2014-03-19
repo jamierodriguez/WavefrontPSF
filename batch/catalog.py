@@ -10,7 +10,8 @@ associated image stamp.
 from __future__ import print_function, division
 
 import numpy as np
-import pyfits
+#import pyfits
+from astropy.io import fits as pyfits
 import argparse
 from os import path, makedirs, chdir, remove
 
