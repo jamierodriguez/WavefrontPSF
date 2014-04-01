@@ -317,7 +317,11 @@ class FocalPlaneFit(Wavefront):
         ztype_dict = {'d': 0, 'x': 1, 'y': 2}
 
         # create empty dictionary
-        zernike_dictionary = dict(z04d=0.0, z04x=0.0, z04y=0.0,
+        zernike_dictionary = dict(
+                                  z01d=0.0, z01x=0.0, z01y=0.0,
+                                  z02d=0.0, z02x=0.0, z02y=0.0,
+                                  z03d=0.0, z03x=0.0, z03y=0.0,
+                                  z04d=0.0, z04x=0.0, z04y=0.0,
                                   z05d=0.0, z05x=0.0, z05y=0.0,
                                   z06d=0.0, z06x=0.0, z06y=0.0,
                                   z07d=0.0, z07x=0.0, z07y=0.0,
@@ -517,7 +521,7 @@ class FocalPlaneFit(Wavefront):
         zthetay = zernike_corrections[:, 2]
         z_length = len(zdelta)
 
-        zernikes = [[0] * 3 +
+        zernikes = np.array([[0] * 3 +
 
             [self.da.meshDict['zMesh'].doInterp(
             self.decaminfo.ccddict[int(coord[2])], [coord[0]], [coord[1]])
@@ -533,31 +537,20 @@ class FocalPlaneFit(Wavefront):
             coord[0] * zthetay[iZ - 1]
             for iZ in range(5, z_length + 1)]
 
-            for coord in coords]
+            for coord in coords])
 
-        ## coord2 = np.array([self.decaminfo.ccddict[int(coord[2])]
-        ##                    for coord in coords])
+        # now adjust z2 and z3
+        # These are currently hardwired!
+        z7 = zernikes[:, 7 - 1]
+        z8 = zernikes[:, 8 - 1]
+        z9 = zernikes[:, 9 - 1]
+        z10 = zernikes[:, 10 - 1]
+        zernikes[:, 2 - 1] = -(-1.226 * z8 + 1.704e-1 * z8 ** 3 +
+                               -1.546e-2 * z10 - 4.550e-3 * z10 ** 3) / -0.558
+        zernikes[:, 3 - 1] = -(-1.19 * z7 + 1.642e-1 * z7 ** 3 +
+                               -1.671e-2 * z9 - 4.908e-3 * z9 ** 3) / -0.558
 
-        ## zernikes = [[0] * 3 +
-
-        ##     [self.da.meshDict['zMesh'].doInterp(
-        ##         coord2, coords[:,0], coords[:,1])
-        ##     / 172. +
-        ##     zdelta[4 - 1] / 172. +
-        ##     coords[:,1] * numfac / 172. * zthetax[4 - 1] +
-        ##     coords[:,0] * numfac / 172. * zthetay[4 - 1]] +
-
-        ##     [self.da.meshDict['z{0}Mesh'.format(iZ)].doInterp(
-        ##         coord2, coords[:,0], coords[:,1]) +
-        ##     zdelta[iZ - 1] +
-        ##     coords[:,1] * zthetax[iZ - 1] +
-        ##     coords[:,0] * zthetay[iZ - 1]
-        ##     for iZ in range(5, z_length + 1)]
-
-        ##     for coord in coords]
-
-
-        zernikes = np.array(zernikes).tolist()
+        zernikes = zernikes.tolist()
 
         return zernikes
 
