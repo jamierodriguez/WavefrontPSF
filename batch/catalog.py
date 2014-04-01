@@ -392,13 +392,25 @@ for i in xrange(1, 63):
         pyfits_dict[key]['array'] = np.array(pyfits_dict[key]['array'])[conds]
         columns.append(pyfits.Column(**pyfits_dict[key]))
 
-    # TODO: I ought to include the old 1st extension (with image header info)
     tbhdu = pyfits.new_table(columns)
 
-    tbhdu.writeto(list_catalogs_base + \
-                  'DECam_{0:08d}_'.format(args_dict['expid']) + \
-                  '{0:02d}_cat_cpd.fits'.format(i),
-                  clobber=True)
+    # if you wanted to combine with the other image, do the following:
+    ## # mask the recArray
+    ## newcat = FP.recdata[conds]
+    ## # fill new table
+    ## newthdu = pyfits.new_table(newcat.columns)
+    ## newthdu.data = newcat
+    ##
+    ## # merge the two tables
+    ## newtable = newthdu.columns + tbhdu.columns
+    ## newtablehdu = pyfits.new_table(newtable)
+
+    prihdu = pyfits.PrimaryHDU(header=pyfits.Header())
+    tbhdulist = pyfits.HDULIST([prihdu, header, tbhdu])
+    tbhdulist.writeto(list_catalogs_base + \
+                      'DECam_{0:08d}_'.format(args_dict['expid']) + \
+                      '{0:02d}_cat_cpd.fits'.format(i),
+                      clobber=True)
 
     if i != 1:
         # remove image
