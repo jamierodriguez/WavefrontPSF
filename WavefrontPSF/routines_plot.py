@@ -5,6 +5,7 @@ Author: Chris Davis
 Description: Methods for plotting various wavefront configurations.
 
 TODO: add routine for correlation and covariance plots to replace number with parameter name along axes
+TODO: change color of wedges?
 """
 
 from __future__ import print_function, division
