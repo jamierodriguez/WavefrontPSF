@@ -3,6 +3,12 @@
 File: fit_analytic.py
 Author: Chris Davis
 Description: File that takes a DES catalog and fits via analytic function
+
+TODO: Add residual plots
+TODO: Add plots from non-analytic
+TODO: Remove some of the reference plots? (Already have them elsewhere...)
+TODO: Consistency with image.py for plots and particularly error bars?
+TODO: Plot zernikes across focal plane?
 """
 
 from __future__ import print_function, division
@@ -371,7 +377,7 @@ if verbose:
             y.append(np.sum(FPF.history[i][key]))
         plt.plot(x, y, label=key)
         plt.title('{0:08d}: {1}'.format(expid, key))
-        fig.savefig(output_directory + '{0:04d}_{1}_history'.format(nCalls,
+        fig.savefig(output_directory + '{0:04d}_history_{1}'.format(nCalls,
                                                                     key)
                     + '.png')
         plt.close('all')
