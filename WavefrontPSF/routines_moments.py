@@ -7,6 +7,8 @@ Description: set of useful moment routines for focal plane objects.
 
 from __future__ import print_function, division
 import numpy as np
+from numpy.lib.recfunctions import merge_arrays
+from routines import convert_dictionary
 
 def second_moment_to_ellipticity(x2, y2, xy, **args):
 
@@ -225,7 +227,7 @@ def convert_moments(data, **args):
 
     """
 
-    poles = data.copy()
+    poles = {}
     if ('x2' in data) * ('y2' in data) * ('xy' in data):
         e0, e0prime, e1, e2 = second_moment_to_ellipticity(**data)
         poles.update(dict(e0=e0, e0prime=e0prime, e1=e1, e2=e2))
@@ -238,8 +240,14 @@ def convert_moments(data, **args):
         zeta1, zeta2, delta1, delta2 = third_moments_to_octupoles(**data)
         wd1, wd2 = ellipticity_to_whisker(delta1, delta2, spin=3, power=3)[:2]
         poles.update(dict(zeta1=zeta1, zeta2=zeta2,
-                          delta1=delta1, delta2=delta2,
-                          wd1=wd1, wd2=wd2))
+                          delta1=delta1, delta2=delta2))
+
+    if ('delta1' in poles) * ('delta2' in poles):
+        wd1, wd2 = ellipticity_to_whisker(poles['delta1'], poles['delta2'],
+                                          spin=3, power=3)[:2]
+        poles.update(dict(wd1=wd1, wd2=wd2))
+
+
 
     if ('x4' in data) * ('x2y2' in data) * ('y4' in data):
         xi = data['x4'] + 2 * data['x2y2'] + data['y4']
