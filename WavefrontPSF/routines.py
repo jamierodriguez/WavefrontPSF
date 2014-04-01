@@ -21,7 +21,6 @@ def print_command(command):
 
 def convert_dictionary(dictionary):
     # convert dictionary into rec array
-    # assumes all entries are float64 and same length
     names = ''
     formats = ''
     for i in xrange(len(dictionary.keys())):
@@ -47,6 +46,15 @@ def convert_dictionary(dictionary):
     test = np.rec.array(test, formats=formats, names=names)
 
     return test
+
+def convert_recarray(recarray):
+    # inverse of convert_dictionary
+    return_dict = {}
+
+    for name in recarray.dtype.names:
+        return_dict.update({name: recarray[name]})
+
+    return return_dict
 
 def average_dictionary(
         data, average,
