@@ -138,7 +138,8 @@ class Wavefront(object):
 
         """
 
-        x_decam, y_decam = coord
+        x_decam = coord[0]
+        y_decam = coord[1]
 
         stamp = self.make_donut.make(inputZernikeArray=zernike,
                                      rzero=rzero,
@@ -180,7 +181,7 @@ class Wavefront(object):
             # make stamp
             stamp_i = self.stamp(zernike=zernike,
                                  rzero=rzero,
-                                 coord=coord[:2])
+                                 coord=coord)
             stamps.append(stamp_i)
 
         stamps = np.array(stamps)
