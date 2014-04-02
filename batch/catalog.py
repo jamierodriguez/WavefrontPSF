@@ -25,7 +25,7 @@ from routines import MAD
 TODO:
     [ ] Get rid of the WIN_IMAGE tags?
     [ ] Create a basic set of scales for both parameters
-
+    [ ] Add Mx from image
 """
 
 ##############################################################################

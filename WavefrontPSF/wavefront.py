@@ -283,7 +283,7 @@ class Wavefront(object):
 
         background : list of floats, optional
             Background level to be subtracted out. If not specified, set to
-            zero.
+            attribute background.
 
         verbosity : list, optional
             If 'stamp' is in verbosity, then the stamps are also saved.
@@ -324,8 +324,14 @@ class Wavefront(object):
 
         for i in range(len(coords)):
             coord = coords[i]
-            background = backgrounds[i]
-            threshold = thresholds[i]
+            if len(backgrounds) > 0:
+                background = backgrounds[i]
+            else:
+                background = self.background
+            if len(thresholds) > 0:
+                threshold = thresholds[i]
+            else:
+                threshold = 1e-9
             stamp = stamps[i]
             # get moments
             moment_dict = self.moments(

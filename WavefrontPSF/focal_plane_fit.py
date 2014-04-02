@@ -572,13 +572,14 @@ class FocalPlaneFit(Wavefront):
         z8 = zernikes[:, 8 - 1]
         z9 = zernikes[:, 9 - 1]
         z10 = zernikes[:, 10 - 1]
+        middle_value = 15.93750
 
         P_2_8 = -1.226 * z8 + 1.704e-1 * z8 ** 3
         P_2_10 = -1.546e-2 * z10 - 4.550e-3 * z10 ** 3
         P_3_7 = -1.19 * z7 + 1.642e-1 * z7 ** 3
         P_3_9 = -1.671e-2 * z9 - 4.908e-3 * z9 ** 3
-        z2 = (y - P_2_8 - P_2_10) / -0.558
-        z3 = (x - P_3_7 - P_3_9) / -0.558
+        z2 = (x - P_2_8 - P_2_10 - middle_value) / -0.558
+        z3 = (y - P_3_7 - P_3_9 - middle_value) / -0.558
 
         return z2, z3
 
