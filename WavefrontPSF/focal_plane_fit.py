@@ -539,20 +539,48 @@ class FocalPlaneFit(Wavefront):
 
             for coord in coords])
 
+        return zernikes
+
+    def adjust_center(self, x, y, zernikes):
+        """A method for adjusting z2 and z3
+
+        Parameters
+        ----------
+        x, y : arrays
+            Arrays of the first moments that we want to make our image have
+
+        zernikes : arrays
+            Arrays of the zernikes
+
+        Returns
+        -------
+        z2, z3 : 
+        Notes
+        -----
+        Currently hardwired; TODO: create program to automatically generate the
+        hardwired coefficients (as well as for rzero scaling!)
+
+        These basically work empirically: I varied z8 or so on and found how
+        the location of the first moment changed with them. I assume these guys
+        are independent; that should be pretty reasonable. I guess I could
+        figure these out...
+
+        """
         # now adjust z2 and z3
         # These are currently hardwired!
         z7 = zernikes[:, 7 - 1]
         z8 = zernikes[:, 8 - 1]
         z9 = zernikes[:, 9 - 1]
         z10 = zernikes[:, 10 - 1]
-        zernikes[:, 2 - 1] = -(-1.226 * z8 + 1.704e-1 * z8 ** 3 +
-                               -1.546e-2 * z10 - 4.550e-3 * z10 ** 3) / -0.558
-        zernikes[:, 3 - 1] = -(-1.19 * z7 + 1.642e-1 * z7 ** 3 +
-                               -1.671e-2 * z9 - 4.908e-3 * z9 ** 3) / -0.558
 
-        zernikes = zernikes.tolist()
+        P_2_8 = -1.226 * z8 + 1.704e-1 * z8 ** 3
+        P_2_10 = -1.546e-2 * z10 - 4.550e-3 * z10 ** 3
+        P_3_7 = -1.19 * z7 + 1.642e-1 * z7 ** 3
+        P_3_9 = -1.671e-2 * z9 - 4.908e-3 * z9 ** 3
+        z2 = (y - P_2_8 - P_2_10) / -0.558
+        z3 = (x - P_3_7 - P_3_9) / -0.558
 
-        return zernikes
+        return z2, z3
 
     def random_coordinates(self, max_samples_box=5, boxdiv=0, chip=0,
                            border=30):

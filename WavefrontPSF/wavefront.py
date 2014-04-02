@@ -174,7 +174,7 @@ class Wavefront(object):
 
         """
         stamps = []
-        for i in range(len(coords)):
+        for i in xrange(len(coords)):
             coord = coords[i]
             zernike = zernikes[i]
             rzero = rzeros[i]
