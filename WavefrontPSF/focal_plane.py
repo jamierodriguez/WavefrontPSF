@@ -235,6 +235,8 @@ class FocalPlane(Wavefront):
             # evaluate the string
             conds = eval(conds)
 
+        # TODO: add filter conds for psfcat (which doesn't have spreadmodel)
+
         return conds
 
     def filter_number_in_box(
@@ -275,13 +277,23 @@ class FocalPlane(Wavefront):
 
         conds_return = np.array([False] * extension_return.size)
         # find out which ones are also nans etc
-        conds_finite = (
-            np.isfinite(recdata_return['Y2' + self.coord_name]) *
-            np.isfinite(recdata_return['X2' + self.coord_name]) *
-            np.isfinite(recdata_return['XY' + self.coord_name]) *
-            (recdata_return['Y2' + self.coord_name] > 0) *
-            (recdata_return['X2' + self.coord_name] > 0)
-            )
+        if 'Y2' + self.coord_name in recdata_return.dtype.names:
+            conds_finite = (
+                np.isfinite(recdata_return['Y2' + self.coord_name]) *
+                np.isfinite(recdata_return['X2' + self.coord_name]) *
+                np.isfinite(recdata_return['XY' + self.coord_name]) *
+                (recdata_return['Y2' + self.coord_name] > 0) *
+                (recdata_return['X2' + self.coord_name] > 0)
+                )
+        elif 'e0' in recdata_return.dtype.names:
+            conds_finite = (
+                np.isfinite(recdata_return['e0']) *
+                np.isfinite(recdata_return['e1']) *
+                np.isfinite(recdata_return['e2']) *
+                (recdata_return['e0'] > 0)
+                )
+        else:
+            conds_finite = np.array([True] * extension_return.size)
 
         # think about reordering below:
         box = self.decaminfo.getBounds_pixel(boxdiv=boxdiv)

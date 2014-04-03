@@ -308,7 +308,9 @@ def generate_hdu_lists_sex(
 
 def generate_hdu_lists(
         expid,
-        path_base='/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript/'):
+        path_base='/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript/',
+        name='cat_cpd',
+        extension=1):
     """quick and dirty way of getting the hdu list format I am now using
 
     Parameters
@@ -319,10 +321,21 @@ def generate_hdu_lists(
     path_base : string
         The directory in which the catalogs are located
 
+    name : string
+        Tag for files.
+
+    extension : int
+        What extension of each hdu file are we looking at?
+
     Returns
     -------
     list_catalogs : list
         a list pointing to all the catalogs we wish to combine.
+        Format is:
+
+        path_base +
+        '{0:08d}/DECam_{0:08d}_'.format(expid) +
+        '{0:02d}_{1}.fits'.format(chip, name)
 
     list_fits_extension : list of integers
         a list pointing which extension on a given fits file we open
@@ -338,7 +351,7 @@ def generate_hdu_lists(
 
     list_catalogs_base = \
         path_base + '{0:08d}/DECam_{0:08d}_'.format(expid)
-    list_catalogs = [list_catalogs_base + '{0:02d}_cat_cpd.fits'.format(i)
+    list_catalogs = [list_catalogs_base + '{0:02d}_{1}.fits'.format(i, name)
                      for i in xrange(1, 63)]
     list_catalogs.pop(60)
     # ccd 2 went bad too.
@@ -353,9 +366,9 @@ def generate_hdu_lists(
 
     # ccd 2 went bad too.
     if expid > 258804:
-        list_fits_extension = [[1]] * (63-3)
+        list_fits_extension = [[extension]] * (63-3)
     else:
-        list_fits_extension = [[1]] * (63-2)
+        list_fits_extension = [[extension]] * (63-2)
 
     return list_catalogs, list_fits_extension, list_chip
 

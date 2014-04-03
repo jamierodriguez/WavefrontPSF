@@ -9,6 +9,7 @@ TODO: Add plots from non-analytic
 TODO: Remove some of the reference plots? (Already have them elsewhere...)
 TODO: Consistency with image.py for plots and particularly error bars?
 TODO: Plot zernikes across focal plane?
+TODO: Don't fit for EVERY star; save some for verification
 """
 
 from __future__ import print_function, division
