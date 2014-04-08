@@ -387,31 +387,37 @@ class FocalPlane(Wavefront):
         coords = np.append(coords.T, [extNumbers], axis=0).T
 
         moments_unaveraged = dict(
-                x=coords[:, 0], y=coords[:, 1],
-                x2=recdata['X2' + self.coord_name].astype(np.float64),
-                y2=recdata['Y2' + self.coord_name].astype(np.float64),
-                xy=recdata['XY' + self.coord_name].astype(np.float64),
-                flux_radius=recdata['FLUX_RADIUS'].astype(np.float64),)
-        if 'FWHM_WORLD' in recdata.dtype.names:
-            moments_unaveraged.update(dict(
-                fwhm=recdata['FWHM_WORLD'].astype(np.float64) * 3600,
-                ))
-        if 'FWHM_IMAGE' in recdata.dtype.names:
-            moments_unaveraged.update(dict(
-                fwhm=recdata['FWHM_IMAGE'].astype(np.float64),
-                ))
+                x=coords[:, 0], y=coords[:, 1])
 
-        if ('X3' + self.coord_name in recdata.dtype.names):
-            moments_unaveraged.update(dict(
-                    x3=recdata['X3' + self.coord_name].astype(np.float64),
-                    x2y=recdata['X2Y' + self.coord_name].astype(np.float64),
-                    xy2=recdata['XY2' + self.coord_name].astype(np.float64),
-                    y3=recdata['Y3' + self.coord_name].astype(np.float64),
-                    a4=recdata['A4_ADAPTIVE'].astype(np.float64),
-                    flux=recdata['FLUX_ADAPTIVE'].astype(np.float64),
-                    sn_flux=recdata['SN_FLUX'].astype(np.float64),
-                    chip=recdata['CHIP'].astype(np.int),
-                    ))
+        # list of keys we wish to add to moments_unaveraged
+        keys_list = [['x2', 'X2' + self.coord_name],
+                     ['y2', 'Y2' + self.coord_name],
+                     ['xy', 'XY' + self.coord_name],
+                     ['flux_radius', 'FLUX_RADIUS'],
+                     ['fwhm_world', 'FWHM_WORLD'],
+                     ['fwhm_image', 'FWHM_IMAGE'],
+                     ['x3', 'X3' + self.coord_name],
+                     ['x2y', 'X2Y' + self.coord_name],
+                     ['xy2', 'XY2' + self.coord_name],
+                     ['y3', 'Y3' + self.coord_name],
+                     ['a4', 'A4_ADAPTIVE'],
+                     ['flux', 'FLUX_ADAPTIVE'],
+                     ['sn_flux', 'SN_FLUX'],
+                     ['snr_win', 'SNR_WIN'],
+                     ['e0', 'e0'],
+                     ['e1', 'e1'],
+                     ['e2', 'e2'],
+                     ['delta1', 'delta1'],
+                     ['delta2', 'delta2'],
+                     ['zeta1', 'zeta1'],
+                     ['zeta2', 'zeta2'],
+                     ]
+
+        for key in keys_list:
+            if key[1] in recdata.dtype.names:
+                moments_unaveraged.update(
+                    {key[0]: recdata[key[1]].astype(np.float64)}
+                    )
 
         moments_unaveraged = convert_moments(moments_unaveraged)
 
