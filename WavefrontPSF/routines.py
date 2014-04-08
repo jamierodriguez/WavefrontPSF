@@ -67,8 +67,14 @@ def average_dictionary(
             keys = data.keys()
         elif type(data) == np.core.records.recarray:
             keys = data.dtype.names
-    x = data[xcoord]
-    y = data[ycoord]
+    if type(xcoord) == str:
+        x = data[xcoord]
+    else:
+        x = xcoord
+    if type(ycoord) == str:
+        y = data[ycoord]
+    else:
+        y = ycoord
     for name in keys:
         zin = data[name]
         # subtract average if desired
