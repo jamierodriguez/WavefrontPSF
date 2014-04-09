@@ -34,12 +34,25 @@ from routines_plot import data_focal_plot, data_hist_plot, save_func_hists
 ##############################################################################
 
 parser = argparse. \
-    ArgumentParser(description=
-                   'Fit image and dump results.')
+ArgumentParser(description=
+                'Fit image and dump results.')
 parser.add_argument("-e",
                     dest="expid",
                     type=int,
                     help="what image number will we fit now?")
+parser.add_argument("-t",
+                    dest="catalogs",
+                    default='/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript/',
+                    help='directory containing the catalogs')
+parser.add_argument("--name",
+                    dest='name',
+                    default='cat_cpd',
+                    help='appended part of name for catalogs')
+parser.add_argument("--extension",
+                    dest='extension',
+                    default=1,
+                    type=int,
+                    help='extension of hdu')
 parser.add_argument("-b",
                     dest="boxdiv",
                     type=int,
@@ -69,10 +82,64 @@ parser.add_argument("-o",
                     dest="output_directory",
                     default='/nfs/slac/g/ki/ki18/cpd/focus/outputs/',
                     help="where will the outputs go")
-parser.add_argument("-t",
-                    dest="catalogs",
-                    default='/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript/',
-                    help='directory containing the catalogs')
+parser.add_argument("--chi_weights",
+                    dest="chi_weights",
+                    default="{" +
+                            "'e0': 0.01, " +
+                            "'e1': 1., " +
+                            "'e2': 1.', " +
+                            "'delta1': 0.1, " +
+                            "'delta2': 0.1, " +
+                            "'zeta1': 0.01, " +
+                            "'zeta2': 0.01, " +
+                            "}",
+                    help='what chi_weights will be used?')
+parser.add_argument("--p_init",
+                    dest="p_init",
+                    default="{" +
+                            "'delta1' : 0, " +
+                            "'delta2' : 0, " +
+                     ##     "'dx' :     0, " +
+                     ##     "'dy' :     0, " +
+                     ##     "'dz' :     0, " +
+                            "'e1' :     0, " +
+                            "'e2' :     0, " +
+                            "'rzero' :  0.14, " +
+                     ##     "'xt' :     0, " +
+                     ##     "'yt' :     0, " +
+                            "'z04d' :   0, " +
+                     ##     "'z04x' :   0, " +
+                     ##     "'z04y' :   0, " +
+                            "'z05d' :   0, " +
+                            "'z05x' :   0, " +
+                            "'z05y' :   0, " +
+                            "'z06d' :   0, " +
+                            "'z06x' :   0, " +
+                            "'z06y' :   0, " +
+                            "'z07d' :   0, " +
+                     ##     "'z07x' :   0, " +
+                     ##     "'z07y' :   0, " +
+                            "'z08d' :   0, " +
+                     ##     "'z08x' :   0, " +
+                     ##     "'z08y' :   0, " +
+                            "'z09d' :   0, " +
+                     ##     "'z09x' :   0, " +
+                     ##     "'z09y' :   0, " +
+                            "'z10d' :   0, " +
+                     ##     "'z10x' :   0, " +
+                     ##     "'z10y' :   0, " +
+                            "'z11d' :   0, " +
+                     ##     "'z11x' :   0, " +
+                     ##     "'z11y' :   0, " +
+                            "'zeta1' :  0, " +
+                            "'zeta2' :  0, " +
+                            "}",
+                        help='initial guess for fit')
+parser.add_argument("--analytic",
+                    dest="analytic",
+                    type=int,
+                    default=1,
+                    help='if > 0, use analytic model for fitting')
 options = parser.parse_args()
 
 args_dict = vars(options)
@@ -87,28 +154,57 @@ n_samples_box = args_dict['n_samples_box']
 subav = False
 methodVal = (args_dict['methodVal'], 1.)
 
-expid = args_dict['expid']
-dataDirectory = args_dict['catalogs']
-list_catalogs, list_fits_extension, list_chip = \
-        generate_hdu_lists(expid,
-                           path_base=dataDirectory)
-
 output_directory = args_dict['output_directory']
 make_directory(output_directory)
+
+expid = args_dict['expid']
+
+
+##############################################################################
+# create catalogs
+##############################################################################
+
+path_base = args_dict['catalogs']
+name = args_dict['name']
+extension = args_dict['extension']
+
+list_catalogs_base = \
+    path_base + 'DECam_{0:08d}_'.format(expid)
+list_catalogs = [list_catalogs_base + '{0:02d}_{1}.fits'.format(i, name)
+                 for i in xrange(1, 63)]
+list_catalogs.pop(60)
+# ccd 2 went bad too.
+if expid > 258804:
+    list_catalogs.pop(1)
+
+list_chip = [[decaminfo().ccddict[i]] for i in xrange(1, 63)]
+list_chip.pop(60)
+# ccd 2 went bad too.
+if expid > 258804:
+    list_chip.pop(1)
+
+# ccd 2 went bad too.
+if expid > 258804:
+    list_fits_extension = [[extension]] * (63-3)
+else:
+    list_fits_extension = [[extension]] * (63-2)
 
 ##############################################################################
 # set up fit
 ##############################################################################
 
-chi_weights = {
-    'e0': 0.01,
-    'e1': 1.,
-    'e2': 1.,
-    'delta1': 0.1,
-    'delta2': 0.1,
-    'zeta1': 0.01,
-    'zeta2': 0.01,
-    }
+## chi_weights = {
+##     'e0': 0.01,
+##     'e1': 1.,
+##     'e2': 1.,
+##     'delta1': 0.1,
+##     'delta2': 0.1,
+##     'zeta1': 0.01,
+##     'zeta2': 0.01,
+##     }
+
+chi_weights = eval(args_dict['chi_weights'])
+p_init = eval(args_dict['p_init'])
 
 FP = FocalPlane(list_catalogs=list_catalogs,
                 list_fits_extension=list_fits_extension,
@@ -151,8 +247,10 @@ FPF.coords = coords_sample
 chi2hist = []
 FPF.history = []
 
-plane_func = FPF.analytic_plane_averaged
-#plane_func = FPF.plane_averaged
+if args_dict['analytic'] > 0:
+    plane_func = FPF.analytic_plane_averaged
+else:
+    plane_func = FPF.plane_averaged
 
 def FitFunc(in_dict):
 
@@ -195,44 +293,44 @@ def SaveFunc(steps, defaults=False):
     return
 
 # fit
-p_init = {
-    'delta1' : 0,
-    'delta2' : 0,
-##     'dx' :     0,
-##     'dy' :     0,
-##     'dz' :     0,
-    'e1' :     0,
-    'e2' :     0,
-    'rzero' :  0.14,
-##     'xt' :     0,
-##     'yt' :     0,
-    'z04d' :   0,
-##     'z04x' :   0,
-##     'z04y' :   0,
-    'z05d' :   0,
-    'z05x' :   0,
-    'z05y' :   0,
-    'z06d' :   0,
-    'z06x' :   0,
-    'z06y' :   0,
-    'z07d' :   0,
-##     'z07x' :   0,
-##     'z07y' :   0,
-    'z08d' :   0,
-##     'z08x' :   0,
-##     'z08y' :   0,
-    'z09d' :   0,
-##     'z09x' :   0,
-##     'z09y' :   0,
-    'z10d' :   0,
-##     'z10x' :   0,
-##     'z10y' :   0,
-    'z11d' :   0,
-##     'z11x' :   0,
-##     'z11y' :   0,
-    'zeta1' :  0,
-    'zeta2' :  0,
-    }
+## p_init = {
+##     'delta1' : 0,
+##     'delta2' : 0,
+## ##     'dx' :     0,
+## ##     'dy' :     0,
+## ##     'dz' :     0,
+##     'e1' :     0,
+##     'e2' :     0,
+##     'rzero' :  0.14,
+## ##     'xt' :     0,
+## ##     'yt' :     0,
+##     'z04d' :   0,
+## ##     'z04x' :   0,
+## ##     'z04y' :   0,
+##     'z05d' :   0,
+##     'z05x' :   0,
+##     'z05y' :   0,
+##     'z06d' :   0,
+##     'z06x' :   0,
+##     'z06y' :   0,
+##     'z07d' :   0,
+## ##     'z07x' :   0,
+## ##     'z07y' :   0,
+##     'z08d' :   0,
+## ##     'z08x' :   0,
+## ##     'z08y' :   0,
+##     'z09d' :   0,
+## ##     'z09x' :   0,
+## ##     'z09y' :   0,
+##     'z10d' :   0,
+## ##     'z10x' :   0,
+## ##     'z10y' :   0,
+##     'z11d' :   0,
+## ##     'z11x' :   0,
+## ##     'z11y' :   0,
+##     'zeta1' :  0,
+##     'zeta2' :  0,
+##     }
 
 par_names = sorted(p_init.keys())
 h_base = 1e-3

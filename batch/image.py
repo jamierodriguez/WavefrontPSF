@@ -31,14 +31,23 @@ parser.add_argument("-e",
                     dest="expid",
                     type=int,
                     help="what image number will we fit now?")
-parser.add_argument("-o",
-                    dest="output_directory",
-                    default='/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript/',
-                    help="where will the outputs go")
 parser.add_argument("-t",
                     dest="catalogs",
                     default='/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript/',
                     help='directory containing the catalogs')
+parser.add_argument("--name",
+                    dest='name',
+                    default='cat_cpd',
+                    help='appended part of name for catalogs')
+parser.add_argument("--extension",
+                    dest='extension',
+                    default=1,
+                    type=int,
+                    help='extension of hdu')
+parser.add_argument("-o",
+                    dest="output_directory",
+                    default='/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript/',
+                    help="where will the outputs go")
 parser.add_argument("-s",
                     dest="size",
                     type=int,
@@ -53,13 +62,37 @@ options = parser.parse_args()
 args_dict = vars(options)
 
 ##############################################################################
-# create images for the catalog
+# create catalogs
 ##############################################################################
 
-# find the locations of the catalog files
-list_catalogs, list_fits_extension, list_chip = \
-        generate_hdu_lists(args_dict['expid'], args_dict['catalogs'])
+path_base = args_dict['catalogs']
+name = args_dict['name']
+extension = args_dict['extension']
 
+list_catalogs_base = \
+    path_base + 'DECam_{0:08d}_'.format(expid)
+list_catalogs = [list_catalogs_base + '{0:02d}_{1}.fits'.format(i, name)
+                 for i in xrange(1, 63)]
+list_catalogs.pop(60)
+# ccd 2 went bad too.
+if expid > 258804:
+    list_catalogs.pop(1)
+
+list_chip = [[decaminfo().ccddict[i]] for i in xrange(1, 63)]
+list_chip.pop(60)
+# ccd 2 went bad too.
+if expid > 258804:
+    list_chip.pop(1)
+
+# ccd 2 went bad too.
+if expid > 258804:
+    list_fits_extension = [[extension]] * (63-3)
+else:
+    list_fits_extension = [[extension]] * (63-2)
+
+##############################################################################
+# create images for the catalog
+##############################################################################
 
 FP = FocalPlane(list_catalogs=list_catalogs,
                 list_fits_extension=list_fits_extension,

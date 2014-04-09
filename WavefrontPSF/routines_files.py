@@ -310,7 +310,7 @@ def generate_hdu_lists(
         expid,
         path_base='/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript/',
         name='cat_cpd',
-        extension=1):
+        extension=2):
     """quick and dirty way of getting the hdu list format I am now using
 
     Parameters
