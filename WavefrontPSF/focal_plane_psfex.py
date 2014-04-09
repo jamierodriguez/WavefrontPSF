@@ -33,9 +33,8 @@ class FocalPlanePSFEx(Wavefront):
     Methods
     -------
     plane
-        from a dictionary of zernike corrections and coordinates, generate a
-        focal plane of moments. if the 'stamp' is in verbosity,
-        the stamps of the stars are also saved.
+        from coordinates, generate a focal plane of moments. if the 'stamp' is
+        in verbosity, the stamps of the stars are also saved.
 
 
     """
@@ -57,6 +56,25 @@ class FocalPlanePSFEx(Wavefront):
         self.verbosity = verbosity
 
     def generate_psfex(self, list_catalogs, list_chip):
+        """Generate the psfex dictionary delineated by chip
+
+        Parameters
+        ----------
+        list_catalogs : list
+            Locations of all the PSFEx objects we are interested in.
+
+        list_chip : list
+            How we group the PSFEx objects
+
+        Returns
+        -------
+        psfex : dictionary
+            A dictionary of the PSFEx objects delineated by list_chip
+            (typically the chip name or number). Each entry is a list of all
+            the PSFEx objects with that value.
+
+        """
+
 
         psfex = {}
         uniques = np.unique(list_chip)
@@ -70,7 +88,23 @@ class FocalPlanePSFEx(Wavefront):
         return psfex
 
     def interpolate(self, ix, iy, ext):
+        """Create psfex image
 
+        Parameters
+        ----------
+        ix, iy : floats
+            Pixel coordinates we would like to sample at the center of.
+
+        ext : int
+            Name of the psfex extension (usually chip name or integer) we
+            should like to interpolate from.
+
+        Returns
+        -------
+        image : array
+            2d array of the psfex image.
+
+        """
         # select the extnum of psfex items
         psfex_list = self.psfex[ext]
         n_psfex = len(psfex_list)
