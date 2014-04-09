@@ -53,6 +53,10 @@ parser.add_argument("--extension",
                     default=1,
                     type=int,
                     help='extension of hdu')
+parser.add_argument("--conds",
+                    dest="conds",
+                    default='default',
+                    help="filter conditions")
 parser.add_argument("-b",
                     dest="boxdiv",
                     type=int,
@@ -148,7 +152,7 @@ verbose = args_dict['verbose']
 
 average = np.mean  # TODO: this may change!!!
 boxdiv = args_dict['boxdiv']
-conds = 'default'
+conds = args_dict['conds']
 max_samples_box = 100000
 n_samples_box = args_dict['n_samples_box']
 subav = False
