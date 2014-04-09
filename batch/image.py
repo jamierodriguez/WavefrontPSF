@@ -70,22 +70,22 @@ name = args_dict['name']
 extension = args_dict['extension']
 
 list_catalogs_base = \
-    path_base + 'DECam_{0:08d}_'.format(expid)
+    path_base + 'DECam_{0:08d}_'.format(args_dict['expid'])
 list_catalogs = [list_catalogs_base + '{0:02d}_{1}.fits'.format(i, name)
                  for i in xrange(1, 63)]
 list_catalogs.pop(60)
 # ccd 2 went bad too.
-if expid > 258804:
+if args_dict['expid'] > 258804:
     list_catalogs.pop(1)
 
 list_chip = [[decaminfo().ccddict[i]] for i in xrange(1, 63)]
 list_chip.pop(60)
 # ccd 2 went bad too.
-if expid > 258804:
+if args_dict['expid'] > 258804:
     list_chip.pop(1)
 
 # ccd 2 went bad too.
-if expid > 258804:
+if args_dict['expid'] > 258804:
     list_fits_extension = [[extension]] * (63-3)
 else:
     list_fits_extension = [[extension]] * (63-2)
