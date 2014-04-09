@@ -93,6 +93,14 @@ class decaminfo(object):
 
         return infoDict
 
+    def getinfoArray(self):
+        vals = np.zeros((71, 2))
+        for key in self.infoDict:
+            infoDict = self.infoDict[key]
+            vals[infoDict['CCDNUM']][0] = infoDict['xCenter']
+            vals[infoDict['CCDNUM']][1] = infoDict['yCenter']
+        return vals
+
 
     def __init__(self,**inputDict):
 
@@ -105,6 +113,33 @@ class decaminfo(object):
             self.ccddict.update(
                 {self.infoDict[keyi]['CCDNUM']: keyi}
                 )
+        self.infoArr = self.getinfoArray()
+
+    def getPosition_extnum(self, extnums, ix, iy):
+        # do getPosition but with extnum instead
+        xpixHalfSize = 1024. * np.ones(extnums.size)
+        ypixHalfSize = 1024. * np.ones(extnums.size)
+        ypixHalfSize = np.where(extnums > 62, 1024., 2048.)
+        xCenter = self.infoArr[extnums][:, 0]
+        yCenter = self.infoArr[extnums][:, 1]
+
+        xPos = xCenter + (ix - xpixHalfSize + 0.5) * self.mmperpixel
+        yPos = yCenter + (iy - ypixHalfSize + 0.5) * self.mmperpixel
+
+        return xPos, yPos
+
+    def getPixel_extnum(self, extnums, xPos, yPos):
+        # do getPixel but with extnum instead
+        xpixHalfSize = 1024. * np.ones(extnums.size)
+        ypixHalfSize = 1024. * np.ones(extnums.size)
+        ypixHalfSize = np.where(extnums > 62, 1024., 2048.)
+        xCenter = self.infoArr[extnums][:, 0]
+        yCenter = self.infoArr[extnums][:, 1]
+
+        ix = (xPos - xCenter) / self.mmperpixel + xpixHalfSize - 0.5
+        iy = (yPos - yCenter) / self.mmperpixel + ypixHalfSize - 0.5
+
+        return ix, iy
 
     def getPosition(self,extname,ix,iy):
         # return the x,y position in [mm] for a given CCD and pixel number

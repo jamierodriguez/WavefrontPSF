@@ -78,6 +78,9 @@ class Wavefront(object):
         self.decaminfo = decaminfo()
 
     def edges(self, boxdiv):
+        """Convenience wrapper for decaminfo.getEdges
+        """
+
         edges = self.decaminfo.getEdges(boxdiv)
         return edges
 
@@ -362,3 +365,51 @@ class Wavefront(object):
         return_dict = convert_moments(return_dict)
 
         return return_dict
+
+    def position_to_pixel(self, coords):
+        """Go from focal coordinates to pixel coordinates
+
+        Paramters
+        ---------
+        coords : array
+            Each entry has the coordinates in [X mm, Y mm, Sensor], with the x
+            and y in aaron's coordinate convention.
+
+        Returns
+        -------
+        coords_pixel: array
+            Each entry is now [ix, iy, Sensor]
+
+        """
+
+        ix, iy = self.infodict.getPixel_extnum(coords[:,2],
+                                               coords[:,0],
+                                               coords[:,1])
+        coords_pixel = np.vstack((ix, iy, coords[:,2])).T
+
+        return coords_pixel
+
+    def pixel_to_position(self, coords):
+
+        """Go from focal coordinates to pixel coordinates
+
+        Paramters
+        ---------
+        coords : array
+            Each entry has the coordinates in [ix, iy, Sensor].
+
+        Returns
+        -------
+        coords_focal: array
+            Each entry is now [X mm, Y mm, Sensor],
+
+        """
+
+        xPos, yPos = self.infodict.getPosition_extnum(coords[:,2],
+                                                      coords[:,0],
+                                                      coords[:,1])
+        coords_focal = np.vstack((xPos, yPos, coords[:,2])).T
+
+        return coords_focal
+
+
