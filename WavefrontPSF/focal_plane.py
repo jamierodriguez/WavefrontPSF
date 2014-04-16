@@ -4,6 +4,7 @@ File: focal_plane.py
 Author: Chris Davis
 Description: Class for focal plane shell tied to specific image.
 
+TODO: add data class for numpy .npy files instead of fits files (no recdata attribute / points to the same thing as data_unaveraged?)
 """
 
 from __future__ import print_function, division

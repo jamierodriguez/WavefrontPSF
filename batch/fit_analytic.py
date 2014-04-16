@@ -28,6 +28,7 @@ from routines import minuit_dictionary, mean_trim, vary_one_parameter
 from routines_moments import convert_moments
 from routines_files import generate_hdu_lists, make_directory
 from routines_plot import data_focal_plot, data_hist_plot, save_func_hists
+from decamutil_cpd import decaminfo
 
 ##############################################################################
 # argparse
@@ -91,7 +92,7 @@ parser.add_argument("--chi_weights",
                     default="{" +
                             "'e0': 0.01, " +
                             "'e1': 1., " +
-                            "'e2': 1.', " +
+                            "'e2': 1., " +
                             "'delta1': 0.1, " +
                             "'delta2': 0.1, " +
                             "'zeta1': 0.01, " +

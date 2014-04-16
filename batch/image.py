@@ -19,6 +19,7 @@ from os import path, makedirs
 from focal_plane import FocalPlane
 from routines_files import generate_hdu_lists
 from routines_plot import data_focal_plot, data_hist_plot, data_contour_plot
+from decamutil_cpd import decaminfo
 
 ##############################################################################
 # argparse
