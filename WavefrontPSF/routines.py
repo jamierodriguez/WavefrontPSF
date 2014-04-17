@@ -152,7 +152,7 @@ def minuit_dictionary(keys, h_base=1e-3):
         if key == 'rzero':
             minuit_dict.update({key: 0.125})
             minuit_dict.update({'error_{0}'.format(key): 0.005})
-            minuit_dict.update({'limit_{0}'.format(key): (0.1, 0.24)})
+            minuit_dict.update({'limit_{0}'.format(key): (0.07, 0.24)})
             h_dict.update({key: 0.005 * h_base})
             #minuit_dict.update({'fix_rzero':False})
         elif key == 'fwhm':
@@ -164,7 +164,7 @@ def minuit_dictionary(keys, h_base=1e-3):
         elif (key == 'dz') + (key == 'z04d'):
             minuit_dict.update({key: 0})
             minuit_dict.update({'error_{0}'.format(key): 40})
-            minuit_dict.update({'limit_{0}'.format(key): (-300, 300)})
+            minuit_dict.update({'limit_{0}'.format(key): (-400, 400)})
             h_dict.update({key: 40 * h_base})
         elif (key == 'z04x') + (key == 'z04y'):
             minuit_dict.update({key: 0})
@@ -181,7 +181,7 @@ def minuit_dictionary(keys, h_base=1e-3):
             ## minuit_dict.update({key:self.image_correction[znum][ztype_num]})
             if key[3] == 'd':
                 minuit_dict.update({'error_{0}'.format(key): 0.1})
-                minuit_dict.update({'limit_{0}'.format(key): (-0.75, 0.75)})
+                minuit_dict.update({'limit_{0}'.format(key): (-1.25, 1.25)})
                 h_dict.update({key: 0.1 * h_base})
             else:
                 # x and y
@@ -195,7 +195,7 @@ def minuit_dictionary(keys, h_base=1e-3):
             # looking at the common mode terms
             minuit_dict.update({key: 0})
             minuit_dict.update({'error_{0}'.format(key): 0.005})
-            minuit_dict.update({'limit_{0}'.format(key): (-0.05, 0.05)})
+            minuit_dict.update({'limit_{0}'.format(key): (-0.5, 0.5)})
             h_dict.update({key: 0.005 * h_base})
         elif (key == 'dx') + (key == 'dy'):
             # hexapod:
