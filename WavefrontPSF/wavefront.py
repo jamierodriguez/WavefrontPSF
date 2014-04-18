@@ -382,9 +382,9 @@ class Wavefront(object):
 
         """
 
-        ix, iy = self.infodict.getPixel_extnum(coords[:,2],
-                                               coords[:,0],
-                                               coords[:,1])
+        ix, iy = self.decaminfo.getPixel_extnum(coords[:,2].astype(np.int),
+                                                coords[:,0],
+                                                coords[:,1])
         coords_pixel = np.vstack((ix, iy, coords[:,2])).T
 
         return coords_pixel
@@ -405,9 +405,10 @@ class Wavefront(object):
 
         """
 
-        xPos, yPos = self.infodict.getPosition_extnum(coords[:,2],
-                                                      coords[:,0],
-                                                      coords[:,1])
+        xPos, yPos = self.decaminfo.getPosition_extnum(coords[:,2].astype(
+            np.int),
+                                                       coords[:,0],
+                                                       coords[:,1])
         coords_focal = np.vstack((xPos, yPos, coords[:,2])).T
 
         return coords_focal
