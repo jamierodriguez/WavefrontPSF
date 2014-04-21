@@ -106,13 +106,15 @@ class FocalPlanePSFEx(Wavefront):
 
         """
         # select the extnum of psfex items
-        psfex_list = self.psfex[ext]
+        ext_name = self.decaminfo.ccddict[ext]
+        psfex_list = self.psfex[ext_name]
         n_psfex = len(psfex_list)
 
         image = 0
         for psfex in psfex_list:
             # TODO: is this true: row is ix and col is iy?
-            image += psfex.get_rec(ix, iy)
+            # cpd 19.4.14: flipped ix to col and iy to row
+            image += psfex.get_rec(iy, ix)
 
         # if you have multiple images, average each one
         image /= n_psfex
@@ -232,3 +234,4 @@ class FocalPlanePSFEx(Wavefront):
                                      boxdiv=boxdiv, subav=subav)
 
         return moments
+
