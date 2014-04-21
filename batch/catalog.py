@@ -26,6 +26,8 @@ TODO:
     [ ] Get rid of the WIN_IMAGE tags?
     [ ] Create a basic set of scales for both parameters
     [ ] Add Mx from image
+
+headerHDU still needs work.
 """
 
 ##############################################################################
@@ -406,7 +408,10 @@ for i in xrange(1, 63):
     ## newtablehdu = pyfits.new_table(newtable)
 
     prihdu = pyfits.PrimaryHDU(header=pyfits.Header())
-    tbhdulist = pyfits.HDULIST([prihdu, header, tbhdu])
+    headerHDU = pyfits.TableHDU(header=header)
+    # TODO: fix this!
+    #headerHDU.data = np.array(header)
+    tbhdulist = pyfits.HDUList([prihdu, headerHDU, tbhdu])
     tbhdulist.writeto(list_catalogs_base + \
                       'DECam_{0:08d}_'.format(args_dict['expid']) + \
                       '{0:02d}_cat_cpd.fits'.format(i),
