@@ -80,8 +80,8 @@ def mkSelPsfCat(expnum,tag="SVA1_FINALCUT",basedir="/nfs/slac/g/ki/ki22/roodman/
 
             buildSelPsfCat(expnum,i,filename,catname,selname)
 
-            if deleteIn:
-                os.remove(filename)
+            # if deleteIn:
+            #     os.remove(filename)
 
 
             
@@ -375,5 +375,5 @@ if __name__ == "__main__":
     aDict = vars(options)  #converts the object options to dictionary of key:value
 
     # do it!
-    mkSelPsfCat(**aDict)
+    mkSelPsfCat(basedir='/nfs/slac/g/ki/ki18/cpd/psfextest', **aDict)
 

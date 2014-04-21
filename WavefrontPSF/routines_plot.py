@@ -747,7 +747,7 @@ def data_hist_plot(data, edges, scales=None,
             key_axis.set_title(key)
             ## (counts, xedges, yedges, Image) = key_axis.hist2d(
             ##     x, y, bins=edges, weights=data[key], **scales[key])
-            r = data[key]
+            r = np.nan_to_num(data[key])
             weighted_counts, xedges, yedges = np.histogram2d(
                 x, y, weights=r, bins=edges)
             ## Image = key_axis.imshow(weighted_counts.T / counts.T,
@@ -762,7 +762,7 @@ def data_hist_plot(data, edges, scales=None,
             key_figure = figures[key]
             key_axis = axes[key]
             key_axis.set_title(key)
-            r = np.sqrt(u ** 2 + v ** 2)
+            r = np.nan_to_num(np.sqrt(u ** 2 + v ** 2))
             ## (counts, xedges, yedges, Image) = key_axis.hist2d(
             ##     x, y, bins=edges, weights=r, **scales[key])
             weighted_counts, xedges, yedges = np.histogram2d(
@@ -780,7 +780,7 @@ def data_hist_plot(data, edges, scales=None,
             key_axis.set_title(key)
             ## (counts, xedges, yedges, Image) = key_axis.hist2d(
             ##     x, y, bins=edges, weights=data[key], **scales[key])
-            r = data[key]
+            r = np.nan_to_num(data[key])
             weighted_counts, xedges, yedges = np.histogram2d(
                 x, y, weights=r, bins=edges)
             ## Image = key_axis.imshow(weighted_counts.T / counts.T,
@@ -933,7 +933,7 @@ def data_contour_plot(data, edges, scales=None,
             key_axis.set_title(key)
             ## (counts, xedges, yedges, Image) = key_axis.hist2d(
             ##     x, y, bins=edges, weights=data[key], **scales[key])
-            r = data[key]
+            r = np.nan_to_num(data[key])
             weighted_counts, xedges, yedges = np.histogram2d(
                 x, y, weights=r, bins=edges)
             ## Image = key_axis.imshow(weighted_counts.T / counts.T,
@@ -949,7 +949,7 @@ def data_contour_plot(data, edges, scales=None,
             key_figure = figures[key]
             key_axis = axes[key]
             key_axis.set_title(key)
-            r = np.sqrt(u ** 2 + v ** 2)
+            r = np.nan_to_num(np.sqrt(u ** 2 + v ** 2))
             ## (counts, xedges, yedges, Image) = key_axis.hist2d(
             ##     x, y, bins=edges, weights=r, **scales[key])
             weighted_counts, xedges, yedges = np.histogram2d(
@@ -968,7 +968,7 @@ def data_contour_plot(data, edges, scales=None,
             key_axis.set_title(key)
             ## (counts, xedges, yedges, Image) = key_axis.hist2d(
             ##     x, y, bins=edges, weights=data[key], **scales[key])
-            r = data[key]
+            r = np.nan_to_num(data[key])
             weighted_counts, xedges, yedges = np.histogram2d(
                 x, y, weights=r, bins=edges)
             ## Image = key_axis.imshow(weighted_counts.T / counts.T,
