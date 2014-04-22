@@ -34,8 +34,8 @@ parser.add_argument("-t", "--tag",dest="tag",default="SVA1_FINALCUT",
 options = parser.parse_args()
 
 # TODO: Change this!
-username = "roodman"
-password = "roo70chips"
+username = "cpd"
+password = "cpd70chips"
 
 # exposure table has expnum, and id, and this id is called exposureid in the image table
 # image table has exposureid, id, run and imagetype

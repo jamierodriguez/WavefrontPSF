@@ -253,59 +253,6 @@ def generate_path_results(expids, path_base):
     return path_results, expids_used
 
 
-def generate_hdu_lists_sex(
-        expid,
-        path_base='/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript/'):
-    """quick and dirty way of getting the hdu list format I am now using
-
-    Parameters
-    ----------
-    expid : integer
-        The image number I want to look at
-
-    path_base : string
-        The directory in which the catalogs are located
-
-    Returns
-    -------
-    list_catalogs : list
-        a list pointing to all the catalogs we wish to combine.
-
-    list_fits_extension : list of integers
-        a list pointing which extension on a given fits file we open
-        format: [[2], [3,4]] says for the first in list_catalog, combine
-        the 2nd extension with the 2nd list_catalog's 3rd and 4th
-        extensions.
-
-    list_chip : list of strings
-        a list containing the extension name of the chip. ie [['N1'],
-        ['S29', 'S5']]
-
-    """
-
-    list_catalogs_base = \
-            path_base + '{0:08d}/DECam_{0:08d}_'.format(expid)
-    list_catalogs = [list_catalogs_base + '{0:02d}_cat.fits'.format(i)
-                     for i in xrange(1, 63)]
-    list_catalogs.pop(60)
-    # ccd 2 went bad too.
-    if expid > 258804:
-        list_catalogs.pop(1)
-
-    list_chip = [[decaminfo().ccddict[i]] for i in xrange(1, 63)]
-    list_chip.pop(60)
-    # ccd 2 went bad too.
-    if expid > 258804:
-        list_chip.pop(1)
-
-    # ccd 2 went bad too.
-    if expid > 258804:
-        list_fits_extension = [[2]] * (63-3)
-    else:
-        list_fits_extension = [[2]] * (63-2)
-
-    return list_catalogs, list_fits_extension, list_chip
-
 def generate_hdu_lists(
         expid,
         path_base='/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript/',
@@ -372,68 +319,6 @@ def generate_hdu_lists(
 
     return list_catalogs, list_fits_extension, list_chip
 
-
-def combine_decam_catalogs_old(list_catalogs, list_fits_extension, list_chip):
-    """assemble an array from all the focal plane chips
-
-    Parameters
-    ----------
-    list_catalogs : list
-        a list pointing to all the catalogs we wish to combine.
-
-    list_fits_extension : list of integers
-        a list pointing which extension on a given fits file we open
-        format: [[2], [3,4]] says for the first in list_catalog, combine
-        the 2nd extension with the 2nd list_catalog's 3rd and 4th
-        extensions.
-
-    list_chip : list of strings
-        a list containing the extension name of the chip. ie [['N1'],
-        ['S29', 'S5']]
-
-    Returns
-    -------
-    recdata_all : recarray
-        The entire contents of all the fits extensions combined
-
-    ext_all : array
-        Array of all the extension names
-
-    """
-
-    for catalog_i in xrange(len(list_catalogs)):
-        hdu_path = list_catalogs[catalog_i]
-
-        try:
-            hdu = pyfits.open(hdu_path)
-        except IOError:
-            print('Cannot open ', hdu_path)
-            continue
-
-        fits_extension_i = list_fits_extension[catalog_i]
-        chip_i = list_chip[catalog_i]
-
-        for fits_extension_ij in xrange(len(fits_extension_i)):
-            ext_name = chip_i[fits_extension_ij]
-            recdata = hdu[fits_extension_i[fits_extension_ij]].data
-            recheader = hdu[fits_extension_i[fits_extension_ij]].header
-
-            try:
-                recdata_all = np.append(recdata_all, recdata)
-                ext_all = np.append(ext_all,
-                                   [ext_name] * recdata.size)
-                recheader_all = np.append(recheader_all, recheader)
-
-            except NameError:
-                # haven't made recdata_combined yet!
-                recdata_all = recdata.copy()
-                ext_all = np.array([ext_name] * recdata.size)
-                recheader_all = recheader.copy()
-
-        hdu.close()
-
-    return recdata_all, ext_all, recheader_all
-
 def combine_decam_catalogs(list_catalogs, list_fits_extension, list_chip):
     """assemble an array from all the focal plane chips
 
@@ -492,39 +377,9 @@ def combine_decam_catalogs(list_catalogs, list_fits_extension, list_chip):
     ext_all = np.array(ext_all)
     return recdata_all, ext_all, recheader_all
 
-## def download_cat(rid, expid, date, i):
-##     # downloads to whatever the current directory is
-##     command = "wget --no-check-certificate --http-user=cpd --http-password=cpd70chips -nc -nd -nH -r -k -p -np  --cut-dirs=3 https://desar2.cosmology.illinois.edu/DESFiles/desardata/OPS/red/{0}_{3}/red/DECam_{1:08d}/DECam_{1:08d}_{2:02d}_cat.fits".format(rid, expid, i, date)
-##     command = ['wget', '--no-check-certificate',
-##                '--http-user=cpd', '--http-password=cpd70chips',
-##                '-nc', '-nd', '-nH', '-r', '-k', '-p', '-np',
-##                '--cut-dirs=3',
-##                "https://desar2.cosmology.illinois.edu/DESFiles/desardata/OPS/"
-##                + "red/{0}_{1}/red/DECam_".format(rid, date)
-##                + "{0:08d}/DECam_{0:08d}_{1:02d}_cat.fits".format(expid, i)]
-##     print_command(command)
-##     call(command)
-##     return
-## 
-## def download_image(rid, expid, date, i):
-##     # downloads to current directory
-##     command = "wget --no-check-certificate --http-user=cpd --http-password=cpd70chips -nc -nd -nH -r -k -p -np  --cut-dirs=3 https://desar2.cosmology.illinois.edu/DESFiles/desardata/OPS/red/{0}_{3}/red/DECam_{1:08d}/DECam_{1:08d}_{2:02d}.fits.fz".format(rid, expid, i, date)
-##     print(command)
-##     system(command)
-##     # decompress image
-##     command = "funpack DECam_{0:08d}_{1:02d}.fits.fz".format(expid, i)
-##     system(command)
-##     # remove old compressed image
-##     remove("DECam_{0:08d}_{1:02d}.fits.fz".format(expid, i))
-## 
-##     return
 
 def download_desdm_filelist(expid, dataDirectory,
                    tag='Y1N_FIRSTCUT',
-                   download_catalog=True,
-                   download_image=True,
-                   download_psfcat=False,
-                   download_background=False,
                    ccd=None, verbose=True):
     username = "cpd"
     password = "cpd70chips"
@@ -578,10 +433,6 @@ def download_desdm(expid, dataDirectory,
     if not path.exists(outname):
         download_desdm_filelist(expid, dataDirectory,
                    tag,
-                   download_catalog,
-                   download_image,
-                   download_psfcat,
-                   download_background,
                    ccd, verbose)
 
     lines = [line.rstrip('\r\n') for line in open(outname)]
