@@ -462,13 +462,17 @@ def download_desdm(expid, dataDirectory,
             else:
                 cmd = 'wget --user='+username+' --password='+password+' --no-check-certificate'
                 if download_image:
-                    cmd += ' ' + imfiles[i]
+                    if not path.exists(imfiles[i].split('/')[-1]):
+                        cmd += ' ' + imfiles[i]
                 if download_catalog:
-                    cmd += ' ' + catfiles[i]
+                    if not path.exists(catfiles[i].split('/')[-1]):
+                        cmd += ' ' + catfiles[i]
                 if download_psfcat:
-                    cmd += ' ' + psfcatfiles[i]
+                    if not path.exists(psfcatfiles[i].split('/')[-1]):
+                        cmd += ' ' + psfcatfiles[i]
                 if download_background:
-                    cmd += ' ' + bkgfiles[i]
+                    if not path.exists(bkgfiles[i].split('/')[-1]):
+                        cmd += ' ' + bkgfiles[i]
 
                 if verbose:
                     print(cmd)

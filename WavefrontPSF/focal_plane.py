@@ -403,6 +403,7 @@ class FocalPlane(Wavefront):
                      ['y3', 'Y3' + self.coord_name],
                      ['a4', 'A4_ADAPTIVE'],
                      ['flux', 'FLUX_ADAPTIVE'],
+                     ['fwhm_adaptive', 'FWHM_ADAPTIVE'],
                      ['sn_flux', 'SN_FLUX'],
                      ['snr_win', 'SNR_WIN'],
                      ['e0', 'e0'],
@@ -412,6 +413,7 @@ class FocalPlane(Wavefront):
                      ['delta2', 'delta2'],
                      ['zeta1', 'zeta1'],
                      ['zeta2', 'zeta2'],
+                     ['vignet', 'VIGNET'],
                      ]
 
         for key in keys_list:

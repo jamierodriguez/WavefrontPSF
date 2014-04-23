@@ -356,7 +356,7 @@ for i in xrange(1, 63):
             moment_dict['x2y'])
         pyfits_dict['XY2WIN_IMAGE']['array'].append(
             moment_dict['xy2'])
-        pyfits_dict['FWHM_IMAGE']['array'].append(
+        pyfits_dict['FWHM_ADAPTIVE']['array'].append(
             moment_dict['fwhm'])
 
         pyfits_dict['WHISKER']['array'].append(
