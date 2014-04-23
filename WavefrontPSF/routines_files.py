@@ -410,7 +410,8 @@ def download_desdm_filelist(expid, dataDirectory,
     if verbose:
         print(cmd)
 
-    call(cmd,shell=True)
+    if not path.exists(outname):
+        call(cmd,shell=True)
 
 def download_desdm(expid, dataDirectory,
                    tag='Y1N_FIRSTCUT',
