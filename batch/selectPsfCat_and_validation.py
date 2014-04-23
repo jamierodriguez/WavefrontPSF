@@ -74,12 +74,12 @@ def mkSelPsfCat(expnum, tag="SVA1_FINALCUT",
 
 
     # run psfex & build selpsfcat
-    for i in range(1,62+1):
+    for i in [1]:#range(1,62+1):
 
         if getIn:
             #getPsfCat(expnum,tag,i)
             download_desdm(expnum, directory, tag=tag, ccd=i,
-                           download_catalog=True, download_psfcat=True,
+                           download_catalog=False, download_psfcat=True,
                            download_image=False, download_background=False)
 
 
@@ -92,7 +92,7 @@ def mkSelPsfCat(expnum, tag="SVA1_FINALCUT",
 
         selname = "DECam_%08d_%02d_selpsfcat.fits" % (expnum,i)
         valname = "DECam_%08d_%02d_valpsfcat.fits" % (expnum,i)
-        sexcatname = "DECam_%08d_%02d_cat.fits" % (expnum,i)
+        #sexcatname = "DECam_%08d_%02d_cat.fits" % (expnum,i)
 
 
         if os.path.exists(filename):
@@ -101,7 +101,7 @@ def mkSelPsfCat(expnum, tag="SVA1_FINALCUT",
             os.system(cmd)
 
             # filter out a validation cat
-            buildValidationCat(expnum, i, filename, catname, filename_out,
+            buildValidationCat(expnum, i, filename, catname, filename_fin,
                                valname, fraction=fraction)
 
             # build your final actual selpsfcat
@@ -109,18 +109,19 @@ def mkSelPsfCat(expnum, tag="SVA1_FINALCUT",
             print cmd
             os.system(cmd)
 
-            buildSelPsfCat(expnum,i,filename_fin,catname_fin,selname,sexcatname)
+            buildSelPsfCat(expnum,i,filename_fin,catname_fin,selname)
 
             if deleteIn:
                 os.remove(filename)
                 os.remove(filename_fin)
-                os.remove(sexcatname)
+                os.remove(catname)
+                os.remove(catname_fin)
         else:
             print(filename + ' does not exist!')
 
 
 
-def buildSelPsfCat(expnum,iext,filename,catname,sexcatname,selname):
+def buildSelPsfCat(expnum,iext,filename,catname,selname):
     """ actually build the selpsfcat file
     """
 
@@ -132,10 +133,6 @@ def buildSelPsfCat(expnum,iext,filename,catname,sexcatname,selname):
     outcathdu = pyfits.open(catname)
     outcat = outcathdu[2].data
     noutcat = outcat.shape[0]
-
-    sexcathdu = pyfits.open(sexcatname)
-    sexcat = sexcathdu[2].data
-    nsexcat = sexcat.shape[0]
 
     # loop over selected stars, build a mask for them in the psfcat
     mask = numpy.zeros((npsfcat),dtype=bool)
@@ -189,7 +186,7 @@ def buildSelPsfCat(expnum,iext,filename,catname,sexcatname,selname):
         row = newcat[irow]
         irowArr[irow] = irow
         # call CPD code to calculate moments
-        stamp = row['VIGNET']
+        stamp = numpy.copy(row['VIGNET'])
         stamp = stamp.astype(numpy.float64)
         moments = WF.moments(stamp, background=median, threshold=median+sigma)
         moments = convert_moments(moments)
@@ -216,13 +213,13 @@ def buildSelPsfCat(expnum,iext,filename,catname,sexcatname,selname):
     c6 = pyfits.Column(name='e0',format='1E',array=e0,unit='arcsec^2')
     c7 = pyfits.Column(name='e1',format='1E',array=e1,unit='arcsec^2')
     c8 = pyfits.Column(name='e2',format='1E',array=e2,unit='arcsec^2')
-    c9 = pyfits.Column(name='flux',format='1E',array=flux,unit='counts')
+    c9 = pyfits.Column(name='FLUX_ADAPTIVE',format='1E',array=flux,unit='counts')
     c10 = pyfits.Column(name='delta1',format='1E',array=delta1,unit='arcsec^3')
     c11 = pyfits.Column(name='delta2',format='1E',array=delta2,unit='arcsec^3')
     c12 = pyfits.Column(name='zeta1',format='1E',array=zeta1,unit='arcsec^3')
     c13 = pyfits.Column(name='zeta2',format='1E',array=zeta2,unit='arcsec^3')
-    c14 = pyfits.Column(name='a4',format='1E',array=a4)
-    c15 = pyfits.Column(name='fwhm_adaptive',format='1E',array=fwhm_adaptive,unit='pixel')
+    c14 = pyfits.Column(name='A4_ADAPTIVE',format='1E',array=a4)
+    c15 = pyfits.Column(name='FWHM_ADAPTIVE',format='1E',array=fwhm_adaptive,unit='pixel')
 
     # add some medians and image information too
     e0Median = numpy.median(e0)
@@ -257,8 +254,8 @@ def buildSelPsfCat(expnum,iext,filename,catname,sexcatname,selname):
     arr30 = numpy.ones((nrows),dtype=numpy.float32) * zeta2Median
     c30 = pyfits.Column(name='zeta2Median',format='1E',array=arr30,unit='arcsec^3')
 
-    coldefs = pyfits.colDefs([c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10,
-         c11, c12, c13, c14, c15 c20, c21, c22, c23, c24, c25, c26, c27, c28,
+    coldefs = pyfits.ColDefs([c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10,
+         c11, c12, c13, c14, c15, c20, c21, c22, c23, c24, c25, c26, c27, c28,
          c29, c30])
     newt2hdu = pyfits.new_table(coldefs)
 
@@ -268,7 +265,12 @@ def buildSelPsfCat(expnum,iext,filename,catname,sexcatname,selname):
 
     # merge the two tables
     newtable = newthdu.columns + newt2hdu.columns
+    # for some reason it is in the conversion newtable to newtablehdu that the
+    # vignet parameter goes wrong; can check via newtable.columns[0].array vs
+    # newtablehdu.data['VIGNET']
     newtablehdu = pyfits.new_table(newtable)
+    # try to fix that
+    newtablehdu.data['VIGNET'] = newcat['VIGNET']
 
     # make output fits file
     prihdr = pyfits.Header()
@@ -293,6 +295,7 @@ def buildValidationCat(expnum, iext, filename, catname,
 
     # loop over selected stars, build a mask for them to put into valname
     mask = numpy.zeros((npsfcat), dtype=bool)
+    mask_all = numpy.zeros((npsfcat), dtype=bool)
 
     # create validation selection
     validation_sample = numpy.zeros((npsfcat), dtype=bool)
@@ -306,14 +309,131 @@ def buildValidationCat(expnum, iext, filename, catname,
         # decide whether to put into validation (so mask them) or not
         if validation_sample[i]:
             mask[isource] = True
+        mask_all[isource] = True
 
-    # create validation cat
-    psfcathdu[2].data = psfcat[mask]
-    psfcathdu.writeto(valname)
+
+    # collect all pixels from all VIGNET's and find 1sigma background level
+    allpixels = psfcat[mask_all]['VIGNET'].flatten()
+    median,sigma = calc_threshold(allpixels)
 
     # get rid of the validation entries
     psfcathdu[2].data = psfcat[~mask]
-    psfcathdu.writeto(filename_out)
+    psfcathdu.writeto(filename_out, clobber=True)
+
+
+    # now the process of creating the validation catalog:
+
+    # create validation cat
+    valcat = psfcat[mask]
+    nrows = valcat.shape[0]
+    # psfcathdu[2].data = valcat
+    # psfcathdu.writeto(valname, clobber=True)
+
+
+    # calculate moments with Chris's code
+    WF = Wavefront()
+    e0 = numpy.zeros((nrows))
+    e1 = numpy.zeros((nrows))
+    e2 = numpy.zeros((nrows))
+    flux = numpy.zeros((nrows))
+    delta1 = numpy.zeros((nrows))
+    delta2 = numpy.zeros((nrows))
+    zeta1 = numpy.zeros((nrows))
+    zeta2 = numpy.zeros((nrows))
+    a4 = numpy.zeros((nrows))
+    fwhm_adaptive = numpy.zeros((nrows))
+
+    for irow in range(nrows):
+        row = valcat[irow]
+        # call CPD code to calculate moments
+        stamp = numpy.copy(row['VIGNET'])
+        stamp = stamp.astype(numpy.float64)
+        moments = WF.moments(stamp, background=median, threshold=median+sigma)
+        moments = convert_moments(moments)
+
+        e0[irow] = moments['e0']
+        e1[irow] = moments['e1']
+        e2[irow] = moments['e2']
+        flux[irow] = moments['flux']
+        delta1[irow] = moments['delta1']
+        delta2[irow] = moments['delta2']
+        zeta1[irow] = moments['zeta1']
+        zeta2[irow] = moments['zeta2']
+
+        a4[irow] = moments['a4']
+        fwhm_adaptive[irow] = moments['fwhm']
+
+
+    # build 2nd table from extra columns
+    c6 = pyfits.Column(name='e0',format='1E',array=e0,unit='arcsec^2')
+    c7 = pyfits.Column(name='e1',format='1E',array=e1,unit='arcsec^2')
+    c8 = pyfits.Column(name='e2',format='1E',array=e2,unit='arcsec^2')
+    c9 = pyfits.Column(name='FLUX_ADAPTIVE',format='1E',array=flux,unit='counts')
+    c10 = pyfits.Column(name='delta1',format='1E',array=delta1,unit='arcsec^3')
+    c11 = pyfits.Column(name='delta2',format='1E',array=delta2,unit='arcsec^3')
+    c12 = pyfits.Column(name='zeta1',format='1E',array=zeta1,unit='arcsec^3')
+    c13 = pyfits.Column(name='zeta2',format='1E',array=zeta2,unit='arcsec^3')
+    c14 = pyfits.Column(name='A4_ADAPTIVE',format='1E',array=a4)
+    c15 = pyfits.Column(name='FWHM_ADAPTIVE',format='1E',array=fwhm_adaptive,unit='pixel')
+
+    # add some medians and image information too
+    e0Median = numpy.median(e0)
+    e1Median = numpy.median(e1)
+    e2Median = numpy.median(e2)
+    delta1Median = numpy.median(delta1)
+    delta2Median = numpy.median(delta2)
+    zeta1Median = numpy.median(zeta1)
+    zeta2Median = numpy.median(zeta2)
+    fwhm = 2.355 * numpy.sqrt(e0)
+    fwhmMedian = numpy.median(fwhm)
+
+    arr20 = numpy.ones((nrows),dtype=numpy.int32) * expnum
+    c20 = pyfits.Column(name='expnum',format='1J',array=arr20)
+    arr21 = numpy.ones((nrows),dtype=numpy.int16) * iext
+    c21 = pyfits.Column(name='ext',format='1I',array=arr21)
+    c22 = pyfits.Column(name='fwhm',format='1E',array=fwhm,unit='arcsec')
+    arr23 = numpy.ones((nrows),dtype=numpy.float32) * fwhmMedian
+    c23 = pyfits.Column(name='fwhmMedian',format='1E',array=arr23,unit='arcsec')
+    arr24 = numpy.ones((nrows),dtype=numpy.float32) * e0Median
+    c24 = pyfits.Column(name='e0Median',format='1E',array=arr24,unit='arcsec^2')
+    arr25 = numpy.ones((nrows),dtype=numpy.float32) * e1Median
+    c25 = pyfits.Column(name='e1Median',format='1E',array=arr25,unit='arcsec^2')
+    arr26 = numpy.ones((nrows),dtype=numpy.float32) * e2Median
+    c26 = pyfits.Column(name='e2Median',format='1E',array=arr26,unit='arcsec^2')
+    arr27 = numpy.ones((nrows),dtype=numpy.float32) * delta1Median
+    c27 = pyfits.Column(name='delta1Median',format='1E',array=arr27,unit='arcsec^3')
+    arr28 = numpy.ones((nrows),dtype=numpy.float32) * delta2Median
+    c28 = pyfits.Column(name='delta2Median',format='1E',array=arr28,unit='arcsec^3')
+    arr29 = numpy.ones((nrows),dtype=numpy.float32) * zeta1Median
+    c29 = pyfits.Column(name='zeta1Median',format='1E',array=arr29,unit='arcsec^3')
+    arr30 = numpy.ones((nrows),dtype=numpy.float32) * zeta2Median
+    c30 = pyfits.Column(name='zeta2Median',format='1E',array=arr30,unit='arcsec^3')
+
+
+    coldefs = pyfits.ColDefs([c6, c7, c8, c9, c10,
+         c11, c12, c13, c14, c15, c20, c21, c22, c23, c24, c25, c26, c27, c28,
+         c29, c30])
+
+    newt2hdu = pyfits.new_table(coldefs)
+
+    # fill new table
+    newthdu = pyfits.new_table(valcat.columns)
+    newthdu.data = valcat
+
+    # merge the two tables
+    newtable = newthdu.columns + newt2hdu.columns
+    # for some reason it is in the conversion newtable to newtablehdu that the
+    # vignet parameter goes wrong; can check via newtable.columns[0].array vs
+    # newtablehdu.data['VIGNET']
+    newtablehdu = pyfits.new_table(newtable)
+    # try to fix that
+    newtablehdu.data['VIGNET'] = valcat['VIGNET']
+
+    # make output fits file
+    prihdr = pyfits.Header()
+    prihdu = pyfits.PrimaryHDU(header=prihdr)
+    thdulist = pyfits.HDUList([prihdu,psfimhead,newtablehdu])
+    thdulist.writeto(valname,clobber=True)
 
 #  run from command line
 #
@@ -331,7 +451,7 @@ if __name__ == "__main__":
     expid = aDict['expnum']
 
     # load up the data file
-    explist = np.load('/nfs/slac/g/ki/ki18/cpd/catalogs/sva1-list.npy')
+    explist = numpy.load('/nfs/slac/g/ki/ki18/cpd/catalogs/sva1-list.npy')
     exp_path = explist[explist['expid'] == expid]['path'][0]
 
     # do it!
