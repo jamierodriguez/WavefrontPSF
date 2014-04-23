@@ -52,7 +52,8 @@ def calc_threshold(values):
 
 def mkSelPsfCat(expnum, tag="SVA1_FINALCUT",
         basedir="/nfs/slac/g/ki/ki22/roodman/dmdata", 
-        getIn=True, deleteIn=True, fraction=0.2):
+        getIn=True, deleteIn=True, fraction=0.2, ccd=0,
+        **kwargs):
     """ make a -psfcat.fits catalog with just stars used by PSFex
     1) call psfex with option to make _out.cat
     2) readin _out.cat pick these stars out of -psfcat.fits
@@ -74,7 +75,11 @@ def mkSelPsfCat(expnum, tag="SVA1_FINALCUT",
 
 
     # run psfex & build selpsfcat
-    for i in [1]:#range(1,62+1):
+    if ccd = 0:
+        ccdrange = range(1, 62 + 1)
+    else:
+        ccdrange = [ccd]
+    for i in ccdrange:
 
         if getIn:
             #getPsfCat(expnum,tag,i)
@@ -444,16 +449,49 @@ if __name__ == "__main__":
                   dest="expnum",
                   type=int,
                   help="sispi exposure number")
+    parser.add_argument("-l", "--explist",
+                  dest="explist",
+                  default="/nfs/slac/g/ki/ki18/cpd/catalogs/sva1-list.npy",
+                  help="numpy file with the exposure numbers")
+    parser.add_argument("-o", "--basedir",
+                  dest="basedir",
+                  default="/nfs/slac/g/ki/ki18/cpd/psfextest",
+                  help="Location of base output directory.")
+    parser.add_argument("-f", "--fraction",
+                  dest="fraction",
+                  default=0.2,
+                  type=float,
+                  help="Fraction of data saved for validation.")
+    parser.add_argument("-g", "--getIn",
+                  dest="getIn",
+                  default=True,
+                  type=bool,
+                  help="Do we download the files?")
+    parser.add_argument("-d", "--deleteIn",
+                  dest="deleteIn",
+                  default=True,
+                  type=bool,
+                  help="Do we delete input files once done?")
+    parser.add_argument("-t", "--tag",
+                  dest="tag",
+                  default="SVA1_FINALCUT",
+                  help="Tag for the input file. (SVA1_FINALCUT, Y1N_FIRSTCUT, etc)")
+    parser.add_argument("-c", "--ccd",
+                  dest="ccd",
+                  default=0,
+                  type=int,
+                  help="CCD Number to run on. 0 does all science chips.")
 
     # collect the options
     options = parser.parse_args()
     aDict = vars(options)
     expid = aDict['expnum']
+    explist_path = aDict['explist']
 
     # load up the data file
-    explist = numpy.load('/nfs/slac/g/ki/ki18/cpd/catalogs/sva1-list.npy')
+    explist = numpy.load(explist_path)
     exp_path = explist[explist['expid'] == expid]['path'][0]
 
     # do it!
-    mkSelPsfCat(basedir='/nfs/slac/g/ki/ki18/cpd/psfextest', **aDict)
+    mkSelPsfCat(**aDict)
 
