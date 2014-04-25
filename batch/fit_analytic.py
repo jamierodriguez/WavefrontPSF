@@ -6,10 +6,10 @@ Description: File that takes a DES catalog and fits via analytic function
 
 TODO: Add residual plots
 TODO: Add plots from non-analytic
-TODO: Remove some of the reference plots? (Already have them elsewhere...)
 TODO: Consistency with image.py for plots and particularly error bars?
-TODO: Plot zernikes across focal plane?
-TODO: Don't fit for EVERY star; save some for verification
+    soln: image used mean_trim, whereas this uses mean; these should be bigger
+    error bars?
+
 """
 
 from __future__ import print_function, division
@@ -90,13 +90,13 @@ parser.add_argument("-o",
 parser.add_argument("--chi_weights",
                     dest="chi_weights",
                     default="{" +
-                            "'e0': 0.01, " +
+                            "'e0': 0.25, " +
                             "'e1': 1., " +
                             "'e2': 1., " +
-                            "'delta1': 0.1, " +
-                            "'delta2': 0.1, " +
-                            "'zeta1': 0.01, " +
-                            "'zeta2': 0.01, " +
+                            "'delta1': 0.25, " +
+                            "'delta2': 0.25, " +
+                            "'zeta1': 0.05, " +
+                            "'zeta2': 0.05, " +
                             "}",
                     help='what chi_weights will be used?')
 parser.add_argument("--p_init",
@@ -198,16 +198,6 @@ else:
 # set up fit
 ##############################################################################
 
-## chi_weights = {
-##     'e0': 0.01,
-##     'e1': 1.,
-##     'e2': 1.,
-##     'delta1': 0.1,
-##     'delta2': 0.1,
-##     'zeta1': 0.01,
-##     'zeta2': 0.01,
-##     }
-
 chi_weights = eval(args_dict['chi_weights'])
 p_init = eval(args_dict['p_init'])
 
@@ -296,46 +286,6 @@ def SaveFunc(steps, defaults=False):
     save_func_hists(**in_dict)
 
     return
-
-# fit
-## p_init = {
-##     'delta1' : 0,
-##     'delta2' : 0,
-## ##     'dx' :     0,
-## ##     'dy' :     0,
-## ##     'dz' :     0,
-##     'e1' :     0,
-##     'e2' :     0,
-##     'rzero' :  0.14,
-## ##     'xt' :     0,
-## ##     'yt' :     0,
-##     'z04d' :   0,
-## ##     'z04x' :   0,
-## ##     'z04y' :   0,
-##     'z05d' :   0,
-##     'z05x' :   0,
-##     'z05y' :   0,
-##     'z06d' :   0,
-##     'z06x' :   0,
-##     'z06y' :   0,
-##     'z07d' :   0,
-## ##     'z07x' :   0,
-## ##     'z07y' :   0,
-##     'z08d' :   0,
-## ##     'z08x' :   0,
-## ##     'z08y' :   0,
-##     'z09d' :   0,
-## ##     'z09x' :   0,
-## ##     'z09y' :   0,
-##     'z10d' :   0,
-## ##     'z10x' :   0,
-## ##     'z10y' :   0,
-##     'z11d' :   0,
-## ##     'z11x' :   0,
-## ##     'z11y' :   0,
-##     'zeta1' :  0,
-##     'zeta2' :  0,
-##     }
 
 par_names = sorted(p_init.keys())
 h_base = 1e-3
@@ -452,6 +402,81 @@ if verbose:
         axes[fig].set_title('{0:08d}: {1}'.format(expid, fig))
         figures[fig].savefig(output_directory +
            '{0:04d}_focal_plot_{1}.png'.format(nCalls, fig))
+    plt.close('all')
+
+
+    # the above with defaults=False
+    # refrence histograms
+    figures, axes, scales = data_hist_plot(data_compare, edges, defaults=False)
+    for fig in figures:
+        axes[fig].set_title('{0:08d}: {1}'.format(expid, fig))
+        figures[fig].savefig(output_directory +
+           '{0:04d}_reference_histograms_unscaled_{1}.png'.format(nCalls, fig))
+    plt.close('all')
+    # refrence_sample histograms
+    figures, axes, scales = data_hist_plot(data_unaveraged_compare, edges,
+                                           defaults=False)
+    for fig in figures:
+        axes[fig].set_title('{0:08d}: {1}'.format(expid, fig))
+        figures[fig].savefig(output_directory +
+           '{0:04d}_sampled_histograms_unscaled_{1}.png'.format(nCalls, fig))
+    plt.close('all')
+    # final histograms
+    figures, axes, scales = data_hist_plot(poles_i, edges, defaults=False)
+    for fig in figures:
+        axes[fig].set_title('{0:08d}: {1}'.format(expid, fig))
+        figures[fig].savefig(output_directory +
+           '{0:04d}_fit_histograms_unscaled_{1}.png'.format(nCalls, fig))
+    plt.close('all')
+    # do focal plane plots
+    figures, axes, scales = data_focal_plot(data_compare, color='r',
+                                            defaults=False)
+    figures, axes, scales = data_focal_plot(poles_i, color='b',
+                                            figures=figures, axes=axes,
+                                            scales=scales)
+    for fig in figures:
+        axes[fig].set_title('{0:08d}: {1}'.format(expid, fig))
+        figures[fig].savefig(output_directory +
+           '{0:04d}_focal_plot_unscaled_{1}.png'.format(nCalls, fig))
+    plt.close('all')
+
+    # now do residuals of fit and reference
+    # residual histograms
+    data_residual = {'x_box': poles_i['x_box'], 'y_box': poles_i['y_box']}
+    for key in poles_i.keys():
+        if (key == 'x_box') + (key == 'y_box'):
+            continue
+        else:
+            data_residual.update({key: data_compare[key] - poles_i[key]})
+    figures, axes, scales = data_hist_plot(data_residual, edges, defaults=False)
+    for fig in figures:
+        axes[fig].set_title('{0:08d}: {1}'.format(expid, fig))
+        figures[fig].savefig(output_directory +
+           '{0:04d}_residual_histograms_{1}.png'.format(nCalls, fig))
+    plt.close('all')
+    # do focal plane plots
+    figures, axes, scales = data_focal_plot(data_residual, color='m',
+                                            defaults=False)
+    for fig in figures:
+        axes[fig].set_title('{0:08d}: {1}'.format(expid, fig))
+        figures[fig].savefig(output_directory +
+           '{0:04d}_focal_plot_residual_{1}.png'.format(nCalls, fig))
+    plt.close('all')
+
+    # plots of zernikes
+    zernikes = np.array(FPF.zernikes(in_dict, coords=coords_sample))
+    zernike_dict = {'x': coords_sample[:,0], 'y': coords_sample[:,1]}
+    zernike_keys = []
+    for zi in xrange(12):
+        zi_key = 'z{0:02d}'.format(zi + 1)
+        zernike_dict.update({zi_key: zernikes[:, zi]})
+        zernike_keys.append(zi_key)
+    figures, axes, scales = data_hist_plot(zernike_dict, edges,
+                                           keys=zernike_keys)
+    for fig in figures:
+        axes[fig].set_title('{0:08d}: {1}'.format(expid, fig))
+        figures[fig].savefig(output_directory +
+           '{0:04d}_fit_histograms_{1}.png'.format(nCalls, fig))
     plt.close('all')
 
     fig = plt.figure(figsize=(12, 12), dpi=300)
