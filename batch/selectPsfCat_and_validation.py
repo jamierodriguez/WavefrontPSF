@@ -75,7 +75,7 @@ def mkSelPsfCat(expnum, tag="SVA1_FINALCUT",
 
 
     # run psfex & build selpsfcat
-    if ccd = 0:
+    if ccd == 0:
         ccdrange = range(1, 62 + 1)
     else:
         ccdrange = [ccd]
