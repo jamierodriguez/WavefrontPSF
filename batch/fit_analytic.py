@@ -447,7 +447,8 @@ if verbose:
         if (key == 'x_box') + (key == 'y_box'):
             continue
         else:
-            data_residual.update({key: data_compare[key] - poles_i[key]})
+            if key in data_compare.keys():
+                data_residual.update({key: data_compare[key] - poles_i[key]})
     figures, axes, scales = data_hist_plot(data_residual, edges, defaults=False)
     for fig in figures:
         axes[fig].set_title('{0:08d}: {1}'.format(expid, fig))
