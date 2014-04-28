@@ -232,6 +232,14 @@ class FocalPlane(Wavefront):
             SN = 2.5 / np.log(10) / recdata['MAGERR_AUTO']
             conds_SN = (SN > 20) #* (SN < 100)
             conds *= conds_SN
+        elif conds == 'psfex':
+            conds = (
+                ((recdata['X' + self.coord_name] > pixel_border) *
+                 (recdata['X' + self.coord_name] < 2048 - pixel_border) *
+                 (recdata['Y' + self.coord_name] > pixel_border) *
+                 (recdata['Y' + self.coord_name] < 4096 - pixel_border)
+                ) *
+                (recdata['SNR_WIN'] > 40))
         else:
             # evaluate the string
             conds = eval(conds)

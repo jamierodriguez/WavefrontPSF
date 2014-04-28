@@ -693,7 +693,7 @@ def data_hist_plot(data, edges, scales=None,
                 #scales.update({key : dict(vmin=None, vmax=None)})
                 if defaults:
                     if key == 'e0':
-                        scales.update({key: dict(vmin=0.1, vmax=0.3)})
+                        scales.update({key: dict(vmin=0.15, vmax=0.4)})
                     elif key == 'e1':
                         scales.update({key: dict(vmin=-0.035, vmax=0.035)})
                     elif key == 'e2':

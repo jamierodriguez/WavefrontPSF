@@ -4,7 +4,6 @@ File: fit_analytic.py
 Author: Chris Davis
 Description: File that takes a DES catalog and fits via analytic function
 
-TODO: Add residual plots
 TODO: Add plots from non-analytic
 TODO: Consistency with image.py for plots and particularly error bars?
     soln: image used mean_trim, whereas this uses mean; these should be bigger
@@ -385,25 +384,13 @@ if verbose:
         figures[fig].savefig(output_directory +
            '{0:04d}_sampled_histograms_{1}.png'.format(nCalls, fig))
     plt.close('all')
-    # final histograms
+    # fit histograms
     figures, axes, scales = data_hist_plot(poles_i, edges)
     for fig in figures:
         axes[fig].set_title('{0:08d}: {1}'.format(expid, fig))
         figures[fig].savefig(output_directory +
            '{0:04d}_fit_histograms_{1}.png'.format(nCalls, fig))
     plt.close('all')
-    # do focal plane plots
-    figures, axes, scales = data_focal_plot(data_compare, color='r',
-                                            defaults=True)
-    figures, axes, scales = data_focal_plot(poles_i, color='b',
-                                            figures=figures, axes=axes,
-                                            scales=scales)
-    for fig in figures:
-        axes[fig].set_title('{0:08d}: {1}'.format(expid, fig))
-        figures[fig].savefig(output_directory +
-           '{0:04d}_focal_plot_{1}.png'.format(nCalls, fig))
-    plt.close('all')
-
 
     # the above with defaults=False
     # refrence histograms
@@ -413,6 +400,7 @@ if verbose:
         figures[fig].savefig(output_directory +
            '{0:04d}_reference_histograms_unscaled_{1}.png'.format(nCalls, fig))
     plt.close('all')
+
     # refrence_sample histograms
     figures, axes, scales = data_hist_plot(data_unaveraged_compare, edges,
                                            defaults=False)
@@ -421,26 +409,15 @@ if verbose:
         figures[fig].savefig(output_directory +
            '{0:04d}_sampled_histograms_unscaled_{1}.png'.format(nCalls, fig))
     plt.close('all')
-    # final histograms
+
+    # fit histograms
     figures, axes, scales = data_hist_plot(poles_i, edges, defaults=False)
     for fig in figures:
         axes[fig].set_title('{0:08d}: {1}'.format(expid, fig))
         figures[fig].savefig(output_directory +
            '{0:04d}_fit_histograms_unscaled_{1}.png'.format(nCalls, fig))
     plt.close('all')
-    # do focal plane plots
-    figures, axes, scales = data_focal_plot(data_compare, color='r',
-                                            defaults=False)
-    figures, axes, scales = data_focal_plot(poles_i, color='b',
-                                            figures=figures, axes=axes,
-                                            scales=scales)
-    for fig in figures:
-        axes[fig].set_title('{0:08d}: {1}'.format(expid, fig))
-        figures[fig].savefig(output_directory +
-           '{0:04d}_focal_plot_unscaled_{1}.png'.format(nCalls, fig))
-    plt.close('all')
 
-    # now do residuals of fit and reference
     # residual histograms
     data_residual = {'x_box': poles_i['x_box'], 'y_box': poles_i['y_box']}
     for key in poles_i.keys():
@@ -455,7 +432,33 @@ if verbose:
         figures[fig].savefig(output_directory +
            '{0:04d}_residual_histograms_{1}.png'.format(nCalls, fig))
     plt.close('all')
+
+
     # do focal plane plots
+    figures, axes, scales = data_focal_plot(data_compare, color='r',
+                                            defaults=True)
+    figures, axes, scales = data_focal_plot(poles_i, color='b',
+                                            figures=figures, axes=axes,
+                                            scales=scales)
+    for fig in figures:
+        axes[fig].set_title('{0:08d}: {1}'.format(expid, fig))
+        figures[fig].savefig(output_directory +
+           '{0:04d}_focal_plot_{1}.png'.format(nCalls, fig))
+    plt.close('all')
+
+    # do unscaled focal plane plots
+    figures, axes, scales = data_focal_plot(data_compare, color='r',
+                                            defaults=False)
+    figures, axes, scales = data_focal_plot(poles_i, color='b',
+                                            figures=figures, axes=axes,
+                                            scales=scales)
+    for fig in figures:
+        axes[fig].set_title('{0:08d}: {1}'.format(expid, fig))
+        figures[fig].savefig(output_directory +
+           '{0:04d}_focal_plot_unscaled_{1}.png'.format(nCalls, fig))
+    plt.close('all')
+
+    # do focal plane residual
     figures, axes, scales = data_focal_plot(data_residual, color='m',
                                             defaults=False)
     for fig in figures:
@@ -468,7 +471,7 @@ if verbose:
     zernikes = np.array(FPF.zernikes(in_dict, coords=coords_sample))
     zernike_dict = {'x': coords_sample[:,0], 'y': coords_sample[:,1]}
     zernike_keys = []
-    for zi in xrange(12):
+    for zi in xrange(11):
         zi_key = 'z{0:02d}'.format(zi + 1)
         zernike_dict.update({zi_key: zernikes[:, zi]})
         zernike_keys.append(zi_key)
