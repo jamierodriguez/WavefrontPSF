@@ -3,6 +3,8 @@
 File: validation.py
 Author: Chris Davis
 Description: For a given expid, create the validation data.
+
+TODO: generate images for wavefrontpsf
 """
 
 from __future__ import print_function, division
@@ -97,18 +99,20 @@ for key in dat.dtype.names:
 
 FP_unaveraged = FP.data_unaveraged
 PSFEx_unaveraged = FPP.plane(FP.coords)
-WavefrontPSF_unaveraged = FPF.analytic_plane(FPFdict, FP.coords)
-
+WavefrontPSF_analytic_unaveraged = FPF.analytic_plane(FPFdict, FP.coords)
+WavefrotnPSF_unaveraged = FPF.plane(FPFdict, FP.coords)
 
 ##############################################################################
 # save catalogs
 ##############################################################################
 
-np.save(output_directory + 'validation_data_{0:08d}'.format(expid),
+np.save(output_directory + 'validation_data',
         FP_unaveraged)
-np.save(output_directory + 'validation_psfex_{0:08d}'.format(expid),
+np.save(output_directory + 'validation_psfex',
         PSFEx_unaveraged)
-np.save(output_directory + 'validation_WavefrontPSF_{0:08d}'.format(expid),
+np.save(output_directory + 'validation_fit',
         WavefrontPSF_unaveraged)
 
+np.save(output_directory + 'validation_fit_analytic',
+        WavefrontPSF_analytic_unaveraged)
 
