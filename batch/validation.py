@@ -100,7 +100,7 @@ for key in dat.dtype.names:
 FP_unaveraged = FP.data_unaveraged
 PSFEx_unaveraged = FPP.plane(FP.coords)
 WavefrontPSF_analytic_unaveraged = FPF.analytic_plane(FPFdict, FP.coords)
-WavefrotnPSF_unaveraged = FPF.plane(FPFdict, FP.coords)
+WavefrontPSF_unaveraged = FPF.plane(FPFdict, FP.coords)
 
 ##############################################################################
 # save catalogs
