@@ -123,7 +123,7 @@ PSFEx_unaveraged = FPP.plane(FP.coords)
 WavefrontPSF_analytic_unaveraged = FPF.analytic_plane(FPFdict, FP.coords)
 WavefrontPSF_unaveraged = FPF.plane(FPFdict, FP.coords)
 
-FP_sel = FP_sel.data_unaveraged
+FP_unaveraged_sel = FP_sel.data_unaveraged
 PSFEx_unaveraged_sel = FPP.plane(FP_sel.coords)
 WavefrontPSF_analytic_unaveraged_sel = FPF.analytic_plane(FPFdict, FP_sel.coords)
 WavefrontPSF_unaveraged_sel = FPF.plane(FPFdict, FP_sel.coords)
