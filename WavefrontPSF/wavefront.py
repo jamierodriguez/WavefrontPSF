@@ -4,6 +4,7 @@ File: wavefront.py
 Author: Chris Davis
 Description: Module for generating PSF objects and their moments.
 
+TODO: Add ability to apply shear to generated images.
 """
 
 from __future__ import print_function, division

@@ -71,6 +71,16 @@ FP = FocalPlane(psfex_list_catalogs, psfex_list_fits_extension,
                 conds='minimal',
                 n_samples_box=10000)
 
+psfex_list_catalogs_sel = [psfex_list_catalogs_i.replace(
+                            'val', 'sel')
+                            for psfex_list_catalogs_i in psfex_list_catalogs]
+
+FP_sel = FocalPlane(psfex_list_catalogs_sel, psfex_list_fits_extension,
+                    psfex_list_chip,
+                    conds='minimal',
+                    n_samples_box=10000)
+
+
 # psfex fit
 psfex_list_catalogs_2 = [psfex_list_catalogs_i.replace(
                             'fits', 'psf').replace(
@@ -80,6 +90,17 @@ psfex_list_catalogs_2 = [psfex_list_catalogs_i.replace(
 FPP = FocalPlanePSFEx(psfex_list_catalogs_2,
                       np.array(psfex_list_chip).flatten(),
                       verbosity=['history', 'stamp'])
+
+# psfex fit
+psfex_list_catalogs_2_sel = [psfex_list_catalogs_i.replace(
+                            'fits', 'psf').replace(
+                                'valpsfcat', 'psfcat')
+                       for psfex_list_catalogs_i in psfex_list_catalogs]
+
+FPP_sel = FocalPlanePSFEx(psfex_list_catalogs_2_sel,
+                      np.array(psfex_list_chip).flatten(),
+                      verbosity=['history', 'stamp'])
+
 
 
 dat = results[results['expid'] == expid]
@@ -102,6 +123,11 @@ PSFEx_unaveraged = FPP.plane(FP.coords)
 WavefrontPSF_analytic_unaveraged = FPF.analytic_plane(FPFdict, FP.coords)
 WavefrontPSF_unaveraged = FPF.plane(FPFdict, FP.coords)
 
+FP_sel = FP_sel.data_unaveraged
+PSFEx_unaveraged_sel = FPP.plane(FP_sel.coords)
+WavefrontPSF_analytic_unaveraged_sel = FPF.analytic_plane(FPFdict, FP_sel.coords)
+WavefrontPSF_unaveraged_sel = FPF.plane(FPFdict, FP_sel.coords)
+
 ##############################################################################
 # save catalogs
 ##############################################################################
@@ -112,7 +138,16 @@ np.save(output_directory + 'validation_psfex',
         PSFEx_unaveraged)
 np.save(output_directory + 'validation_fit',
         WavefrontPSF_unaveraged)
-
 np.save(output_directory + 'validation_fit_analytic',
         WavefrontPSF_analytic_unaveraged)
+
+np.save(output_directory + 'trained_data',
+        FP_unaveraged_sel)
+np.save(output_directory + 'trained_psfex',
+        PSFEx_unaveraged_sel)
+np.save(output_directory + 'trained_fit',
+        WavefrontPSF_unaveraged_sel)
+np.save(output_directory + 'trained_fit_analytic',
+        WavefrontPSF_analytic_unaveraged_sel)
+
 
