@@ -44,6 +44,12 @@ parser.add_argument("-o",
                     default='/nfs/slac/g/ki/ki18/cpd/psfex_catalogs/' +
                             'SVA1_FINALCUT/fits/validation/',
                     help="where will the outputs go")
+parser.add_argument("-s",
+                    dest="stamp",
+                    default=0,
+                    type=int,
+                    help="save stamp / vignet parameter?")
+
 options = parser.parse_args()
 
 args_dict = vars(options)
@@ -53,6 +59,7 @@ tag = args_dict['tag']
 output_directory = args_dict['output_directory']
 results_path = args_dict['results']
 expid = args_dict['expid']
+stamp_save = args_dict['stamp']
 
 ##############################################################################
 # load up data
@@ -113,7 +120,6 @@ for key in dat.dtype.names:
     if ('args' in key) * ('covariance' not in key):
         FPFdict.update({key[5:]: dat[key][0]})
 
-
 ##############################################################################
 # generate catalogs
 ##############################################################################
@@ -127,6 +133,80 @@ FP_unaveraged_sel = FP_sel.data_unaveraged
 PSFEx_unaveraged_sel = FPP.plane(FP_sel.coords)
 WavefrontPSF_analytic_unaveraged_sel = FPF.analytic_plane(FPFdict, FP_sel.coords)
 WavefrontPSF_unaveraged_sel = FPF.plane(FPFdict, FP_sel.coords)
+
+# filter out stamp parameters
+# TODO: this is cludge
+stamp_names = ['vignet', 'stamp', 'VIGNET', 'STAMP']
+if stamp_save == 0:
+    # these are all dicts so remake them
+    FP_unaveraged_fil = {}
+    for key in FP_unaveraged.keys():
+        if key in stamp_names:
+            continue
+        else:
+            FP_unaveraged_fil.update({key: FP_unaveraged[key]})
+    FP_unaveraged = FP_unaveraged_fil
+
+    PSFEx_unaveraged_fil = {}
+    for key in PSFEx_unaveraged.keys():
+        if key in stamp_names:
+            continue
+        else:
+            PSFEx_unaveraged_fil.update({key: PSFEx_unaveraged[key]})
+    PSFEx_unaveraged = PSFEx_unaveraged_fil
+
+    WavefrontPSF_analytic_unaveraged_fil = {}
+    for key in WavefrontPSF_analytic_unaveraged.keys():
+        if key in stamp_names:
+            continue
+        else:
+            WavefrontPSF_analytic_unaveraged_fil.update({key: WavefrontPSF_analytic_unaveraged[key]})
+    WavefrontPSF_analytic_unaveraged = WavefrontPSF_analytic_unaveraged_fil
+
+    WavefrontPSF_unaveraged_fil = {}
+    for key in WavefrontPSF_unaveraged.keys():
+        if key in stamp_names:
+            continue
+        else:
+            WavefrontPSF_unaveraged_fil.update({key: WavefrontPSF_unaveraged[key]})
+    WavefrontPSF_unaveraged = WavefrontPSF_unaveraged_fil
+
+
+    FP_unaveraged_sel_fil = {}
+    for key in FP_unaveraged_sel.keys():
+        if key in stamp_names:
+            continue
+        else:
+            FP_unaveraged_sel_fil.update({key: FP_unaveraged_sel[key]})
+    FP_unaveraged_sel = FP_unaveraged_sel_fil
+
+    PSFEx_unaveraged_sel_fil = {}
+    for key in PSFEx_unaveraged_sel.keys():
+        if key in stamp_names:
+            continue
+        else:
+            PSFEx_unaveraged_sel_fil.update({key: PSFEx_unaveraged_sel[key]})
+    PSFEx_unaveraged_sel = PSFEx_unaveraged_sel_fil
+
+    WavefrontPSF_analytic_unaveraged_sel_fil = {}
+    for key in WavefrontPSF_analytic_unaveraged_sel.keys():
+        if key in stamp_names:
+            continue
+        else:
+            WavefrontPSF_analytic_unaveraged_sel_fil.update({key: WavefrontPSF_analytic_unaveraged_sel[key]})
+    WavefrontPSF_analytic_unaveraged_sel = WavefrontPSF_analytic_unaveraged_sel_fil
+
+    WavefrontPSF_unaveraged_sel_fil = {}
+    for key in WavefrontPSF_unaveraged_sel.keys():
+        if key in stamp_names:
+            continue
+        else:
+            WavefrontPSF_unaveraged_sel_fil.update({key: WavefrontPSF_unaveraged_sel[key]})
+    WavefrontPSF_unaveraged_sel = WavefrontPSF_unaveraged_sel_fil
+
+
+
+
 
 ##############################################################################
 # save catalogs
