@@ -53,6 +53,8 @@ def calc_threshold(values):
 def mkSelPsfCat(expnum, tag="SVA1_FINALCUT",
         basedir="/nfs/slac/g/ki/ki22/roodman/dmdata", 
         getIn=True, deleteIn=True, fraction=0.2, ccd=0,
+        download_catalog=False, download_psfcat=True,
+        download_image=False, download_background=False,
         **kwargs):
     """ make a -psfcat.fits catalog with just stars used by PSFex
     1) call psfex with option to make _out.cat
@@ -84,8 +86,10 @@ def mkSelPsfCat(expnum, tag="SVA1_FINALCUT",
         if getIn:
             #getPsfCat(expnum,tag,i)
             download_desdm(expnum, directory, tag=tag, ccd=i,
-                           download_catalog=False, download_psfcat=True,
-                           download_image=False, download_background=False)
+                           download_catalog=download_catalog,
+                           download_psfcat=download_psfcat,
+                           download_image=download_image,
+                           download_background=download_background)
 
 
         filename = "DECam_%08d_%02d_psfcat.fits" % (expnum,i)
@@ -481,6 +485,22 @@ if __name__ == "__main__":
                   default=0,
                   type=int,
                   help="CCD Number to run on. 0 does all science chips.")
+    parser.add_argument("--downCat",
+                  dest="download_catalog",
+                  default=False,
+                  type=bool,
+                  help="Download associated finalcut catalog?")
+    parser.add_argument("--downBak",
+                  dest="download_background",
+                  default=False,
+                  type=bool,
+                  help="Download associated finalcut background?")
+    parser.add_argument("--downImg",
+                  dest="download_image",
+                  default=False,
+                  type=bool,
+                  help="Download associated finalcut image?")
+
 
     # collect the options
     options = parser.parse_args()

@@ -120,7 +120,7 @@ class Wavefront(object):
         self.make_donut = makedonut(**self.input_dict)
         return
 
-    def stamp(self, zernike, rzero, coord):
+    def stamp(self, zernike, rzero, coord, jitter=[]):
         """Create a stamp from list of zernike parameters
 
         Parameters
@@ -134,11 +134,19 @@ class Wavefront(object):
         coord : list
             [x_decam, y_decam] in mm and Aaron's coordinate convention.
 
+        jitter : list of dictionaries
+            Jitter terms to apply to image.
+
         Returns
         -------
         stamp : array
             The image of the zernike polynomial convolved with Kolmogorov
             spectrum.
+
+        TODO
+        ----
+
+        If shearing, consider over sampling?
 
         """
 
@@ -153,6 +161,31 @@ class Wavefront(object):
                                      yDECam=y_decam).astype(np.float64)
 
         return stamp
+
+    def jitter(self, data, jitter):
+        """Apply jitter
+
+        Parameters
+        ----------
+
+        data : array
+            2d array of image
+
+        jitter : dictionary
+            dictionary of various ellipticity or shear terms (e.g. e1, g1,
+            delta2)
+
+        Returns
+        -------
+
+        data_jittered : array
+            2d array of image post-jitter
+
+        """
+        print('Not implimented yet!')
+
+        return
+
 
     def stamp_factory(self, zernikes, rzeros, coords):
         """Make lots of stamps

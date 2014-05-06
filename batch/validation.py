@@ -60,6 +60,11 @@ output_directory = args_dict['output_directory']
 results_path = args_dict['results']
 expid = args_dict['expid']
 stamp_save = args_dict['stamp']
+if stamp_save == 0:
+    verbosity_list = ['history']
+else:
+    verbosity_list = ['history', 'stamp']
+
 
 ##############################################################################
 # load up data
@@ -96,7 +101,7 @@ psfex_list_catalogs_2 = [psfex_list_catalogs_i.replace(
 
 FPP = FocalPlanePSFEx(psfex_list_catalogs_2,
                       np.array(psfex_list_chip).flatten(),
-                      verbosity=['history', 'stamp'])
+                      verbosity=verbosity_list)
 
 # psfex fit
 psfex_list_catalogs_2_sel = [psfex_list_catalogs_i.replace(
@@ -106,13 +111,13 @@ psfex_list_catalogs_2_sel = [psfex_list_catalogs_i.replace(
 
 FPP_sel = FocalPlanePSFEx(psfex_list_catalogs_2_sel,
                       np.array(psfex_list_chip).flatten(),
-                      verbosity=['history', 'stamp'])
+                      verbosity=verbosity_list)
 
 
 
 dat = results[results['expid'] == expid]
 
-FPF = FocalPlaneFit(verbosity=['history', 'stamp'])
+FPF = FocalPlaneFit(verbosity=verbosity_list)
 
 # get FPF dict
 FPFdict = {}

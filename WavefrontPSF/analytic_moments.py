@@ -208,7 +208,7 @@ def analytic_data(zernikes, rzero, coords=[]):
             val_i = term[0]
             for term_i in xrange(1, len(term)):
                 if term[term_i] <= zernikes.shape[1]:
-                    val_i *= zernikes[:, term[term_i] - 1]
+                    val_i *= zernikes[:, int(term[term_i]) - 1]
                 else:
                     val_i *= 0
             val += val_i
@@ -251,7 +251,7 @@ def analytic_derivative_data(zernikes, rzero, coords=[]):
                     val_i = term[0]
                     for term_i in xrange(1, len(term)):
                         if term[term_i] <= zernikes.shape[1]:
-                            val_i *= zernikes[:, term[term_i] - 1]
+                            val_i *= zernikes[:, int(term[term_i]) - 1]
                         else:
                             val_i *= 0
                     val += val_i
@@ -273,7 +273,7 @@ def analytic_derivative_data(zernikes, rzero, coords=[]):
             val_i = term[0]
             for term_i in xrange(1, len(term)):
                 if term[term_i] <= zernikes.shape[1]:
-                    val_i *= zernikes[:, term[term_i] - 1]
+                    val_i *= zernikes[:, int(term[term_i]) - 1]
                 else:
                     val_i *= 0
             val += val_i
