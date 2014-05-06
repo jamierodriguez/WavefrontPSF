@@ -91,42 +91,43 @@ def mkSelPsfCat(expnum, tag="SVA1_FINALCUT",
                            download_image=download_image,
                            download_background=download_background)
 
+        # do psfcat part
+        if download_psfcat:
+            filename = "DECam_%08d_%02d_psfcat.fits" % (expnum,i)
+            catname = "DECam_%08d_%02d_outcat.fits" % (expnum,i)
+            filename_fin = "DECam_%08d_%02d_psfcat_validation_subtracted.fits" %  \
+                    (expnum,i)
+            catname_fin = "DECam_%08d_%02d_outcat_validation_subtracted.fits" %  \
+                    (expnum,i)
 
-        filename = "DECam_%08d_%02d_psfcat.fits" % (expnum,i)
-        catname = "DECam_%08d_%02d_outcat.fits" % (expnum,i)
-        filename_fin = "DECam_%08d_%02d_psfcat_validation_subtracted.fits" %  \
-                (expnum,i)
-        catname_fin = "DECam_%08d_%02d_outcat_validation_subtracted.fits" %  \
-                (expnum,i)
-
-        selname = "DECam_%08d_%02d_selpsfcat.fits" % (expnum,i)
-        valname = "DECam_%08d_%02d_valpsfcat.fits" % (expnum,i)
-        #sexcatname = "DECam_%08d_%02d_cat.fits" % (expnum,i)
+            selname = "DECam_%08d_%02d_selpsfcat.fits" % (expnum,i)
+            valname = "DECam_%08d_%02d_valpsfcat.fits" % (expnum,i)
+            #sexcatname = "DECam_%08d_%02d_cat.fits" % (expnum,i)
 
 
-        if os.path.exists(filename):
-            cmd = "/nfs/slac/g/ki/ki22/roodman/DESDM/eups/packages/Linux64/psfex/3.17.0+0/bin/psfex %s -c /u/ec/roodman/Astrophysics/PSF/desdm-plus.psfex -OUTCAT_NAME %s" % (filename,catname)
-            print cmd
-            os.system(cmd)
+            if os.path.exists(filename):
+                cmd = "/nfs/slac/g/ki/ki22/roodman/DESDM/eups/packages/Linux64/psfex/3.17.0+0/bin/psfex %s -c /u/ec/roodman/Astrophysics/PSF/desdm-plus.psfex -OUTCAT_NAME %s" % (filename,catname)
+                print cmd
+                os.system(cmd)
 
-            # filter out a validation cat
-            buildValidationCat(expnum, i, filename, catname, filename_fin,
-                               valname, fraction=fraction)
+                # filter out a validation cat
+                buildValidationCat(expnum, i, filename, catname, filename_fin,
+                                   valname, fraction=fraction)
 
-            # build your final actual selpsfcat
-            cmd = "/nfs/slac/g/ki/ki22/roodman/DESDM/eups/packages/Linux64/psfex/3.17.0+0/bin/psfex %s -c /u/ec/roodman/Astrophysics/PSF/desdm-plus.psfex -OUTCAT_NAME %s" % (filename_fin, catname_fin)
-            print cmd
-            os.system(cmd)
+                # build your final actual selpsfcat
+                cmd = "/nfs/slac/g/ki/ki22/roodman/DESDM/eups/packages/Linux64/psfex/3.17.0+0/bin/psfex %s -c /u/ec/roodman/Astrophysics/PSF/desdm-plus.psfex -OUTCAT_NAME %s" % (filename_fin, catname_fin)
+                print cmd
+                os.system(cmd)
 
-            buildSelPsfCat(expnum,i,filename_fin,catname_fin,selname)
+                buildSelPsfCat(expnum,i,filename_fin,catname_fin,selname)
 
-            if deleteIn:
-                os.remove(filename)
-                os.remove(filename_fin)
-                os.remove(catname)
-                os.remove(catname_fin)
-        else:
-            print(filename + ' does not exist!')
+                if deleteIn:
+                    os.remove(filename)
+                    os.remove(filename_fin)
+                    os.remove(catname)
+                    os.remove(catname_fin)
+            else:
+                print(filename + ' does not exist!')
 
 
 
@@ -500,7 +501,11 @@ if __name__ == "__main__":
                   default=False,
                   type=bool,
                   help="Download associated finalcut image?")
-
+    parser.add_argument("--downPsf",
+                  dest="download_psfcat",
+                  default=True,
+                  type=bool,
+                  help="Download psfcat and make assocciated validation cat?")
 
     # collect the options
     options = parser.parse_args()
