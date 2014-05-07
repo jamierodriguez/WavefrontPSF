@@ -391,7 +391,7 @@ def download_desdm_filelist(expid, dataDirectory,
     # move there!
     chdir(dataDirectory)
 
-    outname = "tempfilelist_%d.out" % (expid)
+
 
     # exposure table has expnum, and id, and this id is called exposureid in
     # the image table
@@ -404,7 +404,10 @@ def download_desdm_filelist(expid, dataDirectory,
     if (ccd is not None):
         cmd = cmd + ' and i.ccd = %d' % (ccd)
 
-    outname = "tempfilelist_%d.out" % (expid)
+    if not ccd:
+        outname = "tempfilelist_%d.out" % (expid)
+    else:
+        outname = "tempfilelist_%d_%d.out" % (expid, ccd)
     cmd = cmd + '" > %s' % (outname)
 
     if verbose:
@@ -430,7 +433,10 @@ def download_desdm(expid, dataDirectory,
     # move there!
     chdir(dataDirectory)
 
-    outname = "tempfilelist_%d.out" % (expid)
+    if not ccd:
+        outname = "tempfilelist_%d.out" % (expid)
+    else:
+        outname = "tempfilelist_%d_%d.out" % (expid, ccd)
     if not path.exists(outname):
         download_desdm_filelist(expid, dataDirectory,
                    tag,
