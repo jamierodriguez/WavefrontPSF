@@ -12,6 +12,8 @@ import numpy as np
 from donutlib.makedonut import makedonut
 from adaptive_moments import adaptive_moments, centered_moment
 from os import path, makedirs
+from scipy.ndimage.interpolation import affine_transform
+
 import pickle
 from routines_moments import convert_moments
 from decamutil_cpd import decaminfo
@@ -120,7 +122,7 @@ class Wavefront(object):
         self.make_donut = makedonut(**self.input_dict)
         return
 
-    def stamp(self, zernike, rzero, coord, jitter=[]):
+    def stamp(self, zernike, rzero, coord, jitter={}):
         """Create a stamp from list of zernike parameters
 
         Parameters
@@ -134,7 +136,7 @@ class Wavefront(object):
         coord : list
             [x_decam, y_decam] in mm and Aaron's coordinate convention.
 
-        jitter : list of dictionaries
+        jitter : dictionary
             Jitter terms to apply to image.
 
         Returns
@@ -160,9 +162,14 @@ class Wavefront(object):
                                      xDECam=x_decam,
                                      yDECam=y_decam).astype(np.float64)
 
+        if len(jitter.keys()) > 0:
+            stamp = self.jitter(stamp, jitter)
+
         return stamp
 
-    def jitter(self, data, jitter):
+    def jitter(self, data, jitter={},
+               Mx = 15.937499,
+               My = 15.937499):
         """Apply jitter
 
         Parameters
@@ -175,19 +182,62 @@ class Wavefront(object):
             dictionary of various ellipticity or shear terms (e.g. e1, g1,
             delta2)
 
+        Mx, My : floats
+            The centers of the object
+
         Returns
         -------
 
         data_jittered : array
             2d array of image post-jitter
 
+
+        Notes
+        -----
+
+        Currently only does NORMALIZED ellip e1 and e2!!
+        Largely taken from CppShear.cpp in GalSim
+
         """
-        print('Not implimented yet!')
 
-        return
+        if ('e1' in jitter.keys()) * ('e2' in jitter.keys()):
+
+            try:
+                e1 = jitter['e1']
+            except KeyError:
+                # no e1
+                e1 = 0
+            try:
+                e2 = jitter['e2']
+            except KeyError:
+                e2 = 0
+
+            esq = e1 * e1 + e2 * e2
+
+            if esq < 1e-8:
+                A = 1 + esq / 8 + e1 * (0.5 + esq * 3 / 16)
+                B = 1 + esq / 8 - e1 * (0.5 + esq * 3 / 16)
+                C = e2 * (0.5 + esq * 3 / 16)
+            else:
+                temp = np.sqrt(1 - esq)
+                cc = np.sqrt(0.5 * (1 + 1 / temp))
+                temp = cc * (1 - temp) / esq
+                C = temp * e2
+                temp *= e1
+                A = cc + temp
+                B = cc - temp
+            matrix = np.array([[A, C], [C, B]])
+            matrix /= A * B - C * C
+            offset = (-Mx * (A + C - 1),
+                      -My * (C + B - 1))
+
+            # apply transformation
+            data = affine_transform(data, matrix, offset)
+
+        return data
 
 
-    def stamp_factory(self, zernikes, rzeros, coords):
+    def stamp_factory(self, zernikes, rzeros, coords, jitters=[]):
         """Make lots of stamps
 
         Parameters
@@ -204,6 +254,10 @@ class Wavefront(object):
         rzeros : list of floats
             Kolmogorov spectrum parameter. Basically, larger means smaller PSF.
 
+        jitter : list of dictionaries
+            Jitter terms to apply to image.
+
+
         Returns
         -------
         stamps : list of array
@@ -215,10 +269,13 @@ class Wavefront(object):
             coord = coords[i]
             zernike = zernikes[i]
             rzero = rzeros[i]
+            if len(jitters.keys()) > 0:
+                jitter = jitters[i]
             # make stamp
             stamp_i = self.stamp(zernike=zernike,
                                  rzero=rzero,
-                                 coord=coord)
+                                 coord=coord,
+                                 jitter=jitter)
             stamps.append(stamp_i)
 
         stamps = np.array(stamps)

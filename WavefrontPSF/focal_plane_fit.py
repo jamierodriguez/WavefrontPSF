@@ -379,13 +379,23 @@ class FocalPlaneFit(Wavefront):
         N = len(zernikes)
         rzeros = [rzero] * N
         backgrounds = [self.background] * N
+        jitter_keys = ['e1', 'e2']
+        jitter_dict = {}
+        # guess e0
+        plane = analytic_data(zernikes, rzero, coords=coords)
+        e0 = np.median(plane['e0'])
+        for jitter_key in jitter_keys:
+            if jitter_key in in_dict.keys():
+                jitter_dict.update({jitter_key: in_dict[jitter_key] / e0})
+        jitters = [jitter_dict] * N  # note: if you modify one member,
+                                     # you will modify all. thanks python!
         if self.input_dict['randomFlag']:
             # TODO: This is not tested
             thresholds = [np.sqrt(self.number_electrons)] * N
         else:
             thresholds = [0] * N
         # make stamps
-        stamps = self.stamp_factory(zernikes, rzeros, coords)
+        stamps = self.stamp_factory(zernikes, rzeros, coords, jitters)
         # make moments
         moments = self.moment_dictionary(stamps,
                                          coords,
