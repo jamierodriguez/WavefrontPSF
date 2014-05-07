@@ -269,7 +269,7 @@ class Wavefront(object):
             coord = coords[i]
             zernike = zernikes[i]
             rzero = rzeros[i]
-            if len(jitters.keys()) > 0:
+            if len(jitters) > 0:
                 jitter = jitters[i]
             # make stamp
             stamp_i = self.stamp(zernike=zernike,

@@ -38,7 +38,7 @@ def convert_dictionary(dictionary):
             formats += ','
     test = []
     # this has to be able to be sped up!
-    for j in xrange(len(dictionary[sorted(dictionary.keys())[i]])):
+    for j in xrange(len(dictionary[sorted(dictionary.keys())[0]])):
         inner = []
         for i in sorted(dictionary.keys()):
             inner.append(dictionary[i][j])
