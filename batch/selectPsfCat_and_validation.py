@@ -282,6 +282,9 @@ def buildSelPsfCat(expnum,iext,filename,catname,selname):
     # try to fix that
     newtablehdu.data['VIGNET'] = newcat['VIGNET']
 
+    # insert table name (NEEDED FOR PSFEX!!!)
+    newtablehdu.header.insert(8, ('EXTNAME', 'LDAC_OBJECTS', 'TABLE NAME'))
+
     # make output fits file
     prihdr = pyfits.Header()
     prihdu = pyfits.PrimaryHDU(header=prihdr)
@@ -439,6 +442,9 @@ def buildValidationCat(expnum, iext, filename, catname,
     # try to fix that
     newtablehdu.data['VIGNET'] = valcat['VIGNET']
 
+    # insert table name (NEEDED FOR PSFEX!!!)
+    newtablehdu.header.insert(8, ('EXTNAME', 'LDAC_OBJECTS', 'TABLE NAME'))
+
     # make output fits file
     prihdr = pyfits.Header()
     prihdu = pyfits.PrimaryHDU(header=prihdr)
@@ -469,13 +475,13 @@ if __name__ == "__main__":
                   help="Fraction of data saved for validation.")
     parser.add_argument("-g", "--getIn",
                   dest="getIn",
-                  default=True,
-                  type=bool,
+                  default=1,
+                  type=int,
                   help="Do we download the files?")
     parser.add_argument("-d", "--deleteIn",
                   dest="deleteIn",
-                  default=True,
-                  type=bool,
+                  default=1,
+                  type=int,
                   help="Do we delete input files once done?")
     parser.add_argument("-t", "--tag",
                   dest="tag",
@@ -488,23 +494,23 @@ if __name__ == "__main__":
                   help="CCD Number to run on. 0 does all science chips.")
     parser.add_argument("--downCat",
                   dest="download_catalog",
-                  default=False,
-                  type=bool,
+                  default=0,
+                  type=int,
                   help="Download associated finalcut catalog?")
     parser.add_argument("--downBak",
                   dest="download_background",
-                  default=False,
-                  type=bool,
+                  default=0,
+                  type=int,
                   help="Download associated finalcut background?")
     parser.add_argument("--downImg",
                   dest="download_image",
-                  default=False,
-                  type=bool,
+                  default=0,
+                  type=int,
                   help="Download associated finalcut image?")
     parser.add_argument("--downPsf",
                   dest="download_psfcat",
-                  default=True,
-                  type=bool,
+                  default=1,
+                  type=int,
                   help="Download psfcat and make assocciated validation cat?")
 
     # collect the options
