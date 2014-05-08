@@ -443,7 +443,7 @@ def buildValidationCat(expnum, iext, filename, catname,
     newtablehdu.data['VIGNET'] = valcat['VIGNET']
 
     # insert table name (NEEDED FOR PSFEX!!!)
-    newtablehdu.header.insert(8, ('EXTNAME', 'LDAC_OBJECTS', 'TABLE NAME'))
+    newtablehdu.header.set('EXTNAME', 'LDAC_OBJECTS', 'a name')
 
     # make output fits file
     prihdr = pyfits.Header()
