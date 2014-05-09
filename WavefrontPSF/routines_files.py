@@ -417,6 +417,7 @@ def download_desdm_filelist(expid, dataDirectory,
         call(cmd,shell=True)
 
 def download_desdm(expid, dataDirectory,
+                   filelist=None,
                    tag='Y1N_FIRSTCUT',
                    download_catalog=True,
                    download_image=True,
@@ -433,24 +434,31 @@ def download_desdm(expid, dataDirectory,
     # move there!
     chdir(dataDirectory)
 
-    if not ccd:
-        outname = "tempfilelist_%d.out" % (expid)
-    else:
-        outname = "tempfilelist_%d_%d.out" % (expid, ccd)
-    if not path.exists(outname):
+    if not filelist:
+        if not ccd:
+            filelist = "filelist_%d.out" % (expid)
+        else:
+            filelist = "filelist_%d_%d.out" % (expid, ccd)
+    if not path.exists(filelist):
         download_desdm_filelist(expid, dataDirectory,
                    tag,
                    ccd, verbose)
 
-    lines = [line.rstrip('\r\n') for line in open(outname)]
+    lines = [line.rstrip('\r\n') for line in open(filelist)]
     junk = lines.pop(0)
 
+    # filter out the lines
+    lines_filtered = []
 
-    for line in sorted(lines):
-        if ccd is not None:
-            # only use the line that contains that ccd
-            if '{0:08d}_{1:02d}'.format(expid, ccd) not in line:
-                continue
+    if ccd > 0:
+        # only use the line that contains that ccd
+        lines_filtered = filter(lambda x:
+                '{0:08d}_{1:02d}'.format(expid, ccd) in x, lines)
+    else:
+        # use all lines with expid
+        lines_filtered = filter(lambda x:
+                '{0:08d}'.format(expid) in x, lines)
+    for line in sorted(lines_filtered):
         imfiles=[]
         catfiles=[]
         psfcatfiles=[]

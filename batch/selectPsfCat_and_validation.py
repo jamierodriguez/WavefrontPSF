@@ -51,7 +51,8 @@ def calc_threshold(values):
     return med,sigma
 
 def mkSelPsfCat(expnum, tag="SVA1_FINALCUT",
-        basedir="/nfs/slac/g/ki/ki22/roodman/dmdata", 
+        basedir="/nfs/slac/g/ki/ki22/roodman/dmdata",
+        filelist=None,
         getIn=True, deleteIn=True, fraction=0.2, ccd=0,
         download_catalog=False, download_psfcat=True,
         download_image=False, download_background=False,
@@ -70,22 +71,24 @@ def mkSelPsfCat(expnum, tag="SVA1_FINALCUT",
         os.makedirs(directory)
     os.chdir(directory)
 
-    if getIn:
-        #getPsfCatList(expnum,tag)
-        download_desdm_filelist(expnum, directory,
-                                tag=tag, ccd=None, verbose=True)
-
-
     # run psfex & build selpsfcat
     if ccd == 0:
         ccdrange = range(1, 62 + 1)
     else:
         ccdrange = [ccd]
+
+    if not filelist:
+        if ccd == 0:
+            filelist = directory + "/filelist_%d.out" % (expid)
+        else:
+            filelist = directory + "/filelist_%d_%d.out" % (expid, ccd)
+
     for i in ccdrange:
 
         if getIn:
             #getPsfCat(expnum,tag,i)
-            download_desdm(expnum, directory, tag=tag, ccd=i,
+            download_desdm(expnum, directory, filelist=filelist,
+                           tag=tag, ccd=i,
                            download_catalog=download_catalog,
                            download_psfcat=download_psfcat,
                            download_image=download_image,
@@ -461,9 +464,9 @@ if __name__ == "__main__":
                   type=int,
                   help="sispi exposure number")
     parser.add_argument("-l", "--explist",
-                  dest="explist",
-                  default="/nfs/slac/g/ki/ki18/cpd/catalogs/sva1-list.npy",
-                  help="numpy file with the exposure numbers")
+                  dest="filelist",
+                  default="/nfs/slac/g/ki/ki18/des/cpd/psfex_catalogs/SVA1_FINALCUT_filelist.out",
+                  help="file with lists of file locations")
     parser.add_argument("-o", "--basedir",
                   dest="basedir",
                   default="/nfs/slac/g/ki/ki18/cpd/psfextest",
@@ -517,11 +520,6 @@ if __name__ == "__main__":
     options = parser.parse_args()
     aDict = vars(options)
     expid = aDict['expnum']
-    explist_path = aDict['explist']
-
-    # load up the data file
-    explist = numpy.load(explist_path)
-    exp_path = explist[explist['expid'] == expid]['path'][0]
 
     # do it!
     mkSelPsfCat(**aDict)
