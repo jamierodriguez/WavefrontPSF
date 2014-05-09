@@ -380,7 +380,8 @@ def combine_decam_catalogs(list_catalogs, list_fits_extension, list_chip):
 
 def download_desdm_filelist(expid, dataDirectory,
                    tag='Y1N_FIRSTCUT',
-                   ccd=None, verbose=True):
+                   ccd=None, verbose=True,
+                   filelist=None):
     username = "cpd"
     password = "cpd70chips"
 
@@ -404,10 +405,13 @@ def download_desdm_filelist(expid, dataDirectory,
     if (ccd is not None):
         cmd = cmd + ' and i.ccd = %d' % (ccd)
 
-    if not ccd:
-        outname = "tempfilelist_%d.out" % (expid)
+    if not filelist:
+        if not ccd:
+            outname = "filelist_%d.out" % (expid)
+        else:
+            outname = "filelist_%d_%d.out" % (expid, ccd)
     else:
-        outname = "tempfilelist_%d_%d.out" % (expid, ccd)
+        outname = filelist
     cmd = cmd + '" > %s' % (outname)
 
     if verbose:
@@ -415,6 +419,8 @@ def download_desdm_filelist(expid, dataDirectory,
 
     if not path.exists(outname):
         call(cmd,shell=True)
+
+    return outname
 
 def download_desdm(expid, dataDirectory,
                    filelist=None,
@@ -440,9 +446,8 @@ def download_desdm(expid, dataDirectory,
         else:
             filelist = "filelist_%d_%d.out" % (expid, ccd)
     if not path.exists(filelist):
-        download_desdm_filelist(expid, dataDirectory,
-                   tag,
-                   ccd, verbose)
+        filelist = download_desdm_filelist(expid, dataDirectory,
+                                           tag, ccd, verbose)
 
     lines = [line.rstrip('\r\n') for line in open(filelist)]
     junk = lines.pop(0)
