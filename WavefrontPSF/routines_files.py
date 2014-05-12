@@ -257,6 +257,7 @@ def generate_hdu_lists(
         expid,
         path_base='/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript/',
         name='cat_cpd',
+        ccd=0,
         extension=2):
     """quick and dirty way of getting the hdu list format I am now using
 
@@ -273,6 +274,9 @@ def generate_hdu_lists(
 
     extension : int
         What extension of each hdu file are we looking at?
+
+    ccd : int
+        Which ccd are we looking at? if 0, then choose all 60ish chips.
 
     Returns
     -------
@@ -296,26 +300,22 @@ def generate_hdu_lists(
 
     """
 
-    list_catalogs_base = \
-        path_base + '{0:08d}/DECam_{0:08d}_'.format(expid)
-    list_catalogs = [list_catalogs_base + '{0:02d}_{1}.fits'.format(i, name)
-                     for i in xrange(1, 63)]
-    list_catalogs.pop(60)
-    # ccd 2 went bad too.
-    if expid > 258804:
-        list_catalogs.pop(1)
-
-    list_chip = [[decaminfo().ccddict[i]] for i in xrange(1, 63)]
-    list_chip.pop(60)
-    # ccd 2 went bad too.
-    if expid > 258804:
-        list_chip.pop(1)
-
-    # ccd 2 went bad too.
-    if expid > 258804:
-        list_fits_extension = [[extension]] * (63-3)
+    if ccd == 0:
+        if expid > 258804:
+            ccdrange = [1] + range(3, 62) + [63]
+        else:
+            ccdrange = range(1, 62) + [63]
     else:
-        list_fits_extension = [[extension]] * (63-2)
+        ccdrange = [ccd]
+
+    list_catalogs_base = \
+        path_base + 'DECam_{0:08d}_'.format(expid)
+    list_catalogs = [list_catalogs_base + '{0:02d}_{1}.fits'.format(i, name)
+                     for i in ccdrange]
+
+    list_chip = [[decaminfo().ccddict[i]] for i in ccdrange]
+
+    list_fits_extension = [[extension]] * len(ccdrange)
 
     return list_catalogs, list_fits_extension, list_chip
 

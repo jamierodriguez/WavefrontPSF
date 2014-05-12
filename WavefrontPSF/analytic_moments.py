@@ -119,7 +119,7 @@ for i in range(1, 12):
 
             if sp.im(expr) != 0:
                 imaginary.append([float(sp.im(expr)), i, j, k])
-                expr_im = expr_re + z_list[i] * z_list[j] * z_list[k] * \
+                expr_im = expr_im + z_list[i] * z_list[j] * z_list[k] * \
                         sp.im(expr)
 real = np.array(real)
 imaginary = np.array(imaginary)
@@ -150,7 +150,7 @@ for i in range(1, 12):
                         sp.re(expr)
             if sp.im(expr) != 0:
                 imaginary.append([float(sp.im(expr)), i, j, k])
-                expr_im = expr_re + z_list[i] * z_list[j] * z_list[k] * \
+                expr_im = expr_im + z_list[i] * z_list[j] * z_list[k] * \
                         sp.im(expr)
 real = np.array(real)
 imaginary = np.array(imaginary)
