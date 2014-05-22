@@ -271,6 +271,8 @@ class Wavefront(object):
             rzero = rzeros[i]
             if len(jitters) > 0:
                 jitter = jitters[i]
+            else:
+                jitter = {}
             # make stamp
             stamp_i = self.stamp(zernike=zernike,
                                  rzero=rzero,
