@@ -172,7 +172,7 @@ class FocalPlaneFit(Wavefront):
         if len(methodVal) != 2:
             if mesh_name == 'Science-20130325s1-v1i2_All':
                 #methodVal = (250, 1.0)  # use 250 NN, 1.0 mm offset distance
-                methodVal = (20, 1.0)  # use 250 NN, 1.0 mm offset distance
+                methodVal = (20, 1.0)  # use 20 NN, 1.0 mm offset distance
             else:
                 methodVal = (4, 1.0)
 
@@ -379,16 +379,17 @@ class FocalPlaneFit(Wavefront):
         N = len(zernikes)
         rzeros = [rzero] * N
         backgrounds = [self.background] * N
-        jitter_keys = ['e1', 'e2']
-        jitter_dict = {}
-        # guess e0
-        plane = analytic_data(zernikes, rzero, coords=coords)
-        e0 = np.median(plane['e0'])
-        for jitter_key in jitter_keys:
-            if jitter_key in in_dict.keys():
-                jitter_dict.update({jitter_key: in_dict[jitter_key] / e0})
-        jitters = [jitter_dict] * N  # note: if you modify one member,
-                                     # you will modify all. thanks python!
+        ## jitter_keys = ['e1', 'e2']
+        ## jitter_dict = {}
+        ## # guess e0
+        ## plane = analytic_data(zernikes, rzero, coords=coords)
+        ## e0 = np.median(plane['e0'])
+        ## for jitter_key in jitter_keys:
+        ##     if jitter_key in in_dict.keys():
+        ##         jitter_dict.update({jitter_key: in_dict[jitter_key] / e0})
+        ## jitters = [jitter_dict] * N  # note: if you modify one member,
+        ##                              # you will modify all. thanks python!
+        jitters = []
         if self.input_dict['randomFlag']:
             # TODO: This is not tested
             thresholds = [np.sqrt(self.number_electrons)] * N
@@ -405,9 +406,9 @@ class FocalPlaneFit(Wavefront):
                                          windowed=windowed,
                                          order_dict=order_dict)
 
-        for jitter_mode in self.jitter_modes:
-            if (jitter_mode in moments) * (jitter_mode in in_dict):
-                moments[jitter_mode] += in_dict[jitter_mode]
+        ## for jitter_mode in self.jitter_modes:
+        ##     if (jitter_mode in moments) * (jitter_mode in in_dict):
+        ##         moments[jitter_mode] += in_dict[jitter_mode]
 
         return moments
 
