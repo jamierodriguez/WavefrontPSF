@@ -33,6 +33,20 @@ grad = [0,
         (3 * np.sqrt(8) * ws ** 2),
         24 * np.sqrt(5) * w * (w * ws - 1/2)]
 
+# jarvis, schechter, and jain grad w
+grad_jsj = [0,
+            0,
+            0,
+            0,
+            2 * w,
+            2 * sp.I * ws,
+            2 * ws,
+            -sp.I * (w ** 2 - 2 * w * ws + 1),
+            w ** 2 + 2 * w * ws - 1,
+            3 * sp.I * ws ** 2,
+            3 * ws ** 2,
+            4 * w ** 2 * ws]
+
 estimate = {}
 z_list = sp.symbols('z_0:12', real = True)
 expression = {}
@@ -230,6 +244,31 @@ def analytic_data(zernikes, rzero, coords=[]):
 
 
         val = val * slope + intercept
+
+        return_dict.update({key: val})
+
+    if len(coords) > 0:
+        return_dict.update({'x': coords[:,0],
+                            'y': coords[:,1],
+                            'chip': coords[:,2]})
+
+    return return_dict
+
+def analytic_data_no_rzero(zernikes, coords=[]):
+    return_dict = {}
+
+    for key in estimate.keys():
+        # TODO: should be possible to do this numpy-like?
+        # Do estimate
+        val = 0
+        for term in estimate[key]:
+            val_i = term[0]
+            for term_i in xrange(1, len(term)):
+                if term[term_i] <= zernikes.shape[1]:
+                    val_i *= zernikes[:, int(term[term_i]) - 1]
+                else:
+                    val_i *= 0
+            val += val_i
 
         return_dict.update({key: val})
 
