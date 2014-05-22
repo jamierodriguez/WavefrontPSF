@@ -61,6 +61,9 @@ coords = np.zeros((N, 3))
 analytic = analytic_data(zernikes, rzeros)#, coords=coords)
 plane = {'E1': analytic['e1'] / analytic['e0'],
          'E2': analytic['e2'] / analytic['e0'],
+         'e1': analytic['e1'],
+         'e2': analytic['e2'],
+         'e0': analytic['e0'],
          }
 
 ##############################################################################
@@ -78,7 +81,8 @@ for i in xrange(len(rzeros)):
 
 
 wf = {'x0': [], 'y0': [], 'x2': [], 'xy': [], 'y2': []}
-im3 = {'x0': [], 'y0': [], 'x2': [], 'xy': [], 'y2': [], 'e1': [], 'e2': []}
+im3 = {'x0': [], 'y0': [], 'x2': [], 'xy': [], 'y2': [], 'e1': [], 'e2': [],
+        'e0': [], 'E1': [], 'E2': []}
 hsm = {'x0': [], 'y0': [], 'E1': [], 'E2': [], 'sigma': []}
 
 for stamp_i in xrange(len(stamps)):
@@ -93,7 +97,8 @@ for stamp_i in xrange(len(stamps)):
     # ie im3shape 'e0' is my e0 + 2 * fwhm ** 2
     results_wf = {'x0': poles['Mx'], 'y0': poles['My'],
                   'x2': poles['x2'], 'xy': poles['xy'],
-                  'y2': poles['y2']}
+                  'y2': poles['y2'],
+                  }
 
     for key in wf.keys():
         wf[key].append(results_wf[key])
@@ -117,7 +122,10 @@ for stamp_i in xrange(len(stamps)):
     results_im3shape = {'x0': moments_i.x0 - 0.5, 'y0': moments_i.y0 - 0.5,
                        'x2': moments_i.qxx, 'xy': moments_i.qxy,
                        'y2': moments_i.qyy,
-                       'e1': moments_i.e1, 'e2': moments_i.e2}
+                       'e1': moments_i.e1, 'e2': moments_i.e2,
+                       'e0': moments_i.qxx + moments_i.qyy,
+                       'E1': (moments_i.qxx - moments_i.qyy) / (moments_i.qxx + moments_i.qyy),
+                       'E2': 2 * moments_i.qxy / (moments_i.qxx + moments_i.qyy)}
 
     for key in im3.keys():
         im3[key].append(results_im3shape[key])
@@ -168,6 +176,7 @@ ellipicity_denominator = wf['x2'] + wf['y2'] + \
                          2 * np.sqrt(wf['x2'] * wf['y2'] - wf['xy'] ** 2)
 wf.update({'e1': (wf['x2'] - wf['y2']) / ellipicity_denominator,
            'e2': 2 * wf['xy'] / ellipicity_denominator,
+           'e0': wf['x2'] + wf['y2'],
            'E1': (wf['x2'] - wf['y2']) / (wf['x2'] + wf['y2']),
            'E2': 2 * wf['xy'] / (wf['x2'] + wf['y2']),
            'sigma': np.sqrt(np.sqrt(4 * wf['x2'] * wf['y2']
@@ -304,4 +313,27 @@ for key in sorted(plane.dtype.names):
     if SAVE:
         plt.savefig(out_dir + 'plane_{0}.png'.format(key))
 
+for key in sorted(plane.dtype.names):
+    plt.figure()
+    outs = plt.hist2d(plane[key], im3[key], bins=bins, cmap=reds)
+    plt.xlabel('plane ' + key)
+    plt.ylabel('im3shape ' + key)
+    plt.colorbar()
+
+    xs = np.linspace(outs[1][0], outs[1][-1], 50)
+    plt.plot(xs, xs, 'b--', linewidth=4)
+
+    xfit = plane[key]
+    yfit = im3[key]
+    ysigma = 1
+
+    xfit, yfit, ysigma = line_by_func(xfit, yfit, bins=bins)
+    plt.errorbar(xfit, yfit, yerr=ysigma, fmt='ko',)
+
+    popt, pcov = curve_fit(line, xfit, yfit, sigma=ysigma)
+    plt.plot(xs, line(xs, *popt), 'k-', linewidth=2)
+    plt.title('{0:.2e}, {1:.2e}'.format(*popt))
+
+    if SAVE:
+        plt.savefig(out_dir + 'plane_im3_{0}.png'.format(key))
 
