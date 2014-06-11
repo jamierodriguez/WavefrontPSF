@@ -404,7 +404,10 @@ class FocalPlaneFit(Wavefront):
         if 'history' in self.verbosity:
             self.history.append(in_dict.copy())
 
-        N = len(zernikes)
+        # make stamps
+        stamps = self.coords_to_stamps(in_dict, coords, jitters)
+
+        N = len(stamps)
         backgrounds = [self.background] * N
         ## jitter_keys = ['e1', 'e2']
         ## jitter_dict = {}
@@ -422,8 +425,7 @@ class FocalPlaneFit(Wavefront):
             thresholds = [np.sqrt(self.number_electrons)] * N
         else:
             thresholds = [0] * N
-        # make stamps
-        stamps = coords_to_stamps(in_dict, coords, jitters)
+
         # make moments
         moments = self.moment_dictionary(stamps,
                                          coords,
