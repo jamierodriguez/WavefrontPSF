@@ -1,7 +1,7 @@
 #
-# $Rev:: 159                                                          $:  
+# $Rev:: 179                                                          $:  
 # $Author:: roodman                                                   $:  
-# $LastChangedDate:: 2013-09-23 11:48:32 -0700 (Mon, 23 Sep 2013)     $:
+# $LastChangedDate:: 2014-05-19 15:46:44 -0700 (Mon, 19 May 2014)     $:
 #
 #
 # Python Class to implement Inverse Distance Weighted interpolation
@@ -55,6 +55,8 @@ class IDWInterp(object):
         xyArr = numpy.array(zip(X,Y))
         dNeighbors,indexNeighbors = self.kdtree.query(xyArr,self.kNN)
 
+        #  buggy if kNN>entries...
+        #
         # get the Z values of the neighbors
         zNeighbors = self.Z[indexNeighbors]
 

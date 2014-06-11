@@ -171,14 +171,12 @@ class FocalPlaneFit(Wavefront):
         nInterpGrid = 32
         if len(methodVal) != 2:
             if mesh_name == 'Science-20130325s1-v1i2_All':
-                #methodVal = (250, 1.0)  # use 250 NN, 1.0 mm offset distance
-                methodVal = (20, 1.0)  # use 20 NN, 1.0 mm offset distance
+                methodVal = (250, 1.0)  # use 250 NN, 1.0 mm offset distance
+                #methodVal = (20, 1.0)  # use 20 NN, 1.0 mm offset distance
             else:
                 methodVal = (4, 1.0)
 
-        in_dict = {"zPointsFile": path_mesh + "z4Mesh_" +
-                                 mesh_name + ".dat",
-                  "sensorSet": sensorSet,
+        in_dict = {"sensorSet": sensorSet,
                   "doTrefoil": True,
                   "doSpherical": True,
                   "doQuadrefoil": False,
@@ -197,6 +195,7 @@ class FocalPlaneFit(Wavefront):
                                mesh_name + '.dat'})
             except IOError:
                 continue
+        self.da_dict = in_dict
         ## for key in sorted(in_dict.keys()):
         ##     print(key, in_dict[key])
         da = donutana(**in_dict)
@@ -338,6 +337,42 @@ class FocalPlaneFit(Wavefront):
 
         return zernike_dictionary
 
+    def coords_to_stamps(self, in_dict, coords, jitters=[]):
+        """create a wavefront across the focal plane
+
+        Parameters
+        ----------
+        in_dict : dictionary
+            dictionary containing the zernike corrections
+
+        coords : array
+            An array of [[coordx, coordy, ext_num]] of the locations sampled
+
+        jitters : ?
+            TODO: what's the format with these again?
+
+        Returns
+        -------
+        stamp : array
+            The image of the zernike polynomial convolved with Kolmogorov
+            spectrum.
+
+        """
+
+        if 'rzero' in in_dict.keys():
+            rzero = in_dict['rzero']
+        else:
+            # set the atmospheric contribution to some nominal level
+            rzero = 0.14
+
+        zernikes = self.zernikes(in_dict, coords)
+        N = len(zernikes)
+        rzeros = [rzero] * N
+        # make stamps
+        stamps = self.stamp_factory(zernikes, rzeros, coords, jitters)
+
+        return stamps
+
     def plane(self, in_dict, coords,
               windowed=True, order_dict={}):
         """create a wavefront across the focal plane
@@ -369,15 +404,7 @@ class FocalPlaneFit(Wavefront):
         if 'history' in self.verbosity:
             self.history.append(in_dict.copy())
 
-        if 'rzero' in in_dict.keys():
-            rzero = in_dict['rzero']
-        else:
-            # set the atmospheric contribution to some nominal level
-            rzero = 0.14
-
-        zernikes = self.zernikes(in_dict, coords)
         N = len(zernikes)
-        rzeros = [rzero] * N
         backgrounds = [self.background] * N
         ## jitter_keys = ['e1', 'e2']
         ## jitter_dict = {}
@@ -396,7 +423,7 @@ class FocalPlaneFit(Wavefront):
         else:
             thresholds = [0] * N
         # make stamps
-        stamps = self.stamp_factory(zernikes, rzeros, coords, jitters)
+        stamps = coords_to_stamps(in_dict, coords, jitters)
         # make moments
         moments = self.moment_dictionary(stamps,
                                          coords,
@@ -534,7 +561,7 @@ class FocalPlaneFit(Wavefront):
 
         zernikes = np.array([[0] * 3 +
 
-            [self.da.meshDict['zMesh'].doInterp(
+            [self.da.meshDict['z4Mesh'].doInterp(
             self.decaminfo.ccddict[int(coord[2])], [coord[0]], [coord[1]])
             / 172. +
             zdelta[4 - 1] / 172. +

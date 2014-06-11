@@ -76,6 +76,15 @@ class Wavefront(object):
                 "scaleFactor": 2.,  # 1.,  # 2.,
                 "randomFlag": randomFlag,
                 }
+        else:
+            self.input_dict = {
+                "nbin": nbin,  # 256,  # 128,
+                "nPixels": nPixels,  # 32,  # 32,
+                "pixelOverSample": pixelOverSample,  # 8,  # 4,
+                "scaleFactor": scaleFactor,  # 1.,  # 2.,
+                "randomFlag": randomFlag,
+                }
+
         self.make_donut = makedonut(**self.input_dict)
         # decaminfo stuff (since it's useful)
         self.decaminfo = decaminfo()
@@ -505,5 +514,4 @@ class Wavefront(object):
         coords_focal = np.vstack((xPos, yPos, coords[:,2])).T
 
         return coords_focal
-
 

@@ -13,7 +13,7 @@ XRAY_SOFTDIR = /afs/slac/g/ki/software/
 	LD = gcc
 	LDFLAGS = -bundle -flat_namespace -undefined suppress
 	LIBS = -L/usr/local/lib  -lcfitsio -lfftw3 -lm
-	INCS = -I/Users/cpd/Dropbox/derp-ninja/DES-STANFORD/DECamOptics/donutlib -I/usr/local/include -I/Library/Frameworks/EPD64.framework/Versions/7.3/include/python2.7 -I/Library/Frameworks/EPD64.framework/Versions/7.3/lib/python2.7/site-packages/numpy/core/include
+	INCS = -I/usr/local/include -I/Library/Frameworks/EPD64.framework/Versions/7.3/include/python2.7 -I/Library/Frameworks/EPD64.framework/Versions/7.3/lib/python2.7/site-packages/numpy/core/include
 	SW = swig
 
 

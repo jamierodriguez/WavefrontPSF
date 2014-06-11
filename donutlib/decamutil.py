@@ -13,8 +13,9 @@ class decaminfo(object):
     """
 
     def info(self):
-        # info returns a dictionary chock full of info on the DECam geometry
-        # keyed by the CCD name
+        """info returns a dictionary chock full of info on the DECam geometry
+        keyed by the CCD name
+        """
 
         infoDict = OrderedDict()
 
@@ -100,9 +101,21 @@ class decaminfo(object):
         self.mmperpixel = 0.015
         self.rClear = 225.0
 
+    def __getstate__(self):
+        stateDict = {}
+        keysToPickle = ['infoDict','mmperpixel','rClear']
+        for key in keysToPickle:
+            stateDict[key] = self.__dict__[key]
+        return stateDict
+
+    def __setstate__(self,state):
+        for key in state:
+            self.__dict__[key] = state[key]
+
     def getPosition(self,extname,ix,iy):
-        # return the x,y position in [mm] for a given CCD and pixel number
-        # note that the ix,iy are Image pixels - overscans removed - and start at zero
+        """ return the x,y position in [mm] for a given CCD and pixel number
+        note that the ix,iy are Image pixels - overscans removed - and start at zero
+        """
 
         ccdinfo = self.infoDict[extname]
 
@@ -121,7 +134,8 @@ class decaminfo(object):
         return xPos,yPos
 
     def getPixel(self,extname,xPos,yPos):
-        # given a coordinate in [mm], return pixel number
+        """ given a coordinate in [mm], return pixel number
+        """
 
         ccdinfo = self.infoDict[extname]
 
@@ -139,6 +153,31 @@ class decaminfo(object):
 
         return ix,iy
 
+    def getSensor(self,xPos,yPos):
+        """ given x,y position on the focal plane, return the sensor name
+        or None, if not interior to a chip
+        """
+        for ext in self.infoDict.keys():
+            ccdinfo = self.infoDict[ext]
+            # is this x,y inside this chip?
+            nxdif = numpy.abs( (xPos - ccdinfo["xCenter"]) / self.mmperpixel )
+            nydif = numpy.abs( (yPos - ccdinfo["yCenter"]) / self.mmperpixel )
+
+            # CCD size in pixels
+            if ccdinfo["FAflag"]:
+                xpixHalfSize = 1024.
+                ypixHalfSize = 1024.
+            else:
+                xpixHalfSize = 1024.
+                ypixHalfSize = 2048.
+
+            if nxdif <= xpixHalfSize and nydif <= ypixHalfSize:
+                return ext
+
+        # get to here if we are not inside a chip
+        return None
+            
+        
 
 
 class mosaicinfo(object):

@@ -10,11 +10,15 @@
 #
 
 import numpy
+import scipy
 from scipy.interpolate import SmoothBivariateSpline
 from scipy.interpolate.rbf import Rbf
 from scipy.interpolate import griddata
+from scipy.spatial import cKDTree
 from donutlib.IDWInterp import IDWInterp
-import scipy
+from donutlib.decamutil import decaminfo
+import bisect
+
 try:
     from scipy import stats
 except:
@@ -25,11 +29,14 @@ import statsmodels.api as sm
 try:
     from matplotlib import cm,colors
     from mpl_toolkits.mplot3d import axes3d
-    import matplotlib.pyplot as plt
+    from matplotlib import pyplot as plt
 except:
     print "PointMesh: Could not load matplotlib"
     
-from ROOT import TStyle,gStyle,TCanvas,TGraph2D
+try:
+    from ROOT import TStyle,gStyle,TCanvas,TGraph2D
+except:
+    print "PointMesh: Could not load ROOT"
 
 import pdb
 
@@ -48,10 +55,17 @@ class PointMesh(object):
 
         # fill points Dictionary with Lists of points
         pointsDict = {}
+
+        # pre-fill pointsDict lists
+        for iCoord in self.coordList:
+            pointsDict[iCoord] = []
+            
         for entry in dataPoints:
             aList = entry.tolist()
             key = aList[0]
             point = aList[1:5]
+            # this will add keys, if they are not already present in the coordList
+            # this is ok behavior, since we can use a subset of coords if desired
             if not pointsDict.has_key(key):
                 pointsDict[key] = []
             pointsDict[key].append(point)
@@ -64,10 +78,12 @@ class PointMesh(object):
             self.pointsArray[key] = anArr
     
 
-    def __init__(self,coordList,gridArray,pointsArray=None,pointsFile=None,myMethod='sbs',methodVal=None,debugFlag=False):
+    def __init__(self,coordList,gridArray,pointsArray=None,pointsFile=None,myMethod='sbs',methodVal=None,debugFlag=False,title=""):
         """ initialize the class
         """
         self.debugFlag = debugFlag
+
+        self.title = title
 
         self.nCoord = len(coordList)
         self.coordList = coordList
@@ -75,6 +91,8 @@ class PointMesh(object):
         # vignetting  HARDCODED
         self.radiusVignetted = 225.0
 
+        # decam info
+        self.decam = decaminfo()
 
         # Array with interpolation grid size and number of points
         # should contain a 4 tuple of [ny,ylo,yhi,nx,xlo,xhi] for each nCoord
@@ -105,7 +123,7 @@ class PointMesh(object):
 
     def __getstate__(self):
         stateDict = {}
-        keysToPickle = ['nCoord','gridArray','radiusVignetted','pointsArray','myMethod','coordList','debugFlag','methodVal']
+        keysToPickle = ['nCoord','gridArray','radiusVignetted','pointsArray','myMethod','coordList','debugFlag','methodVal','title','decam']
         for key in keysToPickle:
             stateDict[key] = self.__dict__[key]
         return stateDict
@@ -238,6 +256,8 @@ class PointMesh(object):
 
 
     def doInterp(self,iCoord,x,y):
+        """ get interpolated value for iCoord,x,y
+        """
 
         # put all the returns at the bottom - to check that Z is not a "nan"
         
@@ -495,7 +515,7 @@ class PointMesh(object):
             #    Z = self.interpValues[iCoord]
             #else:
             X,Y,Z = self.getXYZpoints(coordList=coordList)
-                
+
             minX = numpy.minimum(minX,X.min())
             maxX = numpy.maximum(maxX,X.max())
             minY = numpy.minimum(minY,Y.min())
@@ -528,6 +548,32 @@ class PointMesh(object):
         gStyle.SetHistTopMargin(0)
         self.graphData.Draw("zpcol")
         return self.graphData
+
+
+    def plotdMi(self,title='Z',range=None,coordList=None,bins=100):
+        """ plot the difference between the data and the interpolation
+        """
+        # get coordList
+        if coordList == None:
+            coordList = self.coordList
+        
+        # reserve a Figure and 3D axes
+        fig = plt.figure(figsize=(10,7.5))
+
+        # set ranges before too
+        self.ax.set_xlabel('Data - Interpolation')
+        self.ax.set_xlim(minX, maxX)
+
+        X,Y,Z = self.getXYZpoints(coordList)
+        Zi = self.doInterp(X,Y) 
+        plt.hist(Z-Zi,nbins=nbins,range=range,title=title)
+
+        # plot it!
+        plt.show()
+
+        return fig
+
+    
 
     # to fix current color bug
     def forceUpdate(self,event):
@@ -605,25 +651,77 @@ class PointMesh(object):
 
         return self.fig,self.ax
 
-    def plotMeshMPL2D(self,zmin=None,zmax=None,title="",coordList=None):
+
+    def format_coord(self, x, y):
+        """ given x,y find z value from the interpolation grid
+        """
+        extname = self.decam.getSensor(x,y)
+        if extname==None:
+            return     'x=%1.4f, y=%1.4f               '%(x, y)
+        else:
+            if self.interpEdges.has_key(extname):
+                xEdges = self.interpEdges[extname][0][0,:]
+                yEdges = self.interpEdges[extname][1][:,0]
+            else:
+                return     'x=%1.4f, y=%1.4f               '%(x, y)
+
+            # get the right index into the interpValues array
+            indY = bisect.bisect_left(yEdges,y)-1
+            indX = bisect.bisect_left(xEdges,x)-1
+
+        if self.interpValues.has_key(extname):
+            shape = self.interpValues[extname].shape
+            if indX>=0 and indX<shape[1] and indY>=0 and indY<shape[0]:
+                z = self.interpValues[extname][indY,indX]
+                return 'x=%1.4f, y=%1.4f, z=%1.4f, %s'%(x, y, z,extname)
+            else:
+                print "problem: ",extname,x,y
+                return 'x=%1.4f, y=%1.4f               '%(x, y)
+        else:
+            return     'x=%1.4f, y=%1.4f               '%(x, y)
+
+            
+
+
+
+    def plotMeshMPL2D(self,zmin=None,zmax=None,title="",coordList=None,overlay=False,overlayC=None):
         """ plot the Mesh
         """
+
         # get coordList
         if coordList == None:
             coordList = self.coordList
         
         # reserve a Figure and 3D axes
-        self.fig = plt.figure(figsize=(10,7.5))
-        self.ax = self.fig.gca()
+        if overlay:
+            # use the current figure and axes
+            self.fig = plt.gcf()
+            self.ax = plt.gca()
+        else:
+            self.fig = plt.figure(figsize=(10,7.5))
+            self.ax = self.fig.gca()
 
         # autorange in X,Y
-        minX,maxX,minY,maxY,minZ,maxZ = self.autoRange(zmin,zmax,coordList=coordList)
+        if overlay:
+            minZ,maxZ = overlayC.get_clim()
+            minX,maxX = self.ax.get_xlim()
+            minY,maxY = self.ax.get_ylim()
+        else:
+            minX,maxX,minY,maxY,minZ,maxZ = self.autoRange(zmin,zmax,coordList=coordList)
 
+        # hard code X,Y limits to be DECam boundaries
+        minX = -235.
+        maxX = 235.
+        minY = -235.
+        maxY = 235.
+        
         # set ranges before too
-        self.ax.set_xlabel('X')
-        self.ax.set_xlim(minX, maxX)
-        self.ax.set_ylabel('Y')
-        self.ax.set_ylim(minY, maxY)
+        if not overlay:
+            self.ax.set_xlabel('X')
+            self.ax.set_xlim(minX, maxX)
+            self.ax.set_ylabel('Y')
+            self.ax.set_ylim(minY, maxY)
+            
         anorm = colors.Normalize(minZ,maxZ,True)
 
         # loop over Extensions
@@ -631,28 +729,37 @@ class PointMesh(object):
                 
             # pcolor needs X,Y values of the edges of the bins...
             X,Y = self.interpEdges[iCoord]
-            R = numpy.sqrt(X*X + Y*Y)
-            XVig = numpy.ma.masked_where(R>self.radiusVignetted,X)
-            YVig = numpy.ma.masked_where(R>self.radiusVignetted,Y)
+            Xcen,Ycen = self.interpGrids[iCoord]
+            Rcen = numpy.sqrt(Xcen*Xcen + Ycen*Ycen)
+            #R = numpy.sqrt(X*X + Y*Y)
+            #XVig = numpy.ma.masked_where(R>self.radiusVignetted,X)
+            #YVig = numpy.ma.masked_where(R>self.radiusVignetted,Y)
             Z = self.interpValues[iCoord]
-            ZVig = numpy.ma.masked_where(R>self.radiusVignetted,Z)
+            ZVig = numpy.ma.masked_where(Rcen>self.radiusVignetted,Z)
 
-            cset = self.ax.pcolor(XVig, YVig, ZVig, cmap=cm.jet, norm=anorm)
+            self.cset = self.ax.pcolor(X, Y, ZVig, cmap=cm.jet, norm=anorm)
                 
         # set ranges last
-        self.ax.set_xlabel('X')
-        self.ax.set_xlim(minX, maxX)
-        self.ax.set_ylabel('Y')
-        self.ax.set_ylim(minY, maxY)
-        self.ax.set_title(title)
+        if not overlay:
+            self.ax.set_xlabel('X')
+            self.ax.set_xlim(minX, maxX)
+            self.ax.set_ylabel('Y')
+            self.ax.set_ylim(minY, maxY)
+            if title=="":
+                title = self.title
+            self.ax.set_title(title)
 
-        # add the colorbar
-        self.fig.colorbar(cset)
+            # add the colorbar
+            self.fig.colorbar(self.cset)
+
+            # setup plot so that interactively you can use the mouse to show the Z value!        
+            self.ax.format_coord = self.format_coord
+                    
 
         # plot it!
         plt.show()
 
-        return self.fig,self.ax
+        return self.fig,self.ax,self.cset
 
 
 
@@ -669,14 +776,13 @@ class PointMesh(object):
             except:
                 print "PointMesh: error in calcWgtDtoInterp"
 
-        # remake the interpolation mesh too
-        if self.interpPresent:
-            self.makeInterpolation(self.myMethod,self.methodVal)                   
+
 
     def calcWgtNSig(self,nsigma=3.0):
-        # set the weight for the mesh by number of sigma from TMean and TStd
-        # only works for interpolation type "tmean"
-        # wgt = 1.0 or less than nsigma, =0.0 for more...
+        """ set the weight for the mesh by number of sigma from TMean and TStd
+        only works for interpolation type "tmean"
+        wgt = 1.0 or less than nsigma, =0.0 for more...
+        """
 
         for iCoord in self.coordList:
             npoints = self.pointsArray[iCoord][:,0].shape[0]
@@ -687,14 +793,49 @@ class PointMesh(object):
             except:
                 print "PointMesh: error in calcWgtNSig"
 
-        # remake the interpolation mesh too
-        if self.interpPresent:
-            self.makeInterpolation(self.myMethod,self.methodVal)       
+
+    def calcWgtnMAD(self,kNN=100,nMADCut=4.0):
+        """ set the weight for the mesh according to the number of MAD from the mean
+        for each points.  Set the wgt = 1.0 for nMAD<cut =0.0 otherwise
+        """
+
+        listOfnMAD = []
+        for iCoord in self.coordList:
+            thePointsArray = self.pointsArray[iCoord]
+            npoints = thePointsArray[:,0].shape[0]
+
+            if npoints>0:
+
+                # build the KDTree for this iCoord
+                xyArr = thePointsArray[:,(0,1)]
+                kdtree = cKDTree(xyArr)
+
+                # loop over points, find kNearestNeighbors
+                for ipoint in range(npoints):
+                    xyPnt = thePointsArray[ipoint,(0,1)]
+                    distance,neighborIndex = kdtree.query(xyPnt,kNN)
+
+                    # passing the list of neighbors just selects those elements
+                    neighborArr = thePointsArray[neighborIndex,2]
+
+                    medianVal = numpy.median(neighborArr)
+                    MAD = numpy.median(numpy.abs(neighborArr-medianVal))
+                    nMAD = (thePointsArray[ipoint,2] - medianVal)/MAD
+                    listOfnMAD.append(nMAD)
+
+                    # compact pythonism to replace regular if else block
+                    thePointsArray[:,3] = (1. if numpy.abs(nMAD)<nMADCut else 0.0) 
+                    
+
+        # return an array of nMAD values
+        nMADArr = numpy.array(listOfnMAD)
+        return nMADArr
 
             
     def cullMesh(self,minweight):
-        
-        # remove points from pointsArray that have low weights
+        """ remove points from pointsArray that have low weights
+        and remake the interpolation
+        """
         for iCoord in self.coordList:
             if self.pointsArray.has_key(iCoord):
                 origArray = self.pointsArray[iCoord]
@@ -767,16 +908,19 @@ class PointMesh(object):
             # get the data
             data = self.pointsArray[iCoord]
 
-            # get X,Y,Z
-            X = data[:,0]
-            Y = data[:,1]
-            Z = data[:,2]
+            # make sure there is some data!
+            if data.shape[0]>0 :
 
-            # remove the rotation and offset
-            adjustedZ = Z - ( (X * thetay / angleconversion) + (Y * thetax / angleconversion) + delta )
+                # get X,Y,Z
+                X = data[:,0]
+                Y = data[:,1]
+                Z = data[:,2]
 
-            # insert this into pointsArray
-            self.pointsArray[iCoord][:,2] = adjustedZ
+                # remove the rotation and offset
+                adjustedZ = Z - ( (X * thetay / angleconversion) + (Y * thetax / angleconversion) + delta )
+
+                # insert this into pointsArray
+                self.pointsArray[iCoord][:,2] = adjustedZ
 
         # remake the interpolation mesh too
         if self.interpPresent:
@@ -791,26 +935,32 @@ class PointMesh(object):
         for iCoord in self.coordList:            
             # get the data
             data = self.pointsArray[iCoord]
-            X = data[:,0]
-            Y = data[:,1]
-            Z = data[:,2]
-            W = data[:,3]
-            
-            # get the other points
-            otherData = otherMesh.pointsArray[iCoord]
-            otherX = otherData[:,0]
-            otherY = otherData[:,1]
-            otherZ = otherData[:,2]
-            otherW = otherData[:,3]
-            
-            # load new points
-            npoints = otherX.shape[0] + X.shape[0]
-            newData = numpy.zeros((npoints,4))
-            newData[:,0] = numpy.append(X,otherX)
-            newData[:,1] = numpy.append(Y,otherY)
-            newData[:,2] = numpy.append(Z,otherZ)
-            newData[:,3] = numpy.append(W,otherW)
-            self.pointsArray[iCoord] = newData.copy()
+
+            # check that there is data
+            if data.shape[0]>0:
+                X = data[:,0]
+                Y = data[:,1]
+                Z = data[:,2]
+                W = data[:,3]
+
+                # get the other points
+                otherData = otherMesh.pointsArray[iCoord]
+
+                if otherData.shape[0]>0:
+
+                    otherX = otherData[:,0]
+                    otherY = otherData[:,1]
+                    otherZ = otherData[:,2]
+                    otherW = otherData[:,3]
+
+                    # load new points
+                    npoints = otherX.shape[0] + X.shape[0]
+                    newData = numpy.zeros((npoints,4))
+                    newData[:,0] = numpy.append(X,otherX)
+                    newData[:,1] = numpy.append(Y,otherY)
+                    newData[:,2] = numpy.append(Z,otherZ)
+                    newData[:,3] = numpy.append(W,otherW)
+                    self.pointsArray[iCoord] = newData.copy()
 
         # remake the interpolation mesh too
         if self.interpPresent:

@@ -66,9 +66,9 @@ DonutEngine::DonutEngine(int iTelescope,
   _xDECam = 0.0;
   _yDECam = 0.0;
 
-  printOptions();
-
   init();
+
+  printOptions();
 }
 
 DonutEngine::~DonutEngine(){
@@ -81,6 +81,17 @@ DonutEngine::~DonutEngine(){
   }
   delete _fft2PlanC;
   delete _ifft2PlanC;
+}
+
+void DonutEngine::closeFits(){
+
+  if (_debugFlag){
+    int status = 0;         /* initialize status before calling fitsio routines */
+    if (fits_close_file(_fptr, &status)){            /* close the file */
+      fits_report_error(stderr, status);
+    }
+  }
+
 }
 
 void DonutEngine::fillOptions(MapStoS inputMapS, MapStoI inputMapI, MapStoD inputMapD){
@@ -605,6 +616,10 @@ void DonutEngine::calcAll(Real* par){
   // save the parameters
   savePar();
             
+  if (_printLevel>=2){
+    std::cout << "DonutEngine: calcAll is done" << std::endl;
+  }
+
 }
 
 
@@ -750,6 +765,7 @@ void DonutEngine::calcPupilMask(){
       Real filtExchArcBoxYmax = 0.369;
       Real filtExchArcBoxYmin = 0.320;
       Real spiderWidth = 0.019 * (1462.526/4010.)/2.0;  // use 19mm thick
+      //spiderWidth = 0.050 * (1462.526/4010.)/2.0;  // added May 15, 2014, try 50mm thick, actually works pretty well
       Real spiderSlope = 3.01e-4;
 
       // now loop over all bins, and build the pupil

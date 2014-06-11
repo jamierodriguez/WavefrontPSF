@@ -12,8 +12,11 @@ import statsmodels.api as sm
 from donutlib.PointMesh import PointMesh
 from decamutil import decaminfo 
 from decamutil import mosaicinfo
-from ROOT import TTree, TFile, gROOT, TCanvas, gStyle, TGraph2D, TGraphErrors, SetOwnership
-from hplotlib import hfillhist
+try:
+    from ROOT import TTree, TFile, gROOT, TCanvas, gStyle, TGraph2D, TGraphErrors, SetOwnership
+    from hplotlib import hfillhist
+except:
+    print "donutana: could not import ROOT"
 import pdb
 
 class donutana(object):
@@ -58,6 +61,7 @@ class donutana(object):
                            "deltaZSetPoint":0.0,
                            "alignmentMatrix":hexapodArray20121020,
                            "zPointsFile":"",
+                           "z4PointsFile":"",
                            "z5PointsFile":"",
                            "z6PointsFile":"",
                            "z7PointsFile":"",
@@ -65,6 +69,10 @@ class donutana(object):
                            "z9PointsFile":"",
                            "z10PointsFile":"",
                            "z11PointsFile":"",
+                           "z12PointsFile":"",
+                           "z13PointsFile":"",
+                           "z14PointsFile":"",
+                           "z15PointsFile":"",
                            "nInterpGrid":8,
                            "interpMethod":"idw",
                            "methodVal":None,
@@ -73,6 +81,7 @@ class donutana(object):
                            "unVignettedOnly":False,
                            "doTrefoil":False,
                            "doSpherical":False,
+                           "doQuadrefoil":False,
                            "doRzero":False,
                            "histFlag":False,
                            "debugFlag":False}
@@ -122,8 +131,6 @@ class donutana(object):
             for ccd in self.info.keys():
                 ccdinfo = self.info[ccd]
                 if  not ccdinfo["FAflag"]:
-                    if ccd == 'N30':
-                        continue
                     self.coordList.append(ccd)
         elif  self.paramDict["sensorSet"] == "Both":
             for ccd in self.info.keys():
@@ -175,31 +182,18 @@ class donutana(object):
         # also keep a dictionary to the meshes
         self.meshDict = {}
 
-        # build the reference meshes
+        # for backward compatibility...
         if self.paramDict["zPointsFile"] != "":
-            self.zRefMesh = PointMesh(self.coordList,self.gridDict,pointsFile=self.paramDict["zPointsFile"],myMethod=self.paramDict["interpMethod"],methodVal=self.paramDict["methodVal"])
-            self.meshDict["zMesh"] = self.zRefMesh
-        if self.paramDict["z5PointsFile"] != "":
-            self.z5RefMesh = PointMesh(self.coordList,self.gridDict,pointsFile=self.paramDict["z5PointsFile"],myMethod=self.paramDict["interpMethod"],methodVal=self.paramDict["methodVal"])
-            self.meshDict["z5Mesh"] = self.z5RefMesh
-        if self.paramDict["z6PointsFile"] != "":
-            self.z6RefMesh = PointMesh(self.coordList,self.gridDict,pointsFile=self.paramDict["z6PointsFile"],myMethod=self.paramDict["interpMethod"],methodVal=self.paramDict["methodVal"])
-            self.meshDict["z6Mesh"] = self.z6RefMesh
-        if self.paramDict["z7PointsFile"] != "":
-            self.z7RefMesh = PointMesh(self.coordList,self.gridDict,pointsFile=self.paramDict["z7PointsFile"],myMethod=self.paramDict["interpMethod"],methodVal=self.paramDict["methodVal"])
-            self.meshDict["z7Mesh"] = self.z7RefMesh
-        if self.paramDict["z8PointsFile"] != "":
-            self.z8RefMesh = PointMesh(self.coordList,self.gridDict,pointsFile=self.paramDict["z8PointsFile"],myMethod=self.paramDict["interpMethod"],methodVal=self.paramDict["methodVal"])
-            self.meshDict["z8Mesh"] = self.z8RefMesh
-        if self.paramDict["z9PointsFile"] != "":
-            self.z9RefMesh = PointMesh(self.coordList,self.gridDict,pointsFile=self.paramDict["z9PointsFile"],myMethod=self.paramDict["interpMethod"],methodVal=self.paramDict["methodVal"])
-            self.meshDict["z9Mesh"] = self.z9RefMesh
-        if self.paramDict["z10PointsFile"] != "":
-            self.z10RefMesh = PointMesh(self.coordList,self.gridDict,pointsFile=self.paramDict["z10PointsFile"],myMethod=self.paramDict["interpMethod"],methodVal=self.paramDict["methodVal"])
-            self.meshDict["z10Mesh"] = self.z10RefMesh
-        if self.paramDict["z11PointsFile"] != "":
-            self.z11RefMesh = PointMesh(self.coordList,self.gridDict,pointsFile=self.paramDict["z11PointsFile"],myMethod=self.paramDict["interpMethod"],methodVal=self.paramDict["methodVal"])
-            self.meshDict["z11Mesh"] = self.z11RefMesh
+            self.paramDict["z4PointsFile"] = self.paramDict["zPointsFile"]
+
+        # build the reference meshes
+        for iZ in range(4,15+1):
+            name = "z%dPointsFile" % (iZ)
+            title = "Zernike %d" % (iZ)
+            if self.paramDict[name] != "":
+                theMesh = PointMesh(self.coordList,self.gridDict,pointsFile=self.paramDict[name],myMethod=self.paramDict["interpMethod"],methodVal=self.paramDict["methodVal"],title=title)
+                meshName = "z%dMesh" % iZ
+                self.meshDict[meshName] = theMesh
 
         # matrix for Hexapod calculation
         self.alignmentMatrix = numpy.matrix(self.paramDict["alignmentMatrix"])
@@ -211,45 +205,38 @@ class donutana(object):
         self.zangleconv = arcsecperrad * mmpermicron
 
     def fillPoints(self,dataDict,extraCut=""):
-        # fill Points dictionaries for PointMeshes from the list of Donut dictionaries
-        zPnts = {}
-        z5Pnts = {}
-        z6Pnts = {}
-        z7Pnts = {}
-        z8Pnts = {}
-        if self.paramDict["doTrefoil"]:
-            z9Pnts = {}
-            z10Pnts = {}
-        if self.paramDict["doSpherical"]:
-            z11Pnts = {}
-        if self.paramDict["doRzero"]:
-            rzeroPnts = {}
-            chi2Pnts = {}
-            nelePnts = {}
-            
 
-        # need a blank list for each ccd for each of these 5 meshes
-        for coord in self.coordList:
-            zPnts[coord] = []
-            z5Pnts[coord] = []
-            z6Pnts[coord] = []
-            z7Pnts[coord] = []
-            z8Pnts[coord] = []
-            if self.paramDict["doTrefoil"]:
-                z9Pnts[coord] = []
-                z10Pnts[coord] = []
-            if self.paramDict["doSpherical"]:
-                z11Pnts[coord] = []
-            if self.paramDict["doRzero"]:
-                rzeroPnts[coord] = []
-                chi2Pnts[coord] = []
-                nelePnts[coord] = []
-                
-        
-        # fill dicts of Pnts from List of Donut information dictionaries
+        # this fills a dictionary, keyed by Zernike term (and rzero,chi2,nele), of dictionaries, keyed by Coord, of lists (which are converted to arrays)
+
+        bigDict = {}
+
+        # make Points dictionaries for PointMeshes from the list of Donut dictionaries
+        for iZ in range(4,8+1):
+            zkey = "z%d" % (iZ)
+            bigDict[zkey] = {}
+        if self.paramDict["doTrefoil"]:
+            bigDict["z9"] = {}
+            bigDict["z10"] = {}
+        if self.paramDict["doSpherical"]:
+            bigDict["z11"] = {}
+        if self.paramDict["doQuadrefoil"]:
+            bigDict["z14"] = {}
+            bigDict["z15"] = {}
+        if self.paramDict["doRzero"]:
+            bigDict["rzero"] = {}
+            bigDict["chi2"] = {}
+            bigDict["nele"] = {}
+
+        # make a blank list for each Coord for each of the Pnts dicts
+        for key in bigDict.keys():
+            for coord in self.coordList:
+                bigDict[key][coord] = []
+                        
+        # fill bigDict lists from Donut information dictionaries
         for donut in dataDict:
 
             if type(donut) == dict or type(donut) == pyfits.header.Header:
+
                 try:
                     extname = donut["EXTNAME"]
                 except:
@@ -261,18 +248,25 @@ class donutana(object):
                 zern6 = donut["ZERN6"]
                 zern7 = donut["ZERN7"]
                 zern8 = donut["ZERN8"]
+
                 if self.paramDict["doTrefoil"]:
                     zern9 = donut["ZERN9"]
                     zern10 = donut["ZERN10"]
+
                 if self.paramDict["doSpherical"]:
                     zern11 = donut["ZERN11"]
+
+                if self.paramDict["doQuadrefoil"]:
+                    zern14 = donut["ZERN14"]
+                    zern15 = donut["ZERN15"]
+
                 if self.paramDict["doRzero"]:
                     rzero = donut["rzero"]
                     
                 ix = donut["IX"]
                 iy = donut["IY"]
                 chi2 = donut["CHI2"]
-##                fitstat = donut["FITSTAT"]
+##                fitstat = donut["FITSTAT"]   ## why commented out?
                 nele = donut["NELE"]
 ##                bkgd = donut["BKGD"]
                 
@@ -322,6 +316,13 @@ class donutana(object):
                     zern11 = 0.
 
                 try:
+                    zern14 = donut.zern14
+                    zern15 = donut.zern15
+                except:
+                    zern14 = 0.
+                    zern15 = 0.
+
+                try:
                     rzero = donut.rzero
                 except:
                     rzero = 0.
@@ -338,144 +339,65 @@ class donutana(object):
                     good = True
 
             # good Donut
-            if good and zPnts.has_key(extname):
+            if good and bigDict["z4Pnts"].has_key(extname):
                 xval,yval = self.infoObj.getPosition(extname,ix,iy)
-                #KLUDGE KLUDGE
+                # convert from z4 to dz
                 dz = zern4 * self.paramDict["z4Conversion"]
                 wgt = 1.0
 
                 # append to relevant list
-                zPoint = [xval,yval,dz,wgt]
-                zPnts[extname].append(zPoint)
-                
-                z5Point = [xval,yval,zern5,wgt]
-                z5Pnts[extname].append(z5Point)
-
-                z6Point = [xval,yval,zern6,wgt]
-                z6Pnts[extname].append(z6Point)
-
-                z7Point = [xval,yval,zern7,wgt]
-                z7Pnts[extname].append(z7Point)
-
-                z8Point = [xval,yval,zern8,wgt]
-                z8Pnts[extname].append(z8Point)
-
+                # make dicts of pnts
+                pntsDict = {}
+                pntsDict["z4"] = [xval,yval,dz,wgt]
+                pntsDict["z5"] = [xval,yval,zern5,wgt]
+                pntsDict["z6"] = [xval,yval,zern6,wgt]
+                pntsDict["z7"] = [xval,yval,zern7,wgt]
+                pntsDict["z8"] = [xval,yval,zern8,wgt]
                 if self.paramDict["doTrefoil"]:
-
-                    z9Point = [xval,yval,zern9,wgt]
-                    z9Pnts[extname].append(z9Point)
-                    
-                    z10Point = [xval,yval,zern10,wgt]
-                    z10Pnts[extname].append(z10Point)
+                    pntsDict["z9"] = [xval,yval,zern9,wgt]
+                    pntsDict["z10"] = [xval,yval,zern10,wgt]
 
                 if self.paramDict["doSpherical"]:
+                    pntsDict["z11"] = [xval,yval,zern11,wgt]
 
-                    z11Point = [xval,yval,zern11,wgt]
-                    z11Pnts[extname].append(z11Point)
+                if self.paramDict["doQuadrefoil"]:
+                    pntsDict["z14"] = [xval,yval,zern14,wgt]
+                    pntsDict["z15"] = [xval,yval,zern15,wgt]
 
                 if self.paramDict["doRzero"]:
+                    pntsDict["rzero"] = [xval,yval,rzero,wgt]
+                    pntsDict["chi2"] = [xval,yval,chi2,wgt]
+                    pntsDict["nele"] = [xval,yval,nele,wgt]
 
-                    rzeroPoint = [xval,yval,rzero,wgt]
-                    rzeroPnts[extname].append(rzeroPoint)
-                    chi2Point = [xval,yval,chi2,wgt]
-                    chi2Pnts[extname].append(chi2Point)
-                    nelePoint = [xval,yval,nele,wgt]
-                    nelePnts[extname].append(nelePoint)
+                # now enter these points into bigDict
+                for key in bigDict.keys():
+                    bigDict[key][extname].append(pntsDict[key])
+                    
 
 
         # convert all the lists to numpy arrays
-        zPoints = {}
-        z5Points = {}
-        z6Points = {}
-        z7Points = {}
-        z8Points = {}
-        if self.paramDict["doTrefoil"]:
-            z9Points = {}
-            z10Points = {}
-        if self.paramDict["doSpherical"]:
-            z11Points = {}
-        if self.paramDict["doRzero"]:
-            rzeroPoints = {}
-            nelePoints = {}
-            chi2Points = {}
-                            
-        for coord in self.coordList:
-            zPoints[coord] = numpy.array(zPnts[coord])
-            z5Points[coord] = numpy.array(z5Pnts[coord])
-            z6Points[coord] = numpy.array(z6Pnts[coord])
-            z7Points[coord] = numpy.array(z7Pnts[coord])
-            z8Points[coord] = numpy.array(z8Pnts[coord])
-            if self.paramDict["doTrefoil"]:
-                z9Points[coord] = numpy.array(z9Pnts[coord])
-                z10Points[coord] = numpy.array(z10Pnts[coord])
-            if self.paramDict["doSpherical"]:
-                z11Points[coord] = numpy.array(z11Pnts[coord])
-            if self.paramDict["doRzero"]:
-                rzeroPoints[coord] = numpy.array(rzeroPnts[coord])
-                nelePoints[coord] = numpy.array(nelePnts[coord])
-                chi2Points[coord] = numpy.array(chi2Pnts[coord])
-
-        # return
-        allPointsDict = {"z":zPoints,"z5":z5Points,"z6":z6Points,"z7":z7Points,"z8":z8Points}
-        if self.paramDict["doTrefoil"]:
-            allPointsDict["z9"] = z9Points
-            allPointsDict["z10"] = z10Points
-        if self.paramDict["doSpherical"]:
-            allPointsDict["z11"] = z11Points
-        if self.paramDict["doRzero"]:            
-            allPointsDict["rzero"] = rzeroPoints
-            allPointsDict["nele"] = nelePoints
-            allPointsDict["chi2"] = chi2Points
-
+        allPointsDict = {}
+        for key in bigDict.keys():
+            allPointsDict[key] = {}
+            for coord in self.coordList:
+                allPointsDict[key][coord] = numpy.array(bigDict[key][coord])
+     
         return allPointsDict
         
     def makeMeshes(self,donutData,extraCut="",myMethod='none',methodVal=None):
         # make the meshes from the data
 
-        # fill dictionaries of Points, separated by detector
+        # fill dictionaries of Points, separated by extension
         allPointsDict = self.fillPoints(donutData,extraCut)
-        zPoints = allPointsDict["z"]
-        z5Points = allPointsDict["z5"]
-        z6Points = allPointsDict["z6"]
-        z7Points = allPointsDict["z7"]
-        z8Points = allPointsDict["z8"]
 
-        if self.paramDict["doTrefoil"]:
-            z9Points = allPointsDict["z9"]
-            z10Points = allPointsDict["z10"]
-        if self.paramDict["doSpherical"]:
-            z11Points = allPointsDict["z11"]
-        if self.paramDict["doRzero"]:
-            rzeroPoints = allPointsDict["rzero"]
-            nelePoints = allPointsDict["nele"]
-            chi2Points = allPointsDict["chi2"]
-                
-        # build meshes for the input data (don't need interpolation grids)
-        zMesh = PointMesh(self.coordList,self.gridDict,pointsArray=zPoints,myMethod=myMethod,methodVal=methodVal)
-        z5Mesh = PointMesh(self.coordList,self.gridDict,pointsArray=z5Points,myMethod=myMethod,methodVal=methodVal)
-        z6Mesh = PointMesh(self.coordList,self.gridDict,pointsArray=z6Points,myMethod=myMethod,methodVal=methodVal)
-        z7Mesh = PointMesh(self.coordList,self.gridDict,pointsArray=z7Points,myMethod=myMethod,methodVal=methodVal)
-        z8Mesh = PointMesh(self.coordList,self.gridDict,pointsArray=z8Points,myMethod=myMethod,methodVal=methodVal)
-        if self.paramDict["doTrefoil"]:
-            z9Mesh = PointMesh(self.coordList,self.gridDict,pointsArray=z9Points,myMethod=myMethod,methodVal=methodVal)
-            z10Mesh = PointMesh(self.coordList,self.gridDict,pointsArray=z10Points,myMethod=myMethod,methodVal=methodVal)
-        if self.paramDict["doSpherical"]:
-            z11Mesh = PointMesh(self.coordList,self.gridDict,pointsArray=z11Points,myMethod=myMethod,methodVal=methodVal)
-        if self.paramDict["doRzero"]:
-            rzeroMesh = PointMesh(self.coordList,self.gridDict,pointsArray=rzeroPoints,myMethod=myMethod,methodVal=methodVal)
-            neleMesh = PointMesh(self.coordList,self.gridDict,pointsArray=nelePoints,myMethod=myMethod,methodVal=methodVal)
-            chi2Mesh = PointMesh(self.coordList,self.gridDict,pointsArray=chi2Points,myMethod=myMethod,methodVal=methodVal)
+        # build meshes for all keys present
+        allMeshDict = {}
+        for key in allPointsDict.keys():
 
-        allMeshDict = {"zMesh":zMesh,"z5Mesh":z5Mesh,"z6Mesh":z6Mesh,"z7Mesh":z7Mesh,"z8Mesh":z8Mesh}
-        if self.paramDict["doTrefoil"]:
-            allMeshDict["z9Mesh"] = z9Mesh
-            allMeshDict["z10Mesh"] = z10Mesh
-        if self.paramDict["doSpherical"]:
-            allMeshDict["z11Mesh"] = z11Mesh
-        if self.paramDict["doRzero"]:            
-            allMeshDict["rzero"] = rzeroMesh
-            allMeshDict["nele"] = neleMesh
-            allMeshDict["chi2"] = chi2Mesh
+            thePoints = allPointsDict[key]
+            theMesh = PointMesh(self.coordList,self.gridDict,pointsArray=thePoints,myMethod=myMethod,methodVal=methodVal)
+            meshName = "%sMesh" % (key)
+            allMeshDict[meshName] = theMesh
 
         return allMeshDict
 
@@ -490,133 +412,84 @@ class donutana(object):
 
     def analyzeMeshes(self,dictOfMeshes,doCull=False,cullCut=0.90):
         """ analyzeMeshes takes a dictionary with meshes as input, and fits it to the references
+        output dictionary includes a deepcopy of the input meshes
         """
 
-        # deepcopy the meshes!
-        # no longer adjusts in place
-
-        zMesh = copy.deepcopy(dictOfMeshes["zMesh"])
-        z5Mesh = copy.deepcopy(dictOfMeshes["z5Mesh"])
-        z6Mesh = copy.deepcopy(dictOfMeshes["z6Mesh"])
-        z7Mesh = copy.deepcopy(dictOfMeshes["z7Mesh"])
-        z8Mesh = copy.deepcopy(dictOfMeshes["z8Mesh"])
-
+        # deepcopy the meshes! no longer adjusts in place  
         dictOfMeshesCopy = {}
-        dictOfMeshesCopy["zMesh"] = zMesh
-        dictOfMeshesCopy["z5Mesh"] = z5Mesh
-        dictOfMeshesCopy["z6Mesh"] = z6Mesh
-        dictOfMeshesCopy["z7Mesh"] = z7Mesh
-        dictOfMeshesCopy["z8Mesh"] = z8Mesh
-
-        if self.paramDict["doTrefoil"]:
-            z9Mesh = copy.deepcopy(dictOfMeshes["z9Mesh"])
-            z10Mesh = copy.deepcopy(dictOfMeshes["z10Mesh"])
-            dictOfMeshesCopy["z9Mesh"] = z9Mesh
-            dictOfMeshesCopy["z10Mesh"] = z10Mesh
-        if self.paramDict["doSpherical"]:
-            z11Mesh = copy.deepcopy(dictOfMeshes["z11Mesh"])
-            dictOfMeshesCopy["z11Mesh"] = z11Mesh
-        if self.paramDict["doRzero"]:
-            rzeroMesh = copy.deepcopy(dictOfMeshes["rzero"])
-            neleMesh = copy.deepcopy(dictOfMeshes["nele"])
-            chi2Mesh = copy.deepcopy(dictOfMeshes["chi2"])
-
-            dictOfMeshesCopy["rzero"] = rzeroMesh        
-            dictOfMeshesCopy["nele"] = neleMesh        
-            dictOfMeshesCopy["chi2"] = chi2Mesh        
-
+        for key in dictOfMeshes.keys():
+            theMesh = copy.deepcopy(dictOfMeshes[key])
+            dictOfMeshesCopy[key] = theMesh
 
         # then we analyze the Zernike polynomials by comparing them to stored references
         # analyzeDonuts returns a dictionary containing deltas and rotation angles for focus, astigmatism and coma
         # as well as the hexapod adjustments
-        # it also make a Canvas of plots for study
+        # it also makes a Canvas of plots for study
 
-        # fit data meshes to reference meshes
-        zResultDict = self.fitToRefMesh(self.zRefMesh,zMesh,self.zangleconv)
-        z5ResultDict = self.fitToRefMesh(self.z5RefMesh,z5Mesh)
-        z6ResultDict = self.fitToRefMesh(self.z6RefMesh,z6Mesh)
-        z7ResultDict = self.fitToRefMesh(self.z7RefMesh,z7Mesh)
-        z8ResultDict = self.fitToRefMesh(self.z8RefMesh,z8Mesh)
-        if self.paramDict["doTrefoil"]:
-            z9ResultDict = self.fitToRefMesh(self.z9RefMesh,z9Mesh)
-            z10ResultDict = self.fitToRefMesh(self.z10RefMesh,z10Mesh)
-        if self.paramDict["doSpherical"]:
-            z11ResultDict = self.fitToRefMesh(self.z11RefMesh,z11Mesh)
-        if self.paramDict["doRzero"]:
-            rzeroResultDict = self.analyzeRzero(rzeroMesh,chi2Mesh,neleMesh)
+        dictOfResults = {}
+
+        # loop over keys, fitting References
+        for key in dictOfMeshesCopy.keys():
+
+            # some special cases
+            resultsKeyName = "%sResultDict" % (key.replace("Mesh",""))
+            meshName = key
+            if key=="z4":
+                dictOfResults[resultsKeyName] = self.fitToRefMesh(self.meshDict[meshName],dictOfMeshesCopy[meshName],self.zangleconv)
+            elif key=="rzero":
+                dictOfResults[resultsKeyName] = self.analyzeRzero(rzeroMesh,chi2Mesh,neleMesh)
+            elif key=="chi2":
+                continue
+            elif key=="nele":
+                continue
+            else:
+                dictOfResults[resultsKeyName] = self.fitToRefMesh(self.meshDict[meshName],dictOfMeshesCopy[meshName])
 
         # if we want to cull, cull and refit!
         # use the fitted weight to cull - culltype="fit" 
         if doCull:
             # this will take the wgt's from the fit and take their product
             # for each point, and cull at a product of cullCut
-            self.cullAllMeshes(dictOfMeshesCopy,cuttype="fit",cullCut=cullCut)
+            self.cullAllMeshes(dictOfMeshesCopy,cullCut=cullCut)
 
-            zResultDict = self.fitToRefMesh(self.zRefMesh,zMesh,self.zangleconv)
-            z5ResultDict = self.fitToRefMesh(self.z5RefMesh,z5Mesh)
-            z6ResultDict = self.fitToRefMesh(self.z6RefMesh,z6Mesh)
-            z7ResultDict = self.fitToRefMesh(self.z7RefMesh,z7Mesh)
-            z8ResultDict = self.fitToRefMesh(self.z8RefMesh,z8Mesh)
-            if self.paramDict["doTrefoil"]:
-                z9ResultDict = self.fitToRefMesh(self.z9RefMesh,z9Mesh)
-                z10ResultDict = self.fitToRefMesh(self.z10RefMesh,z10Mesh)
-            if self.paramDict["doSpherical"]:
-                z11ResultDict = self.fitToRefMesh(self.z11RefMesh,z11Mesh)
-            if self.paramDict["doRzero"]:
-                rzeroResultDict = self.analyzeRzero(rzeroMesh,chi2Mesh,neleMesh)
+            # loop over keys, fitting References
+            for key in dictOfMeshesCopy.keys():
 
-        # make nulls for z9,z10 if doTrefoil is false
-        if not self.paramDict["doTrefoil"]:
-            z9ResultDict = None
-            z10ResultDict = None
-        if not self.paramDict["doSpherical"]:
-            z11ResultDict = None
-        if not self.paramDict["doRzero"]:
-            rzeroResultDict = None
+                # some special cases
+                resultsKeyName = "%sResultDict" % (key.replace("Mesh",""))
+                meshName = key
+                if key=="z4":
+                    dictOfResults[resultsKeyName] = self.fitToRefMesh(self.meshDict[meshName],dictOfMeshesCopy[meshName],self.zangleconv)
+                elif key=="rzero":
+                    rzeroResultDict = self.analyzeRzero(rzeroMesh,chi2Mesh,neleMesh)
+                elif key=="chi2":
+                    continue
+                elif key=="nele":
+                    continue
+                else:
+                    dictOfResults[resultsKeyName] = self.fitToRefMesh(self.meshDict[meshName],dictOfMeshesCopy[meshName])
+
             
         # analyze this data and extract the hexapod coefficients
-        donutDict = self.calcHexapod(zResultDict,z5ResultDict,z6ResultDict,z7ResultDict,z8ResultDict,z9ResultDict,z10ResultDict,z11ResultDict)
+        donutDict = self.calcHexapod(dictOfResults)
+
         if len(donutDict)==0:
             goodCalc = False
         else:
             goodCalc = True
 
         # add the individual fit results here too
-        donutDict["zResultDict"] = zResultDict
-        donutDict["z5ResultDict"] = z5ResultDict
-        donutDict["z6ResultDict"] = z6ResultDict
-        donutDict["z7ResultDict"] = z7ResultDict
-        donutDict["z8ResultDict"] = z8ResultDict
-
-        if self.paramDict["doTrefoil"]:
-            donutDict["z9ResultDict"] = z9ResultDict
-            donutDict["z10ResultDict"] = z10ResultDict
-
-        if self.paramDict["doSpherical"]:
-            donutDict["z11ResultDict"] = z11ResultDict
-
-        if self.paramDict["doRzero"]:
-            donutDict["rzeroResultDict"] = rzeroResultDict
+        for key in dictOfResults.keys():
+            donutDict[key] = dictOfResults[key]
 
         # and add the meshes too
-        donutDict["zMesh"] = zMesh
-        donutDict["z5Mesh"] = z5Mesh
-        donutDict["z6Mesh"] = z6Mesh
-        donutDict["z7Mesh"] = z7Mesh
-        donutDict["z8Mesh"] = z8Mesh
-        if self.paramDict["doTrefoil"]:            
-            donutDict["z9Mesh"] = z9Mesh
-            donutDict["z10Mesh"] = z10Mesh
-        if self.paramDict["doSpherical"]:   
-            donutDict["z11Mesh"] = z11Mesh
-        if self.paramDict["doRzero"]:   
-            donutDict["rzeroMesh"] = rzeroMesh
-            donutDict["neleMesh"] = neleMesh
-            donutDict["chi2Mesh"] = chi2Mesh
+        for key in dictOfMeshesCopy.keys():
+            donutDict[key] = dictOfMeshesCopy[key]
+
 
         # make a Canvas of plots for this image
         # plot Histogram of Difference before fit, after fit, and after fit vs. X,Y position
-        if self.paramDict["histFlag"] and zResultDict.has_key("deltaArrayBefore") and goodCalc:
+        if self.paramDict["histFlag"] and dictOfResults["z4ResultDict"].has_key("deltaArrayBefore") and goodCalc:
 
             # setup plots
             gStyle.SetStatH(0.32)
@@ -627,96 +500,65 @@ class donutana(object):
             gStyle.SetPalette(1)            
             gROOT.ForceStyle()
             
+            # loop over results, making plots for each
+            nplots = 0
+            plotDict = {} 
+            for key in dictOfResults.keys():
+                theResultDict = dictOfResults[key]
 
-            # z plots
-            #  
-            hZBefore = hfillhist("zBefore","Delta Z, Before Fit",zResultDict["deltaArrayBefore"],200,-200.0,200.0)
-            hZAfter = hfillhist("zAfter","Delta Z, After Fit",zResultDict["deltaArrayAfter"],200,-200.0,200.0)
-            hZBefore2D = TGraph2D("zBefore2D","Delta Z, Before Fit, vs. Position;X[mm];Y[mm]",zResultDict["deltaArrayBefore"].shape[0],zResultDict["deltaArrayX"],zResultDict["deltaArrayY"],zResultDict["deltaArrayBefore"])
-            hZAfter2D = TGraph2D("zAfter2D","Delta Z, After Fit, vs. Position;X[mm];Y[mm]",zResultDict["deltaArrayAfter"].shape[0],zResultDict["deltaArrayX"],zResultDict["deltaArrayY"],zResultDict["deltaArrayAfter"])
+                keyId = key.replace("ResultDict","")
+                # special cases 
+                if keyId=="z4":
+                    nWavesBefore = 200.0
+                    nWavesAfter = 200.0
+                else:
+                    nWavesBefore = 1.0
+                    nWavesAfter = 0.2
 
-            nWavesBefore = 1.0
-            nWavesAfter = 0.2
-            # zern5 plots
-            hZ5Before = hfillhist("z5Before","Delta Zern5, Before Fit",z5ResultDict["deltaArrayBefore"],200,-nWavesBefore,nWavesBefore)
-            hZ5After = hfillhist("z5After","Delta Zern5, After Fit",z5ResultDict["deltaArrayAfter"],200,-nWavesAfter,nWavesAfter)
-            hZ5Before2D = TGraph2D("z5Before2D","Delta Zern5, Before Fit, vs. Position;X[mm];Y[mm]",z5ResultDict["deltaArrayBefore"].shape[0],z5ResultDict["deltaArrayX"],z5ResultDict["deltaArrayY"],z5ResultDict["deltaArrayBefore"])
-            hZ5After2D = TGraph2D("z5After2D","Delta Zern5, After Fit, vs. Position;X[mm];Y[mm]",z5ResultDict["deltaArrayAfter"].shape[0],z5ResultDict["deltaArrayX"],z5ResultDict["deltaArrayY"],z5ResultDict["deltaArrayAfter"])
+                if keyId!="rzero":
+                    nplots = nplots + 1
+                    hBefore = hfillhist(key+"Before","Delta "+key+", Before Fit",theResultDict["deltaArrayBefore"],200,-nWavesBefore,nWavesBefore)
+                    hAfter = hfillhist(key+"zAfter","Delta "+key+", After Fit",theResultDict["deltaArrayAfter"],200,-nWavesAfter,nWavesAfter)
+                    hBefore2D = TGraph2D(key+"Before2D","Delta "+key+", Before Fit, vs. Position;X[mm];Y[mm]",theResultDict["deltaArrayBefore"].shape[0],theResultDict["deltaArrayX"],theResultDict["deltaArrayY"],theResultDict["deltaArrayBefore"])
+                    hAfter2D = TGraph2D(key+"After2D","Delta "+key+", After Fit, vs. Position;X[mm];Y[mm]",theResultDict["deltaArrayAfter"].shape[0],theResultDict["deltaArrayX"],theResultDict["deltaArrayY"],theResultDict["deltaArrayAfter"])
+                   
+                    plotList = [hBefore,hAfter,hBefore2D,hAfter2D]
+                    plotDict[keyId] = plotList
 
-            # z6 plots
-            hZ6Before = hfillhist("z6Before","Delta Zern6, Before Fit",z6ResultDict["deltaArrayBefore"],200,-nWavesBefore,nWavesBefore)
-            hZ6After = hfillhist("z6After","Delta Zern6, After Fit",z6ResultDict["deltaArrayAfter"],200,-nWavesAfter,nWavesAfter)
-            hZ6Before2D = TGraph2D("z6Before2D","Delta Zern6, Before Fit, vs. Position;X[mm];Y[mm]",z6ResultDict["deltaArrayBefore"].shape[0],z6ResultDict["deltaArrayX"],z6ResultDict["deltaArrayY"],z6ResultDict["deltaArrayBefore"])
-            hZ6After2D = TGraph2D("z6After2D","Delta Zern6, After Fit, vs. Position;X[mm];Y[mm]",z6ResultDict["deltaArrayAfter"].shape[0],z6ResultDict["deltaArrayX"],z6ResultDict["deltaArrayY"],z6ResultDict["deltaArrayAfter"])
-
-            # z7 plots
-            hZ7Before = hfillhist("z7Before","Delta Zern7, Before Fit",z7ResultDict["deltaArrayBefore"],200,-nWavesBefore,nWavesBefore)
-            hZ7After = hfillhist("z7After","Delta Zern7, After Fit",z7ResultDict["deltaArrayAfter"],200,-nWavesAfter,nWavesAfter)
-            hZ7Before2D = TGraph2D("z7Before2D","Delta Zern7, Before Fit, vs. Position;X[mm];Y[mm]",z7ResultDict["deltaArrayBefore"].shape[0],z7ResultDict["deltaArrayX"],z7ResultDict["deltaArrayY"],z7ResultDict["deltaArrayBefore"])
-            hZ7After2D = TGraph2D("z7After2D","Delta Zern7, After Fit, vs. Position;X[mm];Y[mm]",z7ResultDict["deltaArrayAfter"].shape[0],z7ResultDict["deltaArrayX"],z7ResultDict["deltaArrayY"],z7ResultDict["deltaArrayAfter"])
-
-            # z8 plots
-            hZ8Before = hfillhist("z8Before","Delta Zern8, Before Fit",z8ResultDict["deltaArrayBefore"],200,-nWavesBefore,nWavesBefore)
-            hZ8After = hfillhist("z8After","Delta Zern8, After Fit",z8ResultDict["deltaArrayAfter"],200,-nWavesAfter,nWavesAfter)
-            hZ8Before2D = TGraph2D("z8Before2D","Delta Zern8, Before Fit, vs. Position;X[mm];Y[mm]",z8ResultDict["deltaArrayBefore"].shape[0],z8ResultDict["deltaArrayX"],z8ResultDict["deltaArrayY"],z8ResultDict["deltaArrayBefore"])
-            hZ8After2D = TGraph2D("z8After2D","Delta Zern8, After Fit, vs. Position;X[mm];Y[mm]",z8ResultDict["deltaArrayAfter"].shape[0],z8ResultDict["deltaArrayX"],z8ResultDict["deltaArrayY"],z8ResultDict["deltaArrayAfter"])
-
-            # z9 and z10 plots
-            if self.paramDict["doTrefoil"]:
-                hZ9Before = hfillhist("z9Before","Delta Zern9, Before Fit",z9ResultDict["deltaArrayBefore"],200,-nWavesBefore,nWavesBefore)
-                hZ9After = hfillhist("z9After","Delta Zern9, After Fit",z9ResultDict["deltaArrayAfter"],200,-nWavesAfter,nWavesAfter)
-                hZ9Before2D = TGraph2D("z9Before2D","Delta Zern9, Before Fit, vs. Position;X[mm];Y[mm]",z9ResultDict["deltaArrayBefore"].shape[0],z9ResultDict["deltaArrayX"],z9ResultDict["deltaArrayY"],z9ResultDict["deltaArrayBefore"])
-                hZ9After2D = TGraph2D("z9After2D","Delta Zern9, After Fit, vs. Position;X[mm];Y[mm]",z9ResultDict["deltaArrayAfter"].shape[0],z9ResultDict["deltaArrayX"],z9ResultDict["deltaArrayY"],z9ResultDict["deltaArrayAfter"])
-
-                hZ10Before = hfillhist("z10Before","Delta Zern10, Before Fit",z10ResultDict["deltaArrayBefore"],200,-nWavesBefore,nWavesBefore)
-                hZ10After = hfillhist("z10After","Delta Zern10, After Fit",z10ResultDict["deltaArrayAfter"],200,-nWavesAfter,nWavesAfter)
-                hZ10Before2D = TGraph2D("z10Before2D","Delta Zern10, Before Fit, vs. Position;X[mm];Y[mm]",z10ResultDict["deltaArrayBefore"].shape[0],z10ResultDict["deltaArrayX"],z10ResultDict["deltaArrayY"],z10ResultDict["deltaArrayBefore"])
-                hZ10After2D = TGraph2D("z10After2D","Delta Zern10, After Fit, vs. Position;X[mm];Y[mm]",z10ResultDict["deltaArrayAfter"].shape[0],z10ResultDict["deltaArrayX"],z10ResultDict["deltaArrayY"],z10ResultDict["deltaArrayAfter"])
-
-            # z11 plots
-            if self.paramDict["doSpherical"]:
-                hZ11Before = hfillhist("z11Before","Delta Zern11, Before Fit",z11ResultDict["deltaArrayBefore"],200,-nWavesBefore,nWavesBefore)
-                hZ11After = hfillhist("z11After","Delta Zern11, After Fit",z11ResultDict["deltaArrayAfter"],200,-nWavesAfter,nWavesAfter)
-                hZ11Before2D = TGraph2D("z11Before2D","Delta Zern11, Before Fit, vs. Position;X[mm];Y[mm]",z11ResultDict["deltaArrayBefore"].shape[0],z11ResultDict["deltaArrayX"],z11ResultDict["deltaArrayY"],z11ResultDict["deltaArrayBefore"])
-                hZ11After2D = TGraph2D("z11After2D","Delta Zern11, After Fit, vs. Position;X[mm];Y[mm]",z11ResultDict["deltaArrayAfter"].shape[0],z11ResultDict["deltaArrayX"],z11ResultDict["deltaArrayY"],z11ResultDict["deltaArrayAfter"])
-                
             # the Canvas
 
             # unique name for our canvas
             tstr = "canvas" + str(time.time())
 
-            if self.paramDict["doTrefoil"]:
-                canvas = TCanvas(tstr,tstr,2100,1000)
-                canvas.Divide(7,4)
-            else:
-                canvas = TCanvas(tstr,tstr,1500,1000)
-                canvas.Divide(5,4)
-
-            # add the plots to a list
-            if self.paramDict["doTrefoil"]:
-                plotList = [hZBefore,hZ5Before,hZ6Before,hZ7Before,hZ8Before,hZ9Before,hZ10Before,hZAfter,hZ5After,hZ6After,hZ7After,hZ8After,hZ9After,hZ10After,hZBefore2D,hZ5Before2D,hZ6Before2D,hZ7Before2D,hZ8Before2D,hZ9Before2D,hZ10Before2D,hZAfter2D,hZ5After2D,hZ6After2D,hZ7After2D,hZ8After2D,hZ9After2D,hZ10After2D]
-            else:
-                plotList = [hZBefore,hZ5Before,hZ6Before,hZ7Before,hZ8Before,hZAfter,hZ5After,hZ6After,hZ7After,hZ8After,hZBefore2D,hZ5Before2D,hZ6Before2D,hZ7Before2D,hZ8Before2D,hZAfter2D,hZ5After2D,hZ6After2D,hZ7After2D,hZ8After2D]
+            canvas = TCanvas(tstr,tstr,300*nplots,1000)
+            canvas.Divide(nplots,4)
 
             # plot em
-            if self.paramDict["doTrefoil"]:
-                for pad in range(28):
-                    canvas.cd(pad+1)
-                    if pad<14 :
-                        plotList[pad].Draw()
-                    else:
-                        plotList[pad].Draw("zcolpcol")
-            else:
-                for pad in range(20):
-                    canvas.cd(pad+1)
-                    if pad<10 :
-                        plotList[pad].Draw()
-                    else:
-                        plotList[pad].Draw("zcolpcol")
+            jZ = 0
+            for iZ in range(4,15+1):
+                key = "z%d" % (iZ)
+                if plotDict.has_key(key):
+                    jZ = jZ + 1
+
+                    plotList = plotDict[key]
+
+                    icanvas = jZ + 0*nplots
+                    canvas.cd(icanvas)
+                    plotList[0].Draw()
+                    icanvas = jZ + 1*nplots
+                    canvas.cd(icanvas)
+                    plotList[1].Draw()
+                    icanvas = jZ + 2*nplots
+                    canvas.cd(icanvas)
+                    plotList[2].Draw("zcolpcol")
+                    icanvas = jZ + 3*nplots
+                    canvas.cd(icanvas)
+                    plotList[3].Draw("zcolpcol")
 
             # set it so that python doesn't own these ROOT object
-            for plot in plotList:
-                SetOwnership(plot,False)
+            for key in plotDict.keys():
+                for plot in plotDict[key]:
+                    SetOwnership(plot,False)
 
             # save canvas in the output Dictionary
             donutDict["canvas"] = canvas
@@ -726,7 +568,13 @@ class donutana(object):
             
             
 
-    def calcHexapod(self,zResultDict,z5ResultDict,z6ResultDict,z7ResultDict,z8ResultDict,z9ResultDict,z10ResultDict,z11ResultDict):
+    def calcHexapod(self,dictOfResults):
+
+        zResultDict = dictOfResults["z4ResultDict"]
+        z5ResultDict = dictOfResults["z5ResultDict"]
+        z6ResultDict = dictOfResults["z6ResultDict"]
+        z7ResultDict = dictOfResults["z7ResultDict"]
+        z8ResultDict = dictOfResults["z8ResultDict"]
 
         # if any problems, print out error message
         try:
@@ -806,135 +654,15 @@ class donutana(object):
             donutSummary["doxterr"] = donutDict["doxtErr"]
             donutSummary["doyterr"] = donutDict["doytErr"]
             
-            donutSummary["zdelta"] = zResultDict["delta"]
-            donutSummary["zthetax"] = zResultDict["thetax"]
-            donutSummary["zthetay"] = zResultDict["thetay"]
-            donutSummary["zdeltaerr"] = zResultDict["deltaErr"]
-            donutSummary["zthetaxerr"] = zResultDict["thetaxErr"]
-            donutSummary["zthetayerr"] = zResultDict["thetayErr"]
-            donutSummary["zmeandeltabefore"] = zResultDict["meanDeltaBefore"]
-            donutSummary["zrmsdeltabefore"] = zResultDict["rmsDeltaBefore"]
-            donutSummary["zmeandeltaafter"] = zResultDict["meanDeltaAfter"]
-            donutSummary["zrmsdeltaafter"] = zResultDict["rmsDeltaAfter"]
+            # also fill all result variables into donutSummary
+            # only donutSummary values are used in the downstream analysis, csv file and TTree
+            # --- changing zdelta to z4delta (not backwards compatible!)
 
-            donutSummary["z5delta"] = z5ResultDict["delta"]
-            donutSummary["z5thetax"] = z5ResultDict["thetax"]
-            donutSummary["z5thetay"] = z5ResultDict["thetay"]
-            donutSummary["z5deltaerr"] = z5ResultDict["deltaErr"]
-            donutSummary["z5thetaxerr"] = z5ResultDict["thetaxErr"]
-            donutSummary["z5thetayerr"] = z5ResultDict["thetayErr"]
-            donutSummary["z5meandeltabefore"] = z5ResultDict["meanDeltaBefore"]
-            donutSummary["z5rmsdeltabefore"] = z5ResultDict["rmsDeltaBefore"]
-            donutSummary["z5meandeltaafter"] = z5ResultDict["meanDeltaAfter"]
-            donutSummary["z5rmsdeltaafter"] = z5ResultDict["rmsDeltaAfter"]
-
-            donutSummary["z6delta"] = z6ResultDict["delta"]
-            donutSummary["z6thetax"] = z6ResultDict["thetax"]
-            donutSummary["z6thetay"] = z6ResultDict["thetay"]
-            donutSummary["z6deltaerr"] = z6ResultDict["deltaErr"]
-            donutSummary["z6thetaxerr"] = z6ResultDict["thetaxErr"]
-            donutSummary["z6thetayerr"] = z6ResultDict["thetayErr"]
-            donutSummary["z6meandeltabefore"] = z6ResultDict["meanDeltaBefore"]
-            donutSummary["z6rmsdeltabefore"] = z6ResultDict["rmsDeltaBefore"]
-            donutSummary["z6meandeltaafter"] = z6ResultDict["meanDeltaAfter"]
-            donutSummary["z6rmsdeltaafter"] = z6ResultDict["rmsDeltaAfter"]
-            
-            donutSummary["z7delta"] = z7ResultDict["delta"]
-            donutSummary["z7thetax"] = z7ResultDict["thetax"]
-            donutSummary["z7thetay"] = z7ResultDict["thetay"]
-            donutSummary["z7deltaerr"] = z7ResultDict["deltaErr"]
-            donutSummary["z7thetaxerr"] = z7ResultDict["thetaxErr"]
-            donutSummary["z7thetayerr"] = z7ResultDict["thetayErr"]
-            donutSummary["z7meandeltabefore"] = z7ResultDict["meanDeltaBefore"]
-            donutSummary["z7rmsdeltabefore"] = z7ResultDict["rmsDeltaBefore"]
-            donutSummary["z7meandeltaafter"] = z7ResultDict["meanDeltaAfter"]
-            donutSummary["z7rmsdeltaafter"] = z7ResultDict["rmsDeltaAfter"]
-            
-            donutSummary["z8delta"] = z8ResultDict["delta"]
-            donutSummary["z8thetax"] = z8ResultDict["thetax"]
-            donutSummary["z8thetay"] = z8ResultDict["thetay"]
-            donutSummary["z8deltaerr"] = z8ResultDict["deltaErr"]
-            donutSummary["z8thetaxerr"] = z8ResultDict["thetaxErr"]
-            donutSummary["z8thetayerr"] = z8ResultDict["thetayErr"]
-            donutSummary["z8meandeltabefore"] = z8ResultDict["meanDeltaBefore"]
-            donutSummary["z8rmsdeltabefore"] = z8ResultDict["rmsDeltaBefore"]
-            donutSummary["z8meandeltaafter"] = z8ResultDict["meanDeltaAfter"]
-            donutSummary["z8rmsdeltaafter"] = z8ResultDict["rmsDeltaAfter"]
-
-            if self.paramDict["doTrefoil"]:
-                
-                donutSummary["z9delta"] = z9ResultDict["delta"]
-                donutSummary["z9thetax"] = z9ResultDict["thetax"]
-                donutSummary["z9thetay"] = z9ResultDict["thetay"]
-                donutSummary["z9deltaerr"] = z9ResultDict["deltaErr"]
-                donutSummary["z9thetaxerr"] = z9ResultDict["thetaxErr"]
-                donutSummary["z9thetayerr"] = z9ResultDict["thetayErr"]
-                donutSummary["z9meandeltabefore"] = z9ResultDict["meanDeltaBefore"]
-                donutSummary["z9rmsdeltabefore"] = z9ResultDict["rmsDeltaBefore"]
-                donutSummary["z9meandeltaafter"] = z9ResultDict["meanDeltaAfter"]
-                donutSummary["z9rmsdeltaafter"] = z9ResultDict["rmsDeltaAfter"]
-
-                donutSummary["z10delta"] = z10ResultDict["delta"]
-                donutSummary["z10thetax"] = z10ResultDict["thetax"]
-                donutSummary["z10thetay"] = z10ResultDict["thetay"]
-                donutSummary["z10deltaerr"] = z10ResultDict["deltaErr"]
-                donutSummary["z10thetaxerr"] = z10ResultDict["thetaxErr"]
-                donutSummary["z10thetayerr"] = z10ResultDict["thetayErr"]
-                donutSummary["z10meandeltabefore"] = z10ResultDict["meanDeltaBefore"]
-                donutSummary["z10rmsdeltabefore"] = z10ResultDict["rmsDeltaBefore"]
-                donutSummary["z10meandeltaafter"] = z10ResultDict["meanDeltaAfter"]
-                donutSummary["z10rmsdeltaafter"] = z10ResultDict["rmsDeltaAfter"]
-
-            else:
-                
-                donutSummary["z9delta"] = 0.
-                donutSummary["z9thetax"] = 0.
-                donutSummary["z9thetay"] = 0.
-                donutSummary["z9deltaerr"] = 0.
-                donutSummary["z9thetaxerr"] = 0.
-                donutSummary["z9thetayerr"] = 0.
-                donutSummary["z9meandeltabefore"] = 0.
-                donutSummary["z9rmsdeltabefore"] = 0.
-                donutSummary["z9meandeltaafter"] = 0.
-                donutSummary["z9rmsdeltaafter"] = 0.
-
-                donutSummary["z10delta"] = 0.
-                donutSummary["z10thetax"] = 0.
-                donutSummary["z10thetay"] = 0.
-                donutSummary["z10deltaerr"] = 0.
-                donutSummary["z10thetaxerr"] = 0.
-                donutSummary["z10thetayerr"] = 0.
-                donutSummary["z10meandeltabefore"] = 0.
-                donutSummary["z10rmsdeltabefore"] = 0.
-                donutSummary["z10meandeltaafter"] = 0.
-                donutSummary["z10rmsdeltaafter"] = 0.
-
-            # do Spherical if desired
-            if self.paramDict["doSpherical"]:
-
-                donutSummary["z11delta"] = z11ResultDict["delta"]
-                donutSummary["z11thetax"] = z11ResultDict["thetax"]
-                donutSummary["z11thetay"] = z11ResultDict["thetay"]
-                donutSummary["z11deltaerr"] = z11ResultDict["deltaErr"]
-                donutSummary["z11thetaxerr"] = z11ResultDict["thetaxErr"]
-                donutSummary["z11thetayerr"] = z11ResultDict["thetayErr"]
-                donutSummary["z11meandeltabefore"] = z11ResultDict["meanDeltaBefore"]
-                donutSummary["z11rmsdeltabefore"] = z11ResultDict["rmsDeltaBefore"]
-                donutSummary["z11meandeltaafter"] = z11ResultDict["meanDeltaAfter"]
-                donutSummary["z11rmsdeltaafter"] = z11ResultDict["rmsDeltaAfter"]
-                
-            else:
-                
-                donutSummary["z11delta"] = 0.
-                donutSummary["z11thetax"] = 0.
-                donutSummary["z11thetay"] = 0.
-                donutSummary["z11deltaerr"] = 0.
-                donutSummary["z11thetaxerr"] = 0.
-                donutSummary["z11thetayerr"] = 0.
-                donutSummary["z11meandeltabefore"] = 0.
-                donutSummary["z11rmsdeltabefore"] = 0.
-                donutSummary["z11meandeltaafter"] = 0.
-                donutSummary["z11rmsdeltaafter"] = 0.
+            infoList = ["delta","thetax","thetay","deltaErr","thetaxErr","thetayErr","meanDeltaBefore","rmsDeltaBefore","meanDeltaAfter","rmsDeltaAfter"]
+            for key in dictOfResults:
+                for datum in infoList:
+                    datumName = "%s%s" % (key.replace("ResultDict",""),datum)
+                    donutSummary[datumName] = dictOfResults[key][datum]
 
             # get number of donuts ultimately used
             ndonuts_used = len(zResultDict["deltaArrayAfter"])
@@ -947,15 +675,15 @@ class donutana(object):
             print "donutana: Not enough information for calcHexapod"
             donutDict = {}
 
-
         return donutDict
         
         
         
 
     def fitToRefMesh(self,refMesh,otherMesh,angleconversion=1.0):
-        # fit a mesh to a Reference mesh, return the fit parameters
-        # and errors and convenient arrays for plots
+        """ fit a mesh to a Reference mesh, return the fit parameters
+        and errors and convenient arrays for plots
+        """
 
         # resultsDict contents
         #      delta fit result
@@ -1004,22 +732,54 @@ class donutana(object):
         return resultDict
 
 
-    def cullAllMeshes(self,dictOfMeshes,cutval=3.0,cutval2=50.,cuttype="WgtNSig",cullCut=0.01):
-        """ utility routine to cull a dictionary of Meshes, where all Meshes are of the same donuts """
-        # first calculate nSigma or DtoInterp or  for each mesh
-        for mesh in dictOfMeshes:
-            thisMesh = dictOfMeshes[mesh]
-            if cuttype=="WgtNSig":
-                thisMesh.calcWgtNSig(nsigma=cutval)
-            elif cuttype=="WgtDtoInterp":
-                if mesh=="z":
-                    thisMesh.calcWgtDtoInterp(maxdist=cutval2)
-                else:
-                    thisMesh.calcWgtDtoInterp(maxdist=cutval)
-                
+    def calcMeshWgts(self,dictOfMeshes,type="nMAD",kNN=200,nMADCut=4.0):
+        """ utility routine to recalculate weights for each mesh entry 
+        calculation is done in-place
+        """
+        
+        outDict = {}
+        # calculate nMAD over kNN for each point in each mesh
+        # then calculate a new weight: =1 for nMAD<cut and =0 for nMAD>cut
+        # try removing tails 
+        if type=="nMAD":
+            plotList = []
+            for iZ in range(4,15+1):
+                key = "z%dMesh" % (iZ)
+                if dictOfMeshes.has_key(key):
+                    thisMesh = dictOfMeshes[key]
+                    nMADArr = thisMesh.calcWgtnMAD(kNN=kNN,nMADCut=nMADCut)
 
-        # now we need to loop over the Coords
-        # and coalesce the Wgts of the points
+                    hnMAD = hfillhist("z%dnMAD" % (iZ),"z%d nMAD Distribution" % (iZ),nMADArr,100,-10.,10.)
+                    plotList.append(hnMAD)
+
+            # unique name for our canvas
+            tstr = "canvas" + str(time.time())
+            nplots = len(plotList)
+            nCols = 4
+            nRows = (nplots-1)/nCols + 1
+            canvas = TCanvas(tstr,tstr,300*nRows,300*nCols)
+            canvas.Divide(nRows,nCols)
+            
+            for i in range(nplots):
+                canvas.cd(i+1)
+                plotList[i].Draw()
+                SetOwnership(plotList[i],False)
+
+            outDict["canvas"] = canvas
+
+        else:
+            print "donutana Error: bad type ",type," in calcMeshWgts"
+
+        return outDict
+
+
+    def cullAllMeshes(self,dictOfMeshes,cullCut=0.01):
+        """ cull a dictionary of Meshes, where all Meshes are of the same donuts 
+        calculates the product of weights for each donut, and removes donuts from all meshes which fail a 
+        cut on the weight
+        """
+
+        # loop over the Coords and coalesce the Wgts of the points
 
         aMesh = dictOfMeshes[dictOfMeshes.keys()[0]]   # this is just the first mesh
         dictOfWgts = {}
@@ -1044,6 +804,7 @@ class donutana(object):
             thisMesh.cullMesh(cullCut)
 
         return 0
+
 
 
     def analyzeRzero(self,rzeroMesh,chi2Mesh,neleMesh):

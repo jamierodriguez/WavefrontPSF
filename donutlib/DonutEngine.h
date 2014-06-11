@@ -61,6 +61,7 @@ public:
   Vector& getvDerivatives(){return _dChi2dpar;};  
   void savePar();
   void printOptions();
+  void closeFits();
 
   // public methods - version for SWIG using numpy arrays or lists
   void calcWFMtoImage(double* par, int n);
