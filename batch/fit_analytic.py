@@ -144,6 +144,11 @@ parser.add_argument("--analytic",
                     type=int,
                     default=1,
                     help='if > 0, use analytic model for fitting')
+parser.add_argument("--par_names",
+                    dest="par_names",
+                    default='[]',
+                    help='par names we will use. If len(list(par_names)) == 0, just use p_init')
+
 options = parser.parse_args()
 
 args_dict = vars(options)
@@ -286,7 +291,9 @@ def SaveFunc(steps, defaults=False):
 
     return
 
-par_names = sorted(p_init.keys())
+par_names = eval(args_dict['par_names'])
+if len(par_names) == 0:
+    par_names = sorted(p_init.keys())
 h_base = 1e-3
 # set up initial guesses
 minuit_dict, h_dict = minuit_dictionary(par_names, h_base=h_base)
