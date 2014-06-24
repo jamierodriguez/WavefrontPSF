@@ -131,7 +131,6 @@ verbose = args_dict['verbose']
 
 average = np.mean  # TODO: this may change!!!
 boxdiv = args_dict['boxdiv']
-conds = args_dict['conds']
 max_samples_box = 100000
 n_samples_box = args_dict['n_samples_box']
 subav = False
