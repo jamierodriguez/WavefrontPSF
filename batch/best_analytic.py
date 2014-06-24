@@ -197,7 +197,8 @@ def FitFunc(in_dict):
     # check whether chi_dict['chi2'] is an allowable number (finite
     # positive)
     if (chi_dict['chi2'] < 0) + (np.isnan(chi_dict['chi2'])):
-        # if it isn't, make it really
+        # if it isn't, make it really huge
+        chi_dict['chi2'] = 1e20
 
     chi2hist.append(chi_dict)
 
