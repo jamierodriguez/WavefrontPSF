@@ -130,6 +130,7 @@ class FocalPlaneFit(Wavefront):
             [0, 0, 0],
             [0, 0, 0],
             ])
+        self.z_length = 11
         ## # Science20120915s1v3_134239
         ## self.reference_correction = -1 * np.array([
         ##     [0, 0, 0],
@@ -547,6 +548,77 @@ class FocalPlaneFit(Wavefront):
 
         """
 
+        zernikes = self.interpolate_zernikes(coords)
+
+        zernikes = self.correct_zernikes(zernikes, coords, in_dict)
+
+        return zernikes
+
+    def interpolate_zernikes(self, coords):
+        """create a list of zernikes at these coordinate locations
+
+        Parameters
+        ----------
+        coords : list
+            A list of [[x, y, ext_num]] detailing the locations we wish to
+            sample on the focal plane
+
+        Returns
+        -------
+        zernikes : list
+            A list of the zernike polynomial coefficients [[z1, z2, z3 ...],
+            ...] calculated from the interpolated reference mesh.
+
+        """
+
+
+        zernikes = np.array([[0] * 3 +
+
+            [self.da.meshDict['z4Mesh'].doInterp(
+            self.decaminfo.ccddict[int(coord[2])], [coord[0]], [coord[1]])
+            / 172.] + 
+
+            [self.da.meshDict['z{0}Mesh'.format(iZ)].doInterp(
+            self.decaminfo.ccddict[int(coord[2])], [coord[0]], [coord[1]])
+
+            for iZ in range(5, self.z_length + 1)]
+
+            for coord in coords])
+
+        return zernikes
+
+    def correct_zernikes(self, zernikes, coords, in_dict):
+        """create a list of zernikes at these coordinate locations
+
+        Parameters
+        ----------
+
+        zernikes : list
+            A list of the zernike polynomial coefficients [[z1, z2, z3 ...],
+            ...] calculated from the interpolated reference mesh.
+
+        coords : list
+            A list of [[x, y, ext_num]] detailing the locations we wish to
+            sample on the focal plane
+
+        in_dict : dictionary
+            dictionary containing the zernike corrections
+
+        Returns
+        -------
+        zernikes : list
+            A list of the zernike polynomial coefficients [[z1, z2, z3 ...],
+            ...]calculated from the interpolated reference mesh plus
+            corrections.
+
+        Notes
+        -----
+        Implicitly included are the reference corrections between the focus
+        chips and the focal plane. I do NOT implicitly include any
+        image-specific corrections.
+
+        """
+
         zernike_corrections_in = self.zernike_corrections_from_dictionary(
             in_dict)
         zernike_corrections = np.copy(zernike_corrections_in)
@@ -559,25 +631,15 @@ class FocalPlaneFit(Wavefront):
         zdelta = zernike_corrections[:, 0]
         zthetax = zernike_corrections[:, 1]
         zthetay = zernike_corrections[:, 2]
-        z_length = len(zdelta)
 
-        zernikes = np.array([[0] * 3 +
+        # correct the z4 terms
+        zdelta[4 - 1] /= 172.
+        zthetax[4 - 1] *= numfac / 172.
+        zthetay[4 - 1] *= numfac / 172.
 
-            [self.da.meshDict['z4Mesh'].doInterp(
-            self.decaminfo.ccddict[int(coord[2])], [coord[0]], [coord[1]])
-            / 172. +
-            zdelta[4 - 1] / 172. +
-            coord[1] * numfac / 172. * zthetax[4 - 1] +
-            coord[0] * numfac / 172. * zthetay[4 - 1]] +
-
-            [self.da.meshDict['z{0}Mesh'.format(iZ)].doInterp(
-            self.decaminfo.ccddict[int(coord[2])], [coord[0]], [coord[1]]) +
-            zdelta[iZ - 1] +
-            coord[1] * zthetax[iZ - 1] +
-            coord[0] * zthetay[iZ - 1]
-            for iZ in range(5, z_length + 1)]
-
-            for coord in coords])
+        # apply correction
+        zernikes += zdelta + np.outer(coords[:,1], zthetax) + \
+                np.outer(coords[:,0], zthetay)
 
         return zernikes
 
