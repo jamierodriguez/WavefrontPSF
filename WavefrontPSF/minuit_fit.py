@@ -120,7 +120,7 @@ class Minuit_Fit(object):
     def __init__(self, FitFunc, minuit_dict, h_dict, par_names,
                  GradFunc=grad_func,
                  SaveFunc=None,
-                 save_iter=0,
+                 save_iter=-1,
                  force_derivatives=0,
                  verbosity=0, max_iterations=1000,
                  tolerance=0.3,
