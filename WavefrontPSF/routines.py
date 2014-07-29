@@ -342,7 +342,7 @@ def get_data(data, i):
 def vary_one_parameter(parameter,
                        FitFunc,
                        minuit_dict,
-                       N=21):
+                       N=11):
 
     if minuit_dict['error_{0}'.format(parameter)] > 0:
         err = minuit_dict['error_{0}'.format(parameter)]
@@ -363,3 +363,48 @@ def vary_one_parameter(parameter,
         chi2.append(chi2_i)
     return chi2, parameters
 
+
+def vary_two_parameters(parameter,
+                        parameter2,
+                        FitFunc,
+                        minuit_dict,
+                        N=11):
+
+    if minuit_dict['error_{0}'.format(parameter)] > 0:
+        err = minuit_dict['error_{0}'.format(parameter)]
+        mid = minuit_dict[parameter]
+        parameters = np.linspace(mid - 5 * err,
+                                 mid + 5 * err,
+                                 N)
+    else:
+        parameters = np.linspace(
+            minuit_dict['limit_{0}'.format(parameter)][0],
+            minuit_dict['limit_{0}'.format(parameter)][1],
+            N)
+
+    # do parameter2 now
+    if minuit_dict['error_{0}'.format(parameter2)] > 0:
+        err = minuit_dict['error_{0}'.format(parameter2)]
+        mid = minuit_dict[parameter]
+        parameters2 = np.linspace(mid - 5 * err,
+                                  mid + 5 * err,
+                                  N)
+    else:
+        parameters2 = np.linspace(
+            minuit_dict['limit_{0}'.format(parameter2)][0],
+            minuit_dict['limit_{0}'.format(parameter2)][1],
+            N)
+
+    chi2 = []
+    parameters_1 = []
+    parameters_2 = []
+    for par in parameters:
+        for par2 in parameters2:
+            in_dict = {key: minuit_dict[key] for key in minuit_dict}
+            in_dict.update({parameter: par,
+                            parameter2: par2})
+            chi2_i = FitFunc(in_dict)
+            chi2.append(chi2_i)
+            parameters_1.append(par)
+            parameters_2.append(par2)
+    return parameters_1, parameters_2, chi2, parameters, parameters2

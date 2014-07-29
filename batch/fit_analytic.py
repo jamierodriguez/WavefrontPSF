@@ -21,11 +21,11 @@ import argparse
 
 from focal_plane import FocalPlane
 from focal_plane_fit import FocalPlaneFit
-from colors import blue_red, blues_r, reds
+from colors import blue_red
 from minuit_fit import Minuit_Fit
-from routines import minuit_dictionary, mean_trim, vary_one_parameter
+from routines import minuit_dictionary, vary_one_parameter, vary_two_parameters
 from routines_moments import convert_moments
-from routines_files import generate_hdu_lists, make_directory
+from routines_files import make_directory
 from routines_plot import data_focal_plot, data_hist_plot, save_func_hists
 from decamutil_cpd import decaminfo
 
@@ -286,7 +286,7 @@ def SaveFunc(steps, defaults=False):
                'output_directory': output_directory,
                'boxdiv': boxdiv,
                'edges': edges,
-               'defaults': defaults,}
+               'defaults': defaults, }
     save_func_hists(**in_dict)
 
     return
@@ -522,10 +522,13 @@ if verbose:
                     + '.png')
         plt.close('all')
 
+    # TODO: do varying parameters elsewhere?
     # do varying parameters
     for parameter in par_names:
+        N = 11
         chi2, parameters = vary_one_parameter(parameter, FitFunc,
-                                              minuit_results['minuit'])
+                                              minuit_results['minuit'],
+                                              N = 11)
         fig = plt.figure(figsize=(12, 12))
         for key in sorted(chi2[-1].keys()):
             chi2par = [np.sum(chi2_i[key]) for chi2_i in chi2]
@@ -542,3 +545,36 @@ if verbose:
                     parameter + '.png')
         plt.close('all')
 
+    # two parameters
+    for ij, parameter in enumerate(par_names[:-1]):
+        for parameter2 in par_names[ij + 1:]:
+            N = 7
+            parameters_1, parameters_2, chi2, parameters, parameters2 = \
+                    vary_two_parameters(parameter, parameter2,
+                                        FitFunc,
+                                        minuit_results['minuit'],
+                                        N=N)
+            for key in sorted(chi2[-1].keys()):
+                fig = plt.figure(figsize=(12, 12))
+                chi2par = [np.sum(chi2_i[key]) for chi2_i in chi2]
+                plt.xlabel(parameter)
+                plt.ylabel(parameter2)
+                plt.xlim(parameters.min(), parameters.max())
+                plt.ylim(parameters2.min(), parameters2.max())
+                extent = [parameters.min(), parameters.max(),
+                          parameters2.min(), parameters2.max()]
+                levels = 9
+                X = np.array(parameters_1).reshape(N, N)
+                Y = np.array(parameters_2).reshape(N, N)
+                C = np.array(chi2par).reshape(N, N)
+                Image = plt.contourf(X, Y, C, levels, cmap=plt.get_cmap('Reds'),
+                                     extent=extent)
+                _ = plt.contour(X, Y, C, levels, extent=extent,
+                                cmap=plt.get_cmap('Reds'))
+                CB = plt.colorbar(Image)
+                plt.title('{0:08d}, {3}: {1}, {2}'.format(expid, parameter,
+                                                          parameter2, key))
+                fig.savefig(output_directory + '{0:04d}_vary2d_{1}_'.format(
+                    nCalls, key) +
+                            parameter + '_and_' + parameter2 + '.png')
+                plt.close('all')
