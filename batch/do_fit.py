@@ -200,8 +200,8 @@ def do_fit(args):
     # set up fit
     ##############################################################################
 
-    chi_weights = eval(args['chi_weights'])
-    p_init = eval(args['p_init'])
+    chi_weights = args['chi_weights']
+    p_init = args['p_init']
 
     FP = FocalPlane(list_catalogs=list_catalogs,
                     list_fits_extension=list_fits_extension,
@@ -273,23 +273,7 @@ def do_fit(args):
 
         return chi2
 
-    # define the save function
-    def SaveFunc(steps, defaults=False):
-        in_dict = {'steps': steps,
-                   'state_history': FPF.history,
-                   'chisquared_history': chi2hist,
-                   'chi_weights': FPF.chi_weights,
-                   'plane': FPF.temp_plane,
-                   'reference_plane': data_compare,
-                   'fits_directory': fits_directory,
-                   'boxdiv': boxdiv,
-                   'edges': edges,
-                   'defaults': defaults,}
-        save_func_hists(**in_dict)
-
-        return
-
-    par_names = eval(args['par_names'])
+    par_names = args['par_names']
     if len(par_names) == 0:
         par_names = sorted(p_init.keys())
     h_base = 1e-3
@@ -307,7 +291,6 @@ def do_fit(args):
     max_iterations = len(par_names) * 100
 
     minuit_fit = Minuit_Fit(FitFunc, minuit_dict, par_names=par_names,
-                            SaveFunc=SaveFunc,
                             save_iter=save_iter,
                             h_dict=h_dict,
                             verbosity=verbosity,
@@ -583,5 +566,8 @@ if __name__ == "__main__":
 
     args = vars(options)
 
+    args['chi_weights'] = eval(args['chi_weights'])
+    args['p_init'] = eval(args['p_init'])
+    args['p_names'] = eval(args['p_names'])
     do_fit(args)
 

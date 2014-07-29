@@ -78,7 +78,7 @@ def catalog_directory_func(expid,
     directory = path.join(catalog_directory,"psfcat/%08d/%08d/" % (rungroup,expid))
     return directory
 
-run_directory = catalog_directory.replace('psfcat', fitname)
+run_directory = path.join(catalog_directory,fitname + '/')
 if not path.exists(run_directory):
     makedirs(run_directory)
     makedirs(run_directory + 'logs/')
@@ -160,7 +160,7 @@ ccds.sort()
 ccds = [ccd for ccd in ccds if not
         path.exists(catalog_directory +
                     "DECam_%08d_%02d_selpsfcat.fits" % (expid, ccd))]
-if len(ccds) < 60:
+if len(ccds) > 60:
     todo_list.append('catalog_make')
 
 # analytic_fit
@@ -169,6 +169,10 @@ if not path.exists(fits_directory + 'minuit_results.npy'):
 
 if verbose:
     print(todo_list)
+    print("expid", expid)
+    print("driver", driver)
+    print("verbose", verbose)
+    print("execute", execute)
 if not execute:
     raise Exception("All done!")
 
@@ -177,26 +181,30 @@ if not execute:
 ###############################################################################
 if driver == 'run_master':
     expids = np.load('/nfs/slac/g/ki/ki18/cpd/catalogs/sva1-list.npy')['expid']
+    expids = expids[:1]
     for expid in expids:
+        args_input = {'driver': 'run_expid',
+                      'expid': expid}
         if shell == cpd_shell:
             # for my computer
-            command = ['python', code_name]
+            command = ['python', master_code_path]
         elif shell == kils_shell:
             # for ki-ls
             command = [
                 'bsub',
                 '-W', '300',
                 '-o', run_directory +
-                      '/logs/run_{0:08d}_cpd.log'.format(expid),
+                      'logs/run_{0:08d}.log'.format(expid),
                 '-R', 'rhel60&&linux64',
-                'python', code_name]
-        args_input = {'driver': 'run_expid',
-                      'expid': expid,
-                      'execute': True,
-                      'verbose': True}
+                '-J', '{0}, {1}'.format(expid, args_input['driver']),
+                'python', master_code_path]
         for arg_i in args_input:
             command.append('--' + arg_i)
             command.append(str(args_input[arg_i]))
+        if verbose:
+            command.append("--verbose")
+        command.append("--execute")
+
         if verbose:
             print_command(command)
         if execute:
@@ -221,7 +229,7 @@ elif driver == 'make_master_filelist':
     if not path.exists(outname):
         call(cmd, shell=True)
 
-elif driver == 'run_expid':
+elif driver == 'run_catalog':
 
     ###############################################################################
     # make catalog filelists for each ccd
@@ -257,21 +265,6 @@ elif driver == 'run_expid':
 
     if 'catalog_make' in todo_list:
 
-        parser_transform = {'expid': '--expid',
-                            'filelist': '--filelist',
-                            'basedir': '--basedir',
-                            'fraction': '--fraction',
-                            'getIn': '--getIn',
-                            'deleteIn': '--deleteIn',
-                            'tag': '--tag',
-                            'ccd': '--ccd',
-                            'download_image': '--downImg',
-                            'download_background': '--downBak',
-                            'download_catalog': '--downCat',
-                            'download_psfcat': '--downPsf',
-                            }
-
-
         ccd_filelists = glob(catalog_directory + '/filelist*')
         ccds = [int(ccd_filelists_i.split('_')[-1].split('.')[0])
                 for ccd_filelists_i in ccd_filelists]
@@ -299,10 +292,11 @@ elif driver == 'run_expid':
             mkSelPsfCat(**args_input)
 
 
+elif driver == 'run_expid':
     ###############################################################################
     # fit catalog analytic
     ###############################################################################
-    if 'fit_analytic' in todo_list:
+    if 'analytic_fit' in todo_list:
         if not path.exists(fits_directory):
             makedirs(fits_directory)
         db = csv2rec(db_csv)
@@ -323,18 +317,22 @@ elif driver == 'run_expid':
         args_input = {'expid': expid,
                       'catalogs': catalog_directory,
                       'name': 'selpsfcat',
-                      'extension': str(2),
+                      'extension': 2,
                       'fits_directory': fits_directory,
-                      'analytic': str(1),
+                      'analytic': 1,
                       'boxdiv': boxdiv,
                       'methodVal': 50,  # number of nearest neighbors
-                      'verbose': str(1),
+                      'verbose': 1,
                       'n_samples_box': n_samples_box,
-                      'save_iter': str(50),
-                      'p_init': str(p_init),
-                      'conds': str(conds),
-                      'par_names': str(par_names)}
-        do_fit(args_input)
+                      'save_iter': 50,
+                      'p_init': p_init,
+                      'conds': conds,
+                      'chi_weights': chi_weights,
+                      'par_names': par_names}
+        if verbose:
+            print(args_input)
+        if execute:
+            do_fit(args_input)
 
 
 ###############################################################################
