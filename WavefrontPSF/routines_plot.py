@@ -1281,9 +1281,12 @@ def save_func_hists(steps,
 
     # compare
     nrows = 1
-    for key in chi_weights:
+    chi_axes = {}
+    for ij in xrange(len(chi_weights.keys())):
+        key = sorted(chi_weights.keys())[ij]
         if chi_weights[key] > 0:
             nrows += 1
+            chi_axes[key] = nrows - 2
     fig, axs = plt.subplots(nrows=nrows, ncols=3, sharex='all', sharey='all',
                             figsize=(BASE_SIZE * 3, BASE_SIZE * nrows))
 
