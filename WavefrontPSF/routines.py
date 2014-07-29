@@ -363,6 +363,7 @@ def vary_one_parameter(parameter,
         chi2.append(chi2_i)
     return chi2, parameters
 
+
 def vary_two_parameters(parameter,
                         parameter2,
                         FitFunc,
@@ -407,3 +408,4 @@ def vary_two_parameters(parameter,
             parameters_1.append(par)
             parameters_2.append(par2)
     return parameters_1, parameters_2, chi2, parameters, parameters2
+

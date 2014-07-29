@@ -1354,23 +1354,25 @@ def save_func_hists(steps,
                        verticalalignment='center',
                        )
 
-    for ij in xrange(len(chi_weights.keys())):
-        key = sorted(chi_weights.keys())[ij]
-        if chi_weights[key] > 0:
-            figures = {key: fig,
-                       '{0}_fit'.format(key): fig,
-                       '{0}_chi2'.format(key): fig}
-            axes = {key: axs[1 + ij, 0],
-                    '{0}_fit'.format(key): axs[1 + ij, 1],
-                    '{0}_chi2'.format(key): axs[1 + ij, 2]}
-            data = {'x_box': plane['x_box'],
-                    'y_box': plane['y_box'],
-                    key: reference_plane[key],
-                    '{0}_fit'.format(key): plane[key],
-                    '{0}_chi2'.format(key): chisquared_history[-1][key]}
-            _ = data_hist_plot(data, edges, keys=figures.keys(),
-                               figures=figures, axes=axes,
-                               defaults=defaults)
+    for ijk in xrange(len(chi_weights.keys())):
+        key = sorted(chi_weights.keys())[ijk]
+        if key not in chi_axes:
+            continue
+        ij = chi_axes[key]
+        figures = {key: fig,
+                   '{0}_fit'.format(key): fig,
+                   '{0}_chi2'.format(key): fig}
+        axes = {key: axs[1 + ij, 0],
+                '{0}_fit'.format(key): axs[1 + ij, 1],
+                '{0}_chi2'.format(key): axs[1 + ij, 2]}
+        data = {'x_box': plane['x_box'],
+                'y_box': plane['y_box'],
+                key: reference_plane[key],
+                '{0}_fit'.format(key): plane[key],
+                '{0}_chi2'.format(key): chisquared_history[-1][key]}
+        _ = data_hist_plot(data, edges, keys=figures.keys(),
+                           figures=figures, axes=axes,
+                           defaults=defaults)
 
     plt.tight_layout()
     fig.savefig(output_directory + '{0:04d}.png'.format(steps))
