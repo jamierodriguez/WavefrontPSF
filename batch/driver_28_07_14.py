@@ -199,11 +199,12 @@ if driver == 'run_master':
             # for ki-ls
             command = [
                 'bsub',
-                '-W', '120',
+                #'-W', '120',
+                '-q', 'long',
                 '-o', run_directory +
                       'logs/run_{0:08d}.log'.format(expid),
                 '-R', 'rhel60&&linux64',
-                '-J', '{1}, {0}'.format(expid, args_input['driver']),
+                '-J', '{0:08d}'.format(expid),
                 'python', master_code_path]
         for arg_i in args_input:
             command.append('--' + arg_i)
