@@ -96,11 +96,9 @@ def average_dictionary(
                        'n': N})
 
     # get the midpoints of each box
-    boxes = decaminfo().average_boxdiv(x, y, y, average,
+    x_box, y_box = decaminfo().average_boxdiv(x, y, y, average,
                                        boxdiv=boxdiv,
                                        boxes=True)
-    x_box = boxes[:,0]
-    y_box = boxes[:,1]
     returndict.update({'x_box': x_box, 'y_box': y_box})
 
     return returndict
