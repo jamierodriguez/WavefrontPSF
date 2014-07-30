@@ -331,7 +331,8 @@ class decaminfo(object):
         var_Pave = []
         N = []
         members_list = []
-        boxes_list = []
+        x_box = []
+        y_box = []
 
         for box in bounds:
             for x in xrange(len(box[0]) - 1):
@@ -351,15 +352,16 @@ class decaminfo(object):
                     if members:
                         members_list.append(np.where(choose)[0])
                     if boxes:
-                        boxes_list.append([0.5 * (box[0][x] + box[0][x + 1]),
-                                           0.5 * (box[1][y] + box[1][y + 1])])
+                        x_box.append(0.5 * (box[0][x] + box[0][x + 1]))
+                        y_box.append(0.5 * (box[1][y] + box[1][y + 1]))
         Pave = np.array(Pave)
         var_Pave = np.array(var_Pave)
         N = np.array(N)
         members_list = np.array(members_list)
-        boxes_list = np.array(boxes_list)
         if boxes:
-            return boxes_list
+            x_box = np.array(x_box)
+            y_box = np.array(y_box)
+            return x_box, y_box
         if members:
             return bounds, members_list
         if Ntrue:
