@@ -15,18 +15,15 @@ from __future__ import print_function, division
 import matplotlib
 # the agg is so I can submit for batch jobs.
 matplotlib.use('Agg')
-import matplotlib.pyplot as plt
 import numpy as np
 import argparse
 
 from focal_plane import FocalPlane
 from focal_plane_fit import FocalPlaneFit
-from colors import blue_red, blues_r, reds
 from minuit_fit import Minuit_Fit
-from routines import minuit_dictionary, mean_trim, vary_one_parameter, vary_two_parameters
+from routines import minuit_dictionary
 from routines_moments import convert_moments
-from routines_files import generate_hdu_lists, make_directory
-from routines_plot import data_focal_plot, data_hist_plot, save_func_hists
+from routines_files import make_directory
 from decamutil_cpd import decaminfo
 
 ##############################################################################
@@ -153,7 +150,7 @@ parser.add_argument("--par_names",
 def do_fit(args):
     verbose = args['verbose']
 
-    average = np.mean  # TODO: this may change!!!
+    average = np.median  # TODO: this may change!!!
     boxdiv = args['boxdiv']
     conds = args['conds']
     max_samples_box = 100000
@@ -273,6 +270,10 @@ def do_fit(args):
 
         return chi2
 
+    def SaveFunc(number):
+
+        return
+
     par_names = args['par_names']
     if len(par_names) == 0:
         par_names = sorted(p_init.keys())
@@ -291,6 +292,7 @@ def do_fit(args):
     max_iterations = len(par_names) * 100
 
     minuit_fit = Minuit_Fit(FitFunc, minuit_dict, par_names=par_names,
+                            SaveFunc=SaveFunc,
                             save_iter=save_iter,
                             h_dict=h_dict,
                             verbosity=verbosity,
@@ -342,223 +344,6 @@ def do_fit(args):
         for key in sorted(minuit_results['args']):
             print("'" + key + "'", ":", minuit_results['args'][key], ",")
 
-    ##############################################################################
-    # figures
-    ##############################################################################
-
-    if verbose:
-        fig = plt.figure()
-        plt.imshow(minuit_results['correlation'], cmap=blue_red,
-                   interpolation='none', vmin=-1, vmax=1,
-                   origin='lower')
-        plt.colorbar()
-        fig.savefig(fits_directory + '{0:04d}_correlation'.format(nCalls) +
-                    '.png')
-        plt.close('all')
-
-        chi2out = FitFunc(minuit_results['args'])
-        SaveFunc(nCalls, defaults=True)
-        # refrence histograms
-        figures, axes, scales = data_hist_plot(data_compare, edges)
-        for fig in figures:
-            axes[fig].set_title('{0:08d}: {1}'.format(expid, fig))
-            figures[fig].savefig(fits_directory +
-               '{0:04d}_reference_histograms_{1}.png'.format(nCalls, fig))
-        plt.close('all')
-        # refrence_sample histograms
-        figures, axes, scales = data_hist_plot(data_unaveraged_compare, edges)
-        for fig in figures:
-            axes[fig].set_title('{0:08d}: {1}'.format(expid, fig))
-            figures[fig].savefig(fits_directory +
-               '{0:04d}_sampled_histograms_{1}.png'.format(nCalls, fig))
-        plt.close('all')
-        # fit histograms
-        figures, axes, scales = data_hist_plot(poles_i, edges)
-        for fig in figures:
-            axes[fig].set_title('{0:08d}: {1}'.format(expid, fig))
-            figures[fig].savefig(fits_directory +
-               '{0:04d}_fit_histograms_{1}.png'.format(nCalls, fig))
-        plt.close('all')
-
-        # the above with defaults=False
-        # refrence histograms
-        figures, axes, scales = data_hist_plot(data_compare, edges, defaults=False)
-        for fig in figures:
-            axes[fig].set_title('{0:08d}: {1}'.format(expid, fig))
-            figures[fig].savefig(fits_directory +
-               '{0:04d}_reference_histograms_unscaled_{1}.png'.format(nCalls, fig))
-        plt.close('all')
-
-        # refrence_sample histograms
-        figures, axes, scales = data_hist_plot(data_unaveraged_compare, edges,
-                                               defaults=False)
-        for fig in figures:
-            axes[fig].set_title('{0:08d}: {1}'.format(expid, fig))
-            figures[fig].savefig(fits_directory +
-               '{0:04d}_sampled_histograms_unscaled_{1}.png'.format(nCalls, fig))
-        plt.close('all')
-
-        # fit histograms
-        figures, axes, scales = data_hist_plot(poles_i, edges, defaults=False)
-        for fig in figures:
-            axes[fig].set_title('{0:08d}: {1}'.format(expid, fig))
-            figures[fig].savefig(fits_directory +
-               '{0:04d}_fit_histograms_unscaled_{1}.png'.format(nCalls, fig))
-        plt.close('all')
-
-        # residual histograms
-        data_residual = {'x_box': poles_i['x_box'], 'y_box': poles_i['y_box']}
-        for key in poles_i.keys():
-            if (key == 'x_box') + (key == 'y_box'):
-                continue
-            else:
-                if key in data_compare.keys():
-                    data_residual.update({key: data_compare[key] - poles_i[key]})
-        figures, axes, scales = data_hist_plot(data_residual, edges, defaults=False)
-        for fig in figures:
-            axes[fig].set_title('{0:08d}: {1}'.format(expid, fig))
-            figures[fig].savefig(fits_directory +
-               '{0:04d}_residual_histograms_{1}.png'.format(nCalls, fig))
-        plt.close('all')
-
-
-        # do focal plane plots
-        figures, axes, scales = data_focal_plot(data_compare, color='r',
-                                                defaults=True)
-        figures, axes, scales = data_focal_plot(poles_i, color='b',
-                                                figures=figures, axes=axes,
-                                                scales=scales)
-        for fig in figures:
-            axes[fig].set_title('{0:08d}: {1}'.format(expid, fig))
-            figures[fig].savefig(fits_directory +
-               '{0:04d}_focal_plot_{1}.png'.format(nCalls, fig))
-        plt.close('all')
-
-        # do unscaled focal plane plots
-        figures, axes, scales = data_focal_plot(data_compare, color='r',
-                                                defaults=False)
-        figures, axes, scales = data_focal_plot(poles_i, color='b',
-                                                figures=figures, axes=axes,
-                                                scales=scales)
-        for fig in figures:
-            axes[fig].set_title('{0:08d}: {1}'.format(expid, fig))
-            figures[fig].savefig(fits_directory +
-               '{0:04d}_focal_plot_unscaled_{1}.png'.format(nCalls, fig))
-        plt.close('all')
-
-        # do focal plane residual
-        figures, axes, scales = data_focal_plot(data_residual, color='m',
-                                                defaults=False)
-        for fig in figures:
-            axes[fig].set_title('{0:08d}: {1}'.format(expid, fig))
-            figures[fig].savefig(fits_directory +
-               '{0:04d}_focal_plot_residual_{1}.png'.format(nCalls, fig))
-        plt.close('all')
-
-        # plots of zernikes
-        zernikes = np.array(FPF.zernikes(in_dict, coords=coords_sample))
-        zernike_dict = {'x': coords_sample[:,0], 'y': coords_sample[:,1]}
-        zernike_keys = []
-        for zi in xrange(11):
-            zi_key = 'z{0:02d}'.format(zi + 1)
-            zernike_dict.update({zi_key: zernikes[:, zi]})
-            zernike_keys.append(zi_key)
-        figures, axes, scales = data_hist_plot(zernike_dict, edges,
-                                               keys=zernike_keys)
-        for fig in figures:
-            axes[fig].set_title('{0:08d}: {1}'.format(expid, fig))
-            figures[fig].savefig(fits_directory +
-               '{0:04d}_fit_histograms_{1}.png'.format(nCalls, fig))
-        plt.close('all')
-
-        fig = plt.figure(figsize=(12, 12), dpi=300)
-        for key in sorted(chi2hist[-1].keys()):
-            x = range(len(chi2hist))
-            y = []
-            for i in x:
-                if key == 'chi2':
-                    y.append(np.sum(chi2hist[i][key]))
-                else:
-                    y.append(np.sum(chi2hist[i][key] * chi_weights[key]))
-            if key == 'chi2':
-                plt.plot(x, np.log10(y), 'k--', label=key)
-            else:
-                plt.plot(x, np.log10(y), label=key)
-        plt.legend()
-        plt.title('{0:08d}: chi2'.format(expid))
-        fig.savefig(fits_directory + '{0:04d}_chi2hist'.format(nCalls) + '.png')
-        plt.close('all')
-
-        # plot values
-        for key in sorted(FPF.history[-1].keys()):
-            fig = plt.figure(figsize=(12, 12), dpi=300)
-            x = range(len(FPF.history))
-            y = []
-            for i in x:
-                y.append(np.sum(FPF.history[i][key]))
-            plt.plot(x, y, label=key)
-            plt.title('{0:08d}: {1}'.format(expid, key))
-            fig.savefig(fits_directory + '{0:04d}_history_{1}'.format(nCalls,
-                                                                        key)
-                        + '.png')
-            plt.close('all')
-
-        # TODO: do varying parameters elsewhere?
-        # do varying parameters
-        for parameter in par_names:
-            N = 11
-            chi2, parameters = vary_one_parameter(parameter, FitFunc,
-                                                  minuit_results['minuit'],
-                                                  N = 11)
-            fig = plt.figure(figsize=(12, 12))
-            for key in sorted(chi2[-1].keys()):
-                chi2par = [np.sum(chi2_i[key]) for chi2_i in chi2]
-                if key == 'chi2':
-                    plt.semilogy(parameters, chi2par, 'k--', label=key)
-                    plt.plot([minuit_results['minuit'][parameter],
-                              minuit_results['minuit'][parameter]],
-                             [np.min(chi2par), np.max(chi2par)], 'k:', linewidth=2)
-                else:
-                    plt.semilogy(parameters, chi2par, '-', label=key)
-            plt.legend()
-            plt.title('{0:08d}: {1}'.format(expid, parameter))
-            fig.savefig(fits_directory + '{0:04d}_vary_'.format(nCalls) +
-                        parameter + '.png')
-            plt.close('all')
-
-        # two parameters
-        for ij, parameter in enumerate(par_names[:-1]):
-            for parameter2 in par_names[ij + 1:]:
-                N = 7
-                parameters_1, parameters_2, chi2, parameters, parameters2 = \
-                        vary_two_parameters(parameter, parameter2,
-                                            FitFunc,
-                                            minuit_results['minuit'],
-                                            N=N)
-                for key in sorted(chi2[-1].keys()):
-                    fig = plt.figure(figsize=(12, 12))
-                    chi2par = [np.sum(chi2_i[key]) for chi2_i in chi2]
-                    plt.xlabel(parameter)
-                    plt.ylabel(parameter2)
-                    plt.xlim(parameters.min(), parameters.max())
-                    plt.ylim(parameters2.min(), parameters2.max())
-                    extent = [parameters.min(), parameters.max(),
-                              parameters2.min(), parameters2.max()]
-                    levels = 9
-                    X = np.array(parameters_1).reshape(N, N)
-                    Y = np.array(parameters_2).reshape(N, N)
-                    C = np.array(chi2par).reshape(N, N)
-                    Image = plt.contourf(X, Y, C, levels, cmap=plt.get_cmap('Reds'),
-                                         extent=extent)
-                    _ = plt.contour(X, Y, C, levels, extent=extent,
-                                    cmap=plt.get_cmap('Reds'))
-                    CB = plt.colorbar(Image)
-                    plt.title('{0:08d}, {3}: {1}, {2}'.format(expid, parameter,
-                                                              parameter2, key))
-                    fig.savefig(fits_directory + '{0:04d}_vary2d_{1}_'.format(
-                        nCalls, key) +
-                                parameter + '_and_' + parameter2 + '.png')
-                    plt.close('all')
 
 
 if __name__ == "__main__":

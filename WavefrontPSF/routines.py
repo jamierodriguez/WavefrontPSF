@@ -159,17 +159,17 @@ def minuit_dictionary(keys, h_base=1e-3):
             #minuit_dict.update({'fwhm':0.14 / self.rzero})
             minuit_dict.update({key: 1.0})
             minuit_dict.update({'error_{0}'.format(key): 0.1})
-            minuit_dict.update({'limit_{0}'.format(key): (0.6, 2.0)})
+            #minuit_dict.update({'limit_{0}'.format(key): (0.6, 2.0)})
             h_dict.update({key: 0.1 * h_base})
         elif (key == 'dz') + (key == 'z04d'):
             minuit_dict.update({key: 0})
             minuit_dict.update({'error_{0}'.format(key): 40})
-            minuit_dict.update({'limit_{0}'.format(key): (-400, 400)})
+            #minuit_dict.update({'limit_{0}'.format(key): (-400, 400)})
             h_dict.update({key: 40 * h_base})
         elif (key == 'z04x') + (key == 'z04y'):
             minuit_dict.update({key: 0})
             minuit_dict.update({'error_{0}'.format(key): 20})
-            minuit_dict.update({'limit_{0}'.format(key): (-100, 100)})
+            #minuit_dict.update({'limit_{0}'.format(key): (-100, 100)})
             h_dict.update({key: 20 * h_base})
         elif (key[0] == 'z') * (len(key) == 4):
             # all zernikes
@@ -181,13 +181,13 @@ def minuit_dictionary(keys, h_base=1e-3):
             ## minuit_dict.update({key:self.image_correction[znum][ztype_num]})
             if key[3] == 'd':
                 minuit_dict.update({'error_{0}'.format(key): 0.1})
-                minuit_dict.update({'limit_{0}'.format(key): (-1.25, 1.25)})
+                #minuit_dict.update({'limit_{0}'.format(key): (-1.25, 1.25)})
                 h_dict.update({key: 0.1 * h_base})
             else:
                 # x and y
                 minuit_dict.update({'error_{0}'.format(key): 5e-4})
-                minuit_dict.update({
-                    'limit_{0}'.format(key): (-0.0075, 0.0075)})
+                #minuit_dict.update({
+                #    'limit_{0}'.format(key): (-0.0075, 0.0075)})
                 h_dict.update({key: 5e-4 * h_base})
         elif ((key == 'e1') + (key == 'e2') +
               (key == 'delta1') + (key == 'delta2') +
@@ -195,19 +195,19 @@ def minuit_dictionary(keys, h_base=1e-3):
             # looking at the common mode terms
             minuit_dict.update({key: 0})
             minuit_dict.update({'error_{0}'.format(key): 0.005})
-            minuit_dict.update({'limit_{0}'.format(key): (-0.5, 0.5)})
+            #minuit_dict.update({'limit_{0}'.format(key): (-0.5, 0.5)})
             h_dict.update({key: 0.005 * h_base})
         elif (key == 'dx') + (key == 'dy'):
             # hexapod:
             minuit_dict.update({key: 0})
             minuit_dict.update({'error_{0}'.format(key): 100})
-            minuit_dict.update({'limit_{0}'.format(key): (-4500, 4500)})
+            #minuit_dict.update({'limit_{0}'.format(key): (-4500, 4500)})
             h_dict.update({key: 100 * h_base})
         elif (key == 'xt') + (key == 'yt'):
             # hexapod:
             minuit_dict.update({key: 0})
             minuit_dict.update({'error_{0}'.format(key): 50})
-            minuit_dict.update({'limit_{0}'.format(key): (-1000, 1000)})
+            #minuit_dict.update({'limit_{0}'.format(key): (-1000, 1000)})
             h_dict.update({key: 50 * h_base})
 
     return minuit_dict, h_dict
@@ -320,6 +320,33 @@ def MAD(data, sigma=3):
     d = np.median(a)
     c = 0.6745  # constant to convert from MAD to std
     mad = np.median(np.fabs(a - d) / c)
+    conds_mad = (a < d + sigma * mad) * (a > d - sigma * mad)
+
+    return conds_mad, mad
+
+def MAD_ma(data, sigma=3):
+    """Take your data and give conditions that cut out MAD outliers
+
+    Parameters
+    ----------
+    data : array
+        the data over which we want to filter
+
+    sigma : float
+        the number of sigma greater than which we want to fitler out
+
+    Returns
+    -------
+    conds_mad : bool array
+        boolean conditions for True being within sigma * mad
+
+    mad : float
+        The value of mad
+    """
+    a = data
+    d = np.ma.median(a)
+    c = 0.6745  # constant to convert from MAD to std
+    mad = np.ma.median(np.fabs(a - d) / c)
     conds_mad = (a < d + sigma * mad) * (a > d - sigma * mad)
 
     return conds_mad, mad

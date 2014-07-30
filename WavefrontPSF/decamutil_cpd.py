@@ -304,7 +304,7 @@ class decaminfo(object):
 
         return boundi
 
-    def average_boxdiv(self, X, Y, P, average, boxdiv=1, rejectsize=1,
+    def average_boxdiv(self, X, Y, P, average, boxdiv=1, rejectsize=5,
             Ntrue=False, members=False, boxes=False):
         '''
         give average X, Y, P in boxes as well as P2

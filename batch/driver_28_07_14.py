@@ -26,7 +26,7 @@ from do_fit import do_fit
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-d', '--driver', dest='driver', default='null',
+parser.add_argument('-d', '--driver', dest='driver', default='run_master',
                     help='What run are we doing?')
 parser.add_argument('-e', '--execute', dest='execute', default=False,
                     action='store_true',
@@ -52,7 +52,7 @@ cpd_shell = '/bin/zsh'
 # Specify Params
 ###############################################################################
 code_name = "driver_28_07_14"
-fitname = "noe0_28_07_14"
+fitname = "all_moments_28_07_14"
 
 if shell == cpd_shell:
     # for my computer
@@ -69,7 +69,7 @@ db_csv = base_catalog_directory + tag + '/db.csv'
 explist = base_catalog_directory + tag + '_filelist.out'
 catalog_directory = path.join(base_catalog_directory, tag)
 fraction = 0.2
-n_samples_box = 100
+n_samples_box = 25
 boxdiv = 4
 
 def catalog_directory_func(expid,
@@ -87,15 +87,22 @@ fits_directory = catalog_directory.replace('psfcat', fitname)
 fits_afterburn_directory = catalog_directory.replace('psfcat', fitname + '_afterburn')
 
 
-par_names = ['rzero', 'z04d', 'z05d', 'z06d', 'xt', 'yt', 'e1', 'e2']
+par_names = ['rzero',
+             'z04d',
+             'z05d', 'z06d',
+             'xt', 'yt',
+             #'dx', 'dy',
+             'e1', 'e2',
+             'delta1', 'delta2',
+             'zeta1', 'zeta2',]
 
-chi_weights = {'e0': 0,
+chi_weights = {'e0': 0.1,
                'e1': 1.,
                'e2': 1.,
-               'delta1': 0,
-               'delta2': 0,
-               'zeta1': 0,
-               'zeta2': 0,}
+               'delta1': 0.1,
+               'delta2': 0.1,
+               'zeta1': 0.01,
+               'zeta2': 0.01,}
 
 p_init = {
 'delta1' : 0,
@@ -165,7 +172,7 @@ if len(ccds) > 60:
 
 # analytic_fit
 if not path.exists(fits_directory + 'minuit_results.npy'):
-    todo_list.append('analytic_fit')
+    todo_list.append('fit_analytic')
 
 if verbose:
     print(todo_list)
@@ -196,7 +203,7 @@ if driver == 'run_master':
                 '-o', run_directory +
                       'logs/run_{0:08d}.log'.format(expid),
                 '-R', 'rhel60&&linux64',
-                '-J', '{0}, {1}'.format(expid, args_input['driver']),
+                '-J', '{1}, {0}'.format(expid, args_input['driver']),
                 'python', master_code_path]
         for arg_i in args_input:
             command.append('--' + arg_i)
@@ -296,13 +303,13 @@ elif driver == 'run_expid':
     ###############################################################################
     # fit catalog analytic
     ###############################################################################
-    if 'analytic_fit' in todo_list:
+    if 'fit_analytic' in todo_list:
         if not path.exists(fits_directory):
             makedirs(fits_directory)
         db = csv2rec(db_csv)
         db = db[db['expid'] == expid]
-        p_init['dx'] = 1.162 * (-db['dordodx']) - 516.954
-        p_init['dy'] = 1.476 * (-db['dordody']) + 663.945
+        p_init['dx'] = 1.162 * (-db['dordodx'][0]) - 516.954
+        p_init['dy'] = 1.476 * (-db['dordody'][0]) + 663.945
 
         conds = (#'"' +
             "((recdata['X' + self.coord_name] > pixel_border) *" +
@@ -334,7 +341,81 @@ elif driver == 'run_expid':
         if execute:
             do_fit(args_input)
 
+###############################################################################
+# merge results
+###############################################################################
 
-###############################################################################
-#
-###############################################################################
+elif driver == 'merge_results':
+
+
+    expids = np.load('/nfs/slac/g/ki/ki18/cpd/catalogs/sva1-list.npy')['expid']
+    results_names = ['coords_sample.npy', 'minuit_results.npy', 'plane_compare.npy', 'plane_fit.npy']
+
+    fits_dict = {'expid': []}
+    for expid in expids:
+        catalog_directory = catalog_directory_func(expid)
+        fits_directory = catalog_directory.replace('psfcat', fitname)
+        if path.exists(fits_directory + 'plane_fit.npy'):
+            minuit_results_i = np.load(fits_directory + 'minuit_results.npy').item()
+            n_samples_box = minuit_results_i['args_dict']['n_samples_box']
+            boxdiv = minuit_results_i['args_dict']['boxdiv']
+
+            coords_sample_i = np.load(fits_directory + 'coords_sample.npy')
+
+            fits_dict['expid'].append(expid)
+            key = 'coords'
+            if key not in fits_dict.keys():
+                fits_dict.update({key: []})
+            fits_dict[key].append(coords_sample_i)
+
+            # deal with minuit_results_i
+            minuit_results_keys = {'args_dict': ['boxdiv', 'n_samples_box', 'methodVal'],
+                                   'status': ['deltatime', 'nCalls', 'nCallsDerivative', 'migrad_ierflg'],
+                                   'mnstat': ['amin', 'edm']}
+            for key_min in minuit_results_keys:
+                for key_i in minuit_results_keys[key_min]:
+                    key = 'minuit_' + key_i
+                    if key not in fits_dict.keys():
+                        fits_dict.update({key: []})
+                    fits_dict[key].append(minuit_results_i[key_min][key_i])
+            # now put in the args
+            for key_i in minuit_results_i['args']:
+                key = 'args_' + key_i
+                if key not in fits_dict.keys():
+                    fits_dict.update({key: []})
+                fits_dict[key].append(minuit_results_i['args'][key_i])
+
+            for key_i in minuit_results_i['errors']:
+                key = 'errors_' + key_i
+                if key not in fits_dict.keys():
+                    fits_dict.update({key: []})
+                fits_dict[key].append(minuit_results_i['errors'][key_i])
+
+            # now do covariance matrix
+            key = 'args_covariance'
+            if key not in fits_dict.keys():
+                fits_dict.update({key: []})
+            fits_dict[key].append(minuit_results_i['covariance'])
+
+
+            plane_fit_i = np.load(fits_directory + 'plane_fit.npy').item()
+
+            for key_i in plane_fit_i.keys():
+                key = 'fit_' + key_i
+                if key not in fits_dict.keys():
+                    fits_dict.update({key: []})
+                fits_dict[key].append(plane_fit_i[key_i])
+
+            plane_compare_i = np.load(fits_directory + 'plane_compare.npy').item()
+            for key_i in plane_compare_i.keys():
+                key = 'data_' + key_i
+                if key not in fits_dict.keys():
+                    fits_dict.update({key: []})
+                fits_dict[key].append(plane_compare_i[key_i])
+
+    # convert dictionary
+    fits_rec = convert_dictionary(fits_dict)
+    # save results
+    np.save(run_directory + 'results', fits_rec)
+
+

@@ -14,7 +14,7 @@ import numpy
 import astropy.io.fits as pyfits
 from wavefront import Wavefront
 from routines_moments import convert_moments
-from routines_files import download_desdm, download_desdm_filelist
+from routines_files import download_desdm
 import pdb
 
 parser = argparse.ArgumentParser(prog='selectPsfCat_and_validation')
