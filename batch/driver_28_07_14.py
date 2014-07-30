@@ -188,7 +188,7 @@ if not execute:
 ###############################################################################
 if driver == 'run_master':
     expids = np.load('/nfs/slac/g/ki/ki18/cpd/catalogs/sva1-list.npy')['expid']
-    expids = expids[:1]
+    expids = expids
     for expid in expids:
         args_input = {'driver': 'run_expid',
                       'expid': expid}
@@ -199,7 +199,7 @@ if driver == 'run_master':
             # for ki-ls
             command = [
                 'bsub',
-                '-W', '300',
+                '-W', '120',
                 '-o', run_directory +
                       'logs/run_{0:08d}.log'.format(expid),
                 '-R', 'rhel60&&linux64',
@@ -217,7 +217,7 @@ if driver == 'run_master':
         if execute:
             call(command)
 
-elif driver == 'make_master_filelist':
+if (driver == 'make_master_filelist') + (driver == 'make_all'):
 
     expids = [0]  # to set!
 
@@ -236,7 +236,7 @@ elif driver == 'make_master_filelist':
     if not path.exists(outname):
         call(cmd, shell=True)
 
-elif driver == 'run_catalog':
+if (driver == 'run_catalog') + (driver == 'make_all'):
 
     ###############################################################################
     # make catalog filelists for each ccd
@@ -299,7 +299,7 @@ elif driver == 'run_catalog':
             mkSelPsfCat(**args_input)
 
 
-elif driver == 'run_expid':
+if (driver == 'run_expid') + (driver == 'make_all'):
     ###############################################################################
     # fit catalog analytic
     ###############################################################################
@@ -345,7 +345,7 @@ elif driver == 'run_expid':
 # merge results
 ###############################################################################
 
-elif driver == 'merge_results':
+if driver == 'merge_results':
 
 
     expids = np.load('/nfs/slac/g/ki/ki18/cpd/catalogs/sva1-list.npy')['expid']
