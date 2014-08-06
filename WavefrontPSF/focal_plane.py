@@ -59,6 +59,7 @@ class FocalPlane(Wavefront):
                  max_samples_box=10000, boxdiv=0, subav=0,
                  conds='default', average=mean_trim,
                  coord_name='WIN_IMAGE',
+                 tag='SVA1_FINALCUT',
                  **args):
 
         # do the old init for Wavefront
@@ -68,16 +69,22 @@ class FocalPlane(Wavefront):
 
         if not list_chip:
             # assume list_catalogs is expid
-            if path.exists('/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript/'):
+            expid = list_catalogs
+            path_base = '/nsf/slac/g/ki/ki18/des/cpd/psfex_catalogs/{0}/psfcat/{1:08d}/{2:08d}/'.format(tag, expid - expid % 1000, expid)
+            if path.exists(path_base):
                 list_catalogs, list_fits_extension, list_chip = \
-                    generate_hdu_lists(list_catalogs)
+                        generate_hdu_lists(expid,
+                            path_base=path_base)
+            elif path.exists('/nfs/slac/g/ki/ki18/cpd/catalogs/wgetscript/'):
+                list_catalogs, list_fits_extension, list_chip = \
+                    generate_hdu_lists(expid)
             elif path.exists('/Users/cpd/Desktop/Images/'):
                 list_catalogs, list_fits_extension, list_chip = \
-                    generate_hdu_lists(list_catalogs,
+                    generate_hdu_lists(expid,
                         path_base='/Users/cpd/Desktop/Images/')
             elif path.exists('/Volumes/Seagate/Images/'):
                 list_catalogs, list_fits_extension, list_chip = \
-                    generate_hdu_lists(list_catalogs,
+                    generate_hdu_lists(expid,
                         path_base='/Volumes/Seagate/Images/')
         elif type(list_catalogs) == list:
             if len(list_catalogs) > 0:
@@ -305,6 +312,7 @@ class FocalPlane(Wavefront):
             conds_finite = np.array([True] * extension_return.size)
 
         # think about reordering below:
+        # Nice!: even if boxdiv < 0, get the original boxdiv=0 answer
         box = self.decaminfo.getBounds_pixel(boxdiv=boxdiv)
         for x in xrange(len(box[0]) - 1):
             conds_coords_x = ((recdata_return['X' + self.coord_name] >

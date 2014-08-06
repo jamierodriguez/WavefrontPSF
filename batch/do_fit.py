@@ -153,8 +153,11 @@ def do_fit(args):
     average = np.median  # TODO: this may change!!!
     boxdiv = args['boxdiv']
     conds = args['conds']
-    max_samples_box = 100000
     n_samples_box = args['n_samples_box']
+    if boxdiv >= 0:
+        max_samples_box = 100000
+    else:
+        max_samples_box = n_samples_box
     subav = False
     methodVal = (args['methodVal'], 1.)
 
@@ -209,42 +212,65 @@ def do_fit(args):
                     average=average,
                     subav=subav,
                     )
-    edges = FP.decaminfo.getEdges(boxdiv=boxdiv)
 
-    data_compare = FP.data
-    data_unaveraged_compare = FP.data_unaveraged
-    edges = FP.decaminfo.getEdges(boxdiv=boxdiv)
+    if boxdiv >= 0:
+        data_compare = FP.data
+        var_dict = data_compare
+        # create subsample
+        recdata_sample, extension_sample = FP.filter_number_in_box(
+                recdata=FP.recdata,
+                extension=FP.extension,
+                max_samples_box=n_samples_box,
+                boxdiv=boxdiv)
+        data_sample, coords_sample, data_unaveraged_sample = FP.create_data(
+            recdata=recdata_sample,
+            extension=extension_sample,
+            average=average,
+            boxdiv=boxdiv,
+            subav=False,
+            )
+    else:
+        data_compare = FP.data_unaveraged
+        # create var_dict from snr_win parameter
+        var_dict = {}
+        weights = 1. / data_compare['snr_win']
+        for key in chi_weights:
+            var_dict.update({'var_' + key: weights})
 
-    # create subsample
-    recdata_sample, extension_sample = FP.filter_number_in_box(
-            recdata=FP.recdata,
-            extension=FP.extension,
-            max_samples_box=n_samples_box,
-            boxdiv=boxdiv)
-    data_sample, coords_sample, data_unaveraged_sample = FP.create_data(
-        recdata=recdata_sample,
-        extension=extension_sample,
-        average=average,
-        boxdiv=boxdiv,
-        subav=False,
-        )
-
-
-    # creat FocalPlaneFit object
+    # create FocalPlaneFit object
     FPF = FocalPlaneFit(methodVal=methodVal)
 
     # give FPF some attributes
     FPF.chi_weights = chi_weights
-    FPF.coords = coords_sample
+    if boxdiv >= 0:
+        FPF.coords = coords_sample
+    else:
+        FPF.coords = FP.coords
 
     # define the fit function
     chi2hist = []
     FPF.history = []
 
     if args['analytic'] > 0:
-        plane_func = FPF.analytic_plane_averaged
+        if boxdiv >= 0:
+            def plane_func(in_dict):
+                return FPF.analytic_plane_averaged(in_dict,
+                        coords=FPF.coords,
+                        average=average, boxdiv=boxdiv,
+                        subav=subav)
+        else:
+            def plane_func(in_dict):
+                return FPF.analytic_plane(in_dict, FPF.coords)
     else:
-        plane_func = FPF.plane_averaged
+        if boxdiv >= 0:
+            def plane_func(in_dict):
+                return FPF.plane_averaged(in_dict,
+                        coords=FPF.coords,
+                        average=average, boxdiv=boxdiv,
+                        subav=subav)
+        else:
+            def plane_func(in_dict):
+                return FPF.analytic_plane(in_dict, FPF.coords)
 
     def FitFunc(in_dict):
 
@@ -257,13 +283,11 @@ def do_fit(args):
                 FPF.remakedonut()
                 return 1e20
 
-        poles_i = plane_func(in_dict, coords=coords_sample,
-                             average=average, boxdiv=boxdiv,
-                             subav=subav)
+        poles_i = plane_func(in_dict)
 
         FPF.temp_plane = poles_i
 
-        chi2 = FPF.compare(poles_i, data_compare, var_dict=data_compare,
+        chi2 = FPF.compare(poles_i, data_compare, var_dict=var_dict,
                            chi_weights=FPF.chi_weights)
 
         chi2hist.append(chi2)
@@ -273,6 +297,14 @@ def do_fit(args):
     def SaveFunc(number):
 
         return
+
+    ## import time
+    ## t0 = time.time()
+    ## for i in range(5):
+    ##     FitFunc(p_init)
+    ## t1 = time.time()
+    ## print((t1 - t0) / 5.)
+    ## print(data_compare['x'].size)
 
     par_names = args['par_names']
     if len(par_names) == 0:
@@ -315,20 +347,17 @@ def do_fit(args):
     nCalls = (int(minuit_fit.nCalls / 1000) + 1) * 1000
 
     # append to minuit results the argdict
-    minuit_results.update({'args': args})
+    minuit_results.update({'args_dict': args})
 
     np.save(fits_directory + 'minuit_results', minuit_results)
 
-    # also save the coordinates
-    np.save(fits_directory + 'coords_sample', coords_sample)
+    if boxdiv >= 0:
+        # also save the coordinates
+        np.save(fits_directory + 'coords_sample', coords_sample)
 
     # save a plane!
     in_dict = minuit_results['args']
-    poles_i = plane_func(in_dict, coords=coords_sample,
-                         average=average, boxdiv=boxdiv,
-                         subav=subav)
-
-    poles_i = convert_moments(poles_i)
+    poles_i = plane_func(in_dict)
 
     np.save(fits_directory + 'plane_fit', poles_i)
     np.save(fits_directory + 'plane_compare', data_compare)

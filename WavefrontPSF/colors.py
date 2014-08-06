@@ -1,7 +1,8 @@
 import brewer2mpl
 import numpy as np
-import matplotlib as mpl
 from matplotlib import cm
+import matplotlib as mpl
+import matplotlib
 from functools import wraps
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import AxesGrid

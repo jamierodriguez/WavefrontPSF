@@ -240,25 +240,43 @@ class decaminfo(object):
         ymax = ccdinfo["yCenter"] + ypixHalfSize * self.mmperpixel
         boundi = [[xmin, xmax], [ymin, ymax]]
 
-        if boxdiv > 0:
-            # now you need to blow these up
-            # first off, the y ones need an extra division to make square boxes
-            boundi[1].insert(1, (boundi[1][0] + boundi[1][1])/2)
+        ## if boxdiv > 0:
+        ##     # now you need to blow these up
+        ##     # first off, the y ones need an extra division to make square boxes
+        ##     boundi[1].insert(1, (boundi[1][0] + boundi[1][1])/2)
 
-            for div in xrange(1, boxdiv):
-                '''
-                put in extra cuts
-                '''
-                for k in xrange(2):
-                    # make the location of each cut
-                    cuts = [(boundi[k][j+1] + boundi[k][j])/2.
-                            for j in xrange(len(boundi[k])-1)]
+        ##     for div in xrange(1, boxdiv):
+        ##         '''
+        ##         put in extra cuts
+        ##         '''
+        ##         for k in xrange(2):
+        ##             # make the location of each cut
+        ##             cuts = [(boundi[k][j+1] + boundi[k][j])/2.
+        ##                     for j in xrange(len(boundi[k])-1)]
 
-                    # append the cut
-                    for j in cuts:
-                        boundi[k].append(j)
-                    # now sort the cuts
-                    boundi[k].sort()
+        ##             # append the cut
+        ##             for j in cuts:
+        ##                 boundi[k].append(j)
+        ##             # now sort the cuts
+        ##             boundi[k].sort()
+
+        for div in xrange(boxdiv):
+            # REDONE NEW SYSTEM: ODDS CUT VERTICAL, EVENS HORIZONTAL!
+
+            if div%2 == 0:
+                k = 1
+            else:
+                k = 0
+
+            # make the location of each cut
+            cuts = [(boundi[k][j+1] + boundi[k][j])/2.
+                    for j in xrange(len(boundi[k])-1)]
+
+            # append the cut
+            for j in cuts:
+                boundi[k].append(j)
+            # now sort the cuts
+            boundi[k].sort()
 
         return boundi
 
@@ -282,25 +300,43 @@ class decaminfo(object):
         ymax = 2 * ypixHalfSize
         boundi = [[xmin, xmax], [ymin, ymax]]
 
-        if boxdiv > 0:
-            # now you need to blow these up
-            # first off, the y ones need an extra division to make square boxes
-            boundi[1].insert(1, (boundi[1][0] + boundi[1][1])/2)
+        ## if boxdiv > 0:
+        ##     # now you need to blow these up
+        ##     # first off, the y ones need an extra division to make square boxes
+        ##     boundi[1].insert(1, (boundi[1][0] + boundi[1][1])/2)
 
-            for div in xrange(1, boxdiv):
-                '''
-                put in extra cuts
-                '''
-                for k in xrange(2):
-                    # make the location of each cut
-                    cuts = [(boundi[k][j+1] + boundi[k][j])/2.
-                            for j in xrange(len(boundi[k])-1)]
+        ##     for div in xrange(1, boxdiv):
+        ##         '''
+        ##         put in extra cuts
+        ##         '''
+        ##         for k in xrange(2):
+        ##             # make the location of each cut
+        ##             cuts = [(boundi[k][j+1] + boundi[k][j])/2.
+        ##                     for j in xrange(len(boundi[k])-1)]
 
-                    # append the cut
-                    for j in cuts:
-                        boundi[k].append(j)
-                    # now sort the cuts
-                    boundi[k].sort()
+        ##             # append the cut
+        ##             for j in cuts:
+        ##                 boundi[k].append(j)
+        ##             # now sort the cuts
+        ##             boundi[k].sort()
+
+        for div in xrange(boxdiv):
+            # REDONE NEW SYSTEM: ODDS CUT VERTICAL, EVENS HORIZONTAL!
+
+            if div%2 == 0:
+                k = 1
+            else:
+                k = 0
+
+            # make the location of each cut
+            cuts = [(boundi[k][j+1] + boundi[k][j])/2.
+                    for j in xrange(len(boundi[k])-1)]
+
+            # append the cut
+            for j in cuts:
+                boundi[k].append(j)
+            # now sort the cuts
+            boundi[k].sort()
 
         return boundi
 

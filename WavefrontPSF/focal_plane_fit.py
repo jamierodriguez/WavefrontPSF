@@ -3,6 +3,7 @@
 File: focal_plane_fit.py
 Author: Chris Davis
 Description: Class for creating wavefronts on a generic focal plane.
+TODO: random_coordinates should be in decamutil!
 """
 
 from __future__ import print_function, division

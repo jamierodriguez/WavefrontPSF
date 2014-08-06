@@ -7,13 +7,11 @@ from __future__ import print_function, division
 import matplotlib
 # the agg is so I can submit for batch jobs.
 matplotlib.use('Agg')
-from matplotlib.pyplot import close
 import numpy as np
 from glob import glob
 from routines import print_command, convert_dictionary
-from routines_files import make_directory, download_desdm_filelist
 from subprocess import call
-from os import environ, path, makedirs, remove, rmdir, chdir
+from os import environ, path, makedirs
 from matplotlib.mlab import csv2rec
 
 from do_PsfCat_and_validation import mkSelPsfCat
@@ -69,8 +67,8 @@ db_csv = base_catalog_directory + tag + '/db.csv'
 explist = base_catalog_directory + tag + '_filelist.out'
 catalog_directory = path.join(base_catalog_directory, tag)
 fraction = 0.2
-n_samples_box = 25
-boxdiv = 4
+n_samples_box = 100
+boxdiv = -1
 
 def catalog_directory_func(expid,
                            catalog_directory=catalog_directory):
@@ -93,8 +91,9 @@ par_names = ['rzero',
              'xt', 'yt',
              #'dx', 'dy',
              'e1', 'e2',
-             'delta1', 'delta2',
-             'zeta1', 'zeta2',]
+             #'delta1', 'delta2',
+             #'zeta1', 'zeta2',
+             ]
 
 chi_weights = {'e0': 0.1,
                'e1': 1.,
@@ -352,45 +351,33 @@ if driver == 'merge_results':
     expids = np.load('/nfs/slac/g/ki/ki18/cpd/catalogs/sva1-list.npy')['expid']
     results_names = ['coords_sample.npy', 'minuit_results.npy', 'plane_compare.npy', 'plane_fit.npy']
 
+    db = np.recfromcsv('/nfs/slac/g/ki/ki18/des/cpd/psfex_catalogs/SVA1_FINALCUT/db.csv')
+
     fits_dict = {'expid': []}
     for expid in expids:
         catalog_directory = catalog_directory_func(expid)
         fits_directory = catalog_directory.replace('psfcat', fitname)
-        if path.exists(fits_directory + 'plane_fit.npy'):
-            minuit_results_i = np.load(fits_directory + 'minuit_results.npy').item()
-            n_samples_box = minuit_results_i['args_dict']['n_samples_box']
-            boxdiv = minuit_results_i['args_dict']['boxdiv']
-
-            coords_sample_i = np.load(fits_directory + 'coords_sample.npy')
-
+        if path.exists(fits_directory + 'minuit_results.npy'):
             fits_dict['expid'].append(expid)
-            key = 'coords'
-            if key not in fits_dict.keys():
-                fits_dict.update({key: []})
-            fits_dict[key].append(coords_sample_i)
+            minuit_results_i = np.load(fits_directory + 'minuit_results.npy').item()
 
             # deal with minuit_results_i
-            minuit_results_keys = {'args_dict': ['boxdiv', 'n_samples_box', 'methodVal'],
-                                   'status': ['deltatime', 'nCalls', 'nCallsDerivative', 'migrad_ierflg'],
-                                   'mnstat': ['amin', 'edm']}
+            minuit_results_keys = ['args_dict', 'mnstat', 'status']
             for key_min in minuit_results_keys:
-                for key_i in minuit_results_keys[key_min]:
-                    key = 'minuit_' + key_i
+                for key_i in minuit_results_i[key_min]:
+                    key = key_min + '_' + key_i
                     if key not in fits_dict.keys():
                         fits_dict.update({key: []})
-                    fits_dict[key].append(minuit_results_i[key_min][key_i])
-            # now put in the args
-            for key_i in minuit_results_i['args']:
-                key = 'args_' + key_i
-                if key not in fits_dict.keys():
-                    fits_dict.update({key: []})
-                fits_dict[key].append(minuit_results_i['args'][key_i])
+                    fits_dict[key].append(str(
+                        minuit_results_i[key_min][key_i]))
 
-            for key_i in minuit_results_i['errors']:
-                key = 'errors_' + key_i
+            # now put in the fits using 'minuit'
+            for key_i in minuit_results_i['minuit']:
+                key = 'fit_' + key_i
                 if key not in fits_dict.keys():
                     fits_dict.update({key: []})
-                fits_dict[key].append(minuit_results_i['errors'][key_i])
+                fits_dict[key].append(minuit_results_i['minuit'][key_i])
+
 
             # now do covariance matrix
             key = 'args_covariance'
@@ -399,20 +386,56 @@ if driver == 'merge_results':
             fits_dict[key].append(minuit_results_i['covariance'])
 
 
-            plane_fit_i = np.load(fits_directory + 'plane_fit.npy').item()
-
-            for key_i in plane_fit_i.keys():
-                key = 'fit_' + key_i
+            # TODO: put in the DB entries e.g. dordodx
+            db_i = db[db['expid'] == expid]
+            for key_i in db_i.dtype.names:
+                key = 'db_' + key_i
                 if key not in fits_dict.keys():
                     fits_dict.update({key: []})
-                fits_dict[key].append(plane_fit_i[key_i])
+                # extra [0] is to convert to number
+                entry = db_i[key_i][0]
+                if entry <= -9998:
+                    entry = np.nan
+                fits_dict[key].append(entry)
 
-            plane_compare_i = np.load(fits_directory + 'plane_compare.npy').item()
-            for key_i in plane_compare_i.keys():
-                key = 'data_' + key_i
-                if key not in fits_dict.keys():
-                    fits_dict.update({key: []})
-                fits_dict[key].append(plane_compare_i[key_i])
+
+            # TODO: put in string location to plane_fit, plane_compare
+            key = 'path_plane_fit'
+            entry = fits_directory + 'plane_fit.npy'
+            if key not in fits_dict.keys():
+                fits_dict.update({key: []})
+            fits_dict[key].append(entry)
+
+            key = 'path_plane_compare'
+            entry = fits_directory + 'plane_compare.npy'
+            if key not in fits_dict.keys():
+                fits_dict.update({key: []})
+            fits_dict[key].append(entry)
+
+            # the things that take forever:
+            ## if path.exists(fits_directory + 'coords_sample.npy'):
+            ##     coords_sample_i = np.load(fits_directory + 'coords_sample.npy')
+
+            ##     fits_dict['expid'].append(expid)
+            ##     key = 'coords'
+            ##     if key not in fits_dict.keys():
+            ##         fits_dict.update({key: []})
+            ##     fits_dict[key].append(coords_sample_i)
+
+            ## plane_fit_i = np.load(fits_directory + 'plane_fit.npy').item()
+
+            ## for key_i in plane_fit_i.keys():
+            ##     key = 'fit_' + key_i
+            ##     if key not in fits_dict.keys():
+            ##         fits_dict.update({key: []})
+            ##     fits_dict[key].append(plane_fit_i[key_i])
+
+            ## plane_compare_i = np.load(fits_directory + 'plane_compare.npy').item()
+            ## for key_i in plane_compare_i.keys():
+            ##     key = 'data_' + key_i
+            ##     if key not in fits_dict.keys():
+            ##         fits_dict.update({key: []})
+            ##     fits_dict[key].append(plane_compare_i[key_i])
 
     # convert dictionary
     fits_rec = convert_dictionary(fits_dict)
