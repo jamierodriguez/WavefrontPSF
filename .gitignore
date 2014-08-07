@@ -17,6 +17,8 @@
 # ignore build folders
 build
 
+*/core.*
+
 # ignore the Makefile and swig file in donutlib
 donutlib/donutengine.py
 donutlib/Makefile

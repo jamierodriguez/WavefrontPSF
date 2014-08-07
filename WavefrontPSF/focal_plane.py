@@ -142,7 +142,7 @@ class FocalPlane(Wavefront):
                                       max_samples_box=self.max_samples_box,
                                       boxdiv=self.boxdiv)
 
-        self.data, self.coords, self.data_unaveraged = self.create_data(
+        self.data_averaged, self.coords, self.data = self.create_data_averaged(
                 recdata=self.recdata,
                 extension=self.extension,
                 average=self.average,
@@ -372,7 +372,7 @@ class FocalPlane(Wavefront):
 
         return recdata_return, extension_return
 
-    def create_data_unaveraged(self, recdata, extension):
+    def create_data(self, recdata, extension):
         """Create the data attribute
 
         Parameters
@@ -445,8 +445,8 @@ class FocalPlane(Wavefront):
 
         return moments_unaveraged, coords
 
-    def create_data(self, recdata, extension, average, boxdiv, subav):
-        """Create the data attribute
+    def create_data_averaged(self, recdata, extension, average, boxdiv, subav):
+        """Create the averaged data attribute
 
         Parameters
         ----------
@@ -478,8 +478,7 @@ class FocalPlane(Wavefront):
 
         """
 
-        moments_unaveraged, coords = self.create_data_unaveraged(recdata,
-                                                                 extension)
+        moments_unaveraged, coords = self.create_data(recdata, extension)
 
         # now average
         moments = average_dictionary(moments_unaveraged, average,

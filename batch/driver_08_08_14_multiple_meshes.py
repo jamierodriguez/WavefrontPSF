@@ -24,11 +24,11 @@ import matplotlib
 matplotlib.use('Agg')
 import numpy as np
 from glob import glob
-from routines import print_command, convert_dictionary
 from subprocess import call
 from os import environ, path, makedirs
 from matplotlib.mlab import csv2rec
 
+from routines import print_command, convert_dictionary
 from do_PsfCat_and_validation import mkSelPsfCat
 from do_fit import do_fit
 
@@ -58,12 +58,6 @@ expid = args['expid']
 driver = args['driver']
 mesh_name = args['mesh_name']
 
-mesh_name_dict = {'Science-20130425s1-v1i2_All': 'intra_r',
-                  'Science-20130325s1-v1i2_All': 'extra_r',
-                  'Science-20140212s2-v1i2_All': 'extra_i',
-                  '': 'empty',}
-mesh_name_type = mesh_name_dict[mesh_name]
-
 shell = environ['SHELL']
 kils_shell = '/afs/slac.stanford.edu/u/ki/cpd/.local/bin/zsh'
 cpd_shell = '/bin/zsh'
@@ -71,9 +65,15 @@ cpd_shell = '/bin/zsh'
 ###############################################################################
 # Specify Params
 ###############################################################################
+
 daycode = '_08_08_14_multiple_meshes'
 code_name = "driver" + daycode
-fitname = "multiple_meshes" + "_" + mesh_name_type + "_" + daycode
+mesh_name_dict = {'Science-20130425s1-v1i2_All': 'intra_r',
+                  'Science-20130325s1-v1i2_All': 'extra_r',
+                  'Science-20140212s2-v1i2_All': 'extra_i',
+                  '': 'empty',}
+mesh_name_type = mesh_name_dict[mesh_name]
+fitname = 'fits' + daycode + '_' + mesh_name_type
 
 if shell == cpd_shell:
     # for my computer
@@ -85,6 +85,8 @@ elif shell == kils_shell:
 
     base_catalog_directory = '/nfs/slac/g/ki/ki18/des/cpd/psfex_catalogs/'
     expids = np.load('/nfs/slac/g/ki/ki18/des/cpd/psfex_catalogs/SVA1_FINALCUT/sva1-list_best.npy')
+
+    #expids = np.load('/nfs/slac/g/ki/ki18/cpd/catalogs/sva1-list.npy')['expid']
 
 tag = 'SVA1_FINALCUT'
 db_csv = base_catalog_directory + tag + '/db.csv'
@@ -105,9 +107,6 @@ def catalog_directory_func(expid,
     return directory
 
 run_directory = path.join(catalog_directory,fitname + '/')
-if not path.exists(run_directory):
-    makedirs(run_directory)
-    makedirs(run_directory + 'logs/')
 catalog_directory = catalog_directory_func(expid)
 fits_directory = catalog_directory.replace('psfcat', fitname)
 fits_afterburn_directory = catalog_directory.replace('psfcat', fitname + '_afterburn')
@@ -220,7 +219,19 @@ if driver == 'run_master':
     run_directory_base = run_directory
     for expid in expids:
         for mesh_name_i, mesh_name in enumerate(mesh_names):
-            run_directory = run_directory_base.replace('empty', mesh_name)
+            run_directory = run_directory_base.replace('empty', mesh_name_dict[mesh_name])
+
+            # check if results are there, else skip
+            catalog_directory = catalog_directory_func(expid, use_rungroup=True)
+            fits_directory = catalog_directory.replace('psfcat', fitname)
+            if path.exists(fits_directory + 'minuit_results.npy'):
+                continue
+
+
+
+            if not path.exists(run_directory):
+                makedirs(run_directory)
+                makedirs(run_directory + 'logs/')
             jobname = '{0:08d}_{1}'.format(expid, mesh_name_i)
             jobnames.append(jobname)
             args_input = {'driver': 'run_expid',
@@ -234,7 +245,7 @@ if driver == 'run_master':
                 command = [
                     'bsub',
                     #'-W', '120',
-                    '-q', 'medium',
+                    '-q', 'long',
                     '-o', run_directory +
                           'logs/{0}.log'.format(jobname),
                     '-R', 'rhel60&&linux64',
@@ -386,16 +397,23 @@ if driver == 'merge_results':
     db = np.recfromcsv('/nfs/slac/g/ki/ki18/des/cpd/psfex_catalogs/SVA1_FINALCUT/db.csv')
     use_rungroup = True
 
-
     # TODO: TEMP! Redo results files for the following fits directories:
     fitname_base = fitname
     run_directory_base = run_directory
     fitname_list = ['fits', 'fits_19.06.14', 'fits_19.06.14_float_hexapod',
                     'fits_19.06.14_float_hexapod_noe0']
-    fitname_list = ["multiple_meshes" + "_" + mesh_name_type_i + "_" + daycode
-                    for mesh_name_type_i in mesh_name_dict.keys()
-                    if len(mesh_name_type_i) > 0]
     use_rungroup = False
+
+
+    fitname_list = ['all_moments_07_08_14_marchmesh', 'all_moments_28_07_14',
+                    'all_moments_06_08_14']
+
+    fitname_list = ['fits' + daycode + '_' + mesh_name_dict[mesh_name_i]
+                    for mesh_name_i in mesh_name_dict.keys()
+                    if len(mesh_name_i) > 0]
+    use_rungroup = True
+
+
     for fitname in fitname_list:
         run_directory = run_directory_base.replace(fitname_base, fitname)
 
@@ -412,6 +430,9 @@ if driver == 'merge_results':
                 for key_min in minuit_results_keys:
                     for key_i in minuit_results_i[key_min]:
                         key = key_min + '_' + key_i
+                        if fitname == 'fits_19.06.14':
+                            if 'par_names' in key:
+                                continue
                         if key not in fits_dict.keys():
                             fits_dict.update({key: []})
                         fits_dict[key].append(str(
@@ -483,6 +504,10 @@ if driver == 'merge_results':
 
         if verbose:
             print(fitname)
+            keys = fits_dict.keys()
+            if len(keys) == 0:
+                raise Exception("No keys = failed to run!")
+            key = keys[-1]
             print(len(fits_dict[key]))
         # convert dictionary
         fits_rec = convert_dictionary(fits_dict)

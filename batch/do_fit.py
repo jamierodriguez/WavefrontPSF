@@ -151,6 +151,17 @@ parser.add_argument("--par_names",
                     help='par names we will use. If len(list(par_names)) == 0, just use p_init')
 
 
+###############################################################################
+# git info
+###############################################################################
+
+from subprocess import call
+def get_git_revision_hash():
+    import subprocess
+    return subprocess.check_output(['git', 'rev-parse', 'HEAD'])
+
+git_hash = get_git_revision_hash()
+
 def do_fit(args):
     verbose = args['verbose']
 
@@ -219,7 +230,7 @@ def do_fit(args):
                     )
 
     if boxdiv >= 0:
-        data_compare = FP.data
+        data_compare = FP.data_averaged
         var_dict = data_compare
         # create subsample
         recdata_sample, extension_sample = FP.filter_number_in_box(
@@ -234,8 +245,11 @@ def do_fit(args):
             boxdiv=boxdiv,
             subav=False,
             )
+        # save memory?!
+        del data_sample, recdata_sample, FP.recdata, FP.data_unaveraged
     else:
-        data_compare = FP.data_unaveraged
+        data_compare = FP.data
+        del FP.data_averaged, FP.recdata
         # create var_dict from snr_win parameter
         var_dict = {}
         weights = 1. / data_compare['snr_win']
@@ -354,6 +368,7 @@ def do_fit(args):
 
     # append to minuit results the argdict
     minuit_results.update({'args_dict': args})
+    minuit_results.update({'git_hash': git_hash})
 
     np.save(fits_directory + 'minuit_results', minuit_results)
 
