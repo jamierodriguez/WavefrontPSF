@@ -331,6 +331,9 @@ class FocalPlane(Wavefront):
                     if i == 61:
                         #n30 sucks
                         continue
+                    elif i == 2:
+                        # so does s30
+                        continue
                     extname = self.decaminfo.ccddict[i]
 
                     conds = conds_coords * (extension_return == extname)

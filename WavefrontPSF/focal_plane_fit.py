@@ -29,7 +29,9 @@ class FocalPlaneFit(Wavefront):
         name of the specific types of meshes we want
         we have reference corrections for "Science20120915seq1_134239"
         but not for the latest "Science20130325s1v2_190406"
-        Use: Science-20130325s1-v1i2_All
+        Use: Science-20130325s1-v1i2_All , which is extra-focal r band
+        Science-20130425s1-v1i2_All are intra-focal r
+        Science-20140212s2-v1i2_All are extra-focal i
     da
         aaron's donutana object
 

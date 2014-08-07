@@ -41,7 +41,10 @@ def convert_dictionary(dictionary):
     for j in xrange(len(dictionary[sorted(dictionary.keys())[0]])):
         inner = []
         for i in sorted(dictionary.keys()):
-            inner.append(dictionary[i][j])
+            try:
+                inner.append(dictionary[i][j])
+            except:
+                import ipdb; ipdb.set_trace()
         test.append(tuple(inner))
     test = np.rec.array(test, formats=formats, names=names)
 

@@ -83,6 +83,10 @@ parser.add_argument("-o", "--fits_directory",
                     dest="fits_directory",
                     default='/nfs/slac/g/ki/ki18/cpd/focus/outputs/',
                     help="where will the outputs go")
+parser.add_argument("--mesh_name",
+                    dest="mesh_name",
+                    default="Science-20130325s1-v1i2_All",
+                    help="Name of mesh used for generating zernikes.")
 parser.add_argument("--chi_weights",
                     dest="chi_weights",
                     default="{" +
@@ -160,6 +164,7 @@ def do_fit(args):
         max_samples_box = n_samples_box
     subav = False
     methodVal = (args['methodVal'], 1.)
+    mesh_name = args['mesh_name']
 
     fits_directory = args['fits_directory']
     make_directory(fits_directory)
@@ -238,7 +243,8 @@ def do_fit(args):
             var_dict.update({'var_' + key: weights})
 
     # create FocalPlaneFit object
-    FPF = FocalPlaneFit(methodVal=methodVal)
+    FPF = FocalPlaneFit(methodVal=methodVal,
+                        mesh_name=mesh_name)
 
     # give FPF some attributes
     FPF.chi_weights = chi_weights
