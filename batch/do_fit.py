@@ -267,9 +267,15 @@ def do_fit(args):
     else:
         FPF.coords = FP.coords
 
+    # for record sake:
+    print('Number of objects used: ', len(FPF.coords))
+
     # define the fit function
     chi2hist = []
     FPF.history = []
+
+    # get base zernikes for coords
+    zernikes = FPF.interpolate_zernikes(FPF.coords)
 
     if args['analytic'] > 0:
         if boxdiv >= 0:
@@ -277,20 +283,22 @@ def do_fit(args):
                 return FPF.analytic_plane_averaged(in_dict,
                         coords=FPF.coords,
                         average=average, boxdiv=boxdiv,
-                        subav=subav)
+                        subav=subav,
+                        zernikes=zernikes)
         else:
             def plane_func(in_dict):
-                return FPF.analytic_plane(in_dict, FPF.coords)
+                return FPF.analytic_plane(in_dict, FPF.coords, zernikes=zernikes)
     else:
         if boxdiv >= 0:
             def plane_func(in_dict):
                 return FPF.plane_averaged(in_dict,
                         coords=FPF.coords,
                         average=average, boxdiv=boxdiv,
-                        subav=subav)
+                        subav=subav,
+                        zernikes=zernikes)
         else:
             def plane_func(in_dict):
-                return FPF.analytic_plane(in_dict, FPF.coords)
+                return FPF.analytic_plane(in_dict, FPF.coords, zernikes=zernikes)
 
     def FitFunc(in_dict):
 
@@ -382,6 +390,9 @@ def do_fit(args):
 
     np.save(fits_directory + 'plane_fit', poles_i)
     np.save(fits_directory + 'plane_compare', data_compare)
+
+    # save the zernikes too
+    np.save(fits_directory + 'zernikes', zernikes)
 
     if verbose:
         for key in sorted(minuit_results['args']):

@@ -341,7 +341,7 @@ class FocalPlaneFit(Wavefront):
 
         return zernike_dictionary
 
-    def coords_to_stamps(self, in_dict, coords, jitters=[]):
+    def coords_to_stamps(self, in_dict, coords, jitters=[], zernikes=[]):
         """create a wavefront across the focal plane
 
         Parameters
@@ -369,7 +369,10 @@ class FocalPlaneFit(Wavefront):
             # set the atmospheric contribution to some nominal level
             rzero = 0.14
 
-        zernikes = self.zernikes(in_dict, coords)
+        if len(zernikes) == 0:
+            zernikes = self.zernikes(in_dict, coords)
+        else:
+            zernikes = self.correct_zernikes(zernikes, coords, in_dict)
         N = len(zernikes)
         rzeros = [rzero] * N
         # make stamps
@@ -378,7 +381,7 @@ class FocalPlaneFit(Wavefront):
         return stamps
 
     def plane(self, in_dict, coords,
-              windowed=True, order_dict={}):
+              windowed=True, order_dict={}, zernikes=[]):
         """create a wavefront across the focal plane
 
         Parameters
@@ -396,6 +399,10 @@ class FocalPlaneFit(Wavefront):
             A dictionary of dictionaries indicating the name and the powers of
             the moments calculated.
             Default calculates the second and third moments.
+
+        zernikes : array, optional
+            Contains precomputed base zernikes [[z1, z2, z3...], [z1, z2, z3...]]
+            If not present, calculate zernikes from self.zernikes(coords, in_dict)
 
         Returns
         -------
@@ -428,7 +435,7 @@ class FocalPlaneFit(Wavefront):
             thresholds = [0] * N
 
         # make stamps
-        stamps = self.coords_to_stamps(in_dict, coords, jitters)
+        stamps = self.coords_to_stamps(in_dict, coords, jitters, zernikes=zernikes)
 
         # make moments
         moments = self.moment_dictionary(stamps,
@@ -447,7 +454,7 @@ class FocalPlaneFit(Wavefront):
 
     def plane_averaged(
             self, in_dict, coords, average=np.mean, boxdiv=0, subav=False,
-            windowed=True, order_dict={}):
+            windowed=True, order_dict={}, zernikes=[]):
         """create a wavefront across the focal plane and average into boxes
 
         Parameters
@@ -485,7 +492,7 @@ class FocalPlaneFit(Wavefront):
 
         # get the moments
         moments_unaveraged = self.plane(in_dict, coords, windowed=windowed,
-                                        order_dict=order_dict)
+                                        order_dict=order_dict, zernikes=zernikes)
 
         # now average
         moments = average_dictionary(moments_unaveraged, average,
@@ -493,7 +500,7 @@ class FocalPlaneFit(Wavefront):
 
         return moments
 
-    def analytic_plane(self, in_dict, coords):
+    def analytic_plane(self, in_dict, coords, zernikes=[]):
         if 'history' in self.verbosity:
             self.history.append(in_dict.copy())
         if 'rzero' in in_dict.keys():
@@ -502,7 +509,11 @@ class FocalPlaneFit(Wavefront):
             # set the atmospheric contribution to some nominal level
             rzero = 0.14
 
-        zernikes = np.array(self.zernikes(in_dict, coords))
+        if len(zernikes) == 0:
+            zernikes = np.array(self.zernikes(in_dict, coords))
+        else:
+            # correct input zernikes for in_dict
+            zernikes = self.correct_zernikes(zernikes, coords, in_dict)
 
         plane = analytic_data(zernikes, rzero, coords=coords)
 
@@ -515,9 +526,9 @@ class FocalPlaneFit(Wavefront):
         return plane
 
     def analytic_plane_averaged(self, in_dict, coords, average=np.mean,
-                                boxdiv=0, subav=False):
+                                boxdiv=0, subav=False, zernikes=[]):
 
-        plane_unaveraged = self.analytic_plane(in_dict, coords)
+        plane_unaveraged = self.analytic_plane(in_dict, coords, zernikes=zernikes)
 
         plane = average_dictionary(plane_unaveraged, average,
                                    boxdiv=boxdiv, subav=subav)

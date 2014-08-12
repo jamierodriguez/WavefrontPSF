@@ -395,18 +395,20 @@ if driver == 'merge_results':
     results_names = ['coords_sample.npy', 'minuit_results.npy', 'plane_compare.npy', 'plane_fit.npy']
 
     db = np.recfromcsv('/nfs/slac/g/ki/ki18/des/cpd/psfex_catalogs/SVA1_FINALCUT/db.csv')
-    use_rungroup = True
 
-    # TODO: TEMP! Redo results files for the following fits directories:
     fitname_base = fitname
     run_directory_base = run_directory
-    fitname_list = ['fits', 'fits_19.06.14', 'fits_19.06.14_float_hexapod',
-                    'fits_19.06.14_float_hexapod_noe0']
-    use_rungroup = False
 
 
-    fitname_list = ['all_moments_07_08_14_marchmesh', 'all_moments_28_07_14',
-                    'all_moments_06_08_14']
+    ## fitname_list = ['fits', 'fits_19.06.14', 'fits_19.06.14_float_hexapod',
+    ##                 'fits_19.06.14_float_hexapod_noe0']
+    ## use_rungroup = False
+
+
+    ## fitname_list = ['all_moments_07_08_14_marchmesh', 'all_moments_28_07_14',
+    ##                 'all_moments_06_08_14']
+    ## use_rungroup = True
+
 
     fitname_list = ['fits' + daycode + '_' + mesh_name_dict[mesh_name_i]
                     for mesh_name_i in mesh_name_dict.keys()
