@@ -298,7 +298,7 @@ def do_fit(args):
                         zernikes=zernikes)
         else:
             def plane_func(in_dict):
-                return FPF.analytic_plane(in_dict, FPF.coords, zernikes=zernikes)
+                return FPF.plane(in_dict, FPF.coords, zernikes=zernikes)
 
     def FitFunc(in_dict):
 
