@@ -670,7 +670,8 @@ class FocalPlaneFit(Wavefront):
 
         Returns
         -------
-        z2, z3 : 
+        z2, z3 : arrays
+
         Notes
         -----
         Currently hardwired; TODO: create program to automatically generate the

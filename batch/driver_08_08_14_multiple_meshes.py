@@ -504,6 +504,37 @@ if driver == 'merge_results':
                 ##         fits_dict.update({key: []})
                 ##     fits_dict[key].append(plane_compare_i[key_i])
 
+                # for plane_compare, add in mean, median, std, and MAD of
+                # parameters
+                var_names = ['delta1', 'delta2',
+                             'zeta1', 'zeta2',
+                             'e0', 'e1', 'e2',
+                             'flux_radius', 'a4'
+                             'fwhm_adaptive']
+                avgs = [np.mean, np.median]
+                avg_names = ['mean', 'median']
+                std_names = ['std', 'mad']
+                plane_compare_i = np.load(fits_directory + 'plane_compare.npy').item()
+                for key_i in range(len(var_names)):
+                    var_name = var_names[key_i]
+                    data = plane_compare_i[var_name]
+                    for avg_i in range(len(avgs)):
+                        avg = avgs[avg_i]
+                        avg_name = avg_names[avg_i]
+                        std_name = std_names[avg_i]
+
+                        data_mod = avg(data)
+                        key = 'data_' + var_name + '_' + avg_name
+                        if key not in fits_dict.keys():
+                            fits_dict.update({key: []})
+                        fits_dict[key].append(data_mod)
+
+                        data_mod = np.sqrt(avg(np.square(data - avg(data))))
+                        key = 'data_' + var_name + '_' + std_name
+                        if key not in fits_dict.keys():
+                            fits_dict.update({key: []})
+                        fits_dict[key].append(data_mod)
+
         if verbose:
             print(fitname)
             keys = fits_dict.keys()
