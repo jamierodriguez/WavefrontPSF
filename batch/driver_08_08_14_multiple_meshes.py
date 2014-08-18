@@ -509,7 +509,7 @@ if driver == 'merge_results':
                 var_names = ['delta1', 'delta2',
                              'zeta1', 'zeta2',
                              'e0', 'e1', 'e2',
-                             'flux_radius', 'a4'
+                             'flux_radius', 'a4',
                              'fwhm_adaptive']
                 avgs = [np.mean, np.median]
                 avg_names = ['mean', 'median']
