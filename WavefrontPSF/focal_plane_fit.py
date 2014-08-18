@@ -590,7 +590,7 @@ class FocalPlaneFit(Wavefront):
 
             [self.da.meshDict['z4Mesh'].doInterp(
             self.decaminfo.ccddict[int(coord[2])], [coord[0]], [coord[1]])
-            / 172.] + 
+            / 172.] +
 
             [self.da.meshDict['z{0}Mesh'.format(iZ)].doInterp(
             self.decaminfo.ccddict[int(coord[2])], [coord[0]], [coord[1]])
@@ -652,10 +652,11 @@ class FocalPlaneFit(Wavefront):
         zthetay[4 - 1] *= numfac / 172.
 
         # apply correction
-        zernikes += zdelta + np.outer(coords[:,1], zthetax) + \
+        zernikes_out = np.copy(zernikes)
+        zernikes_out += zdelta + np.outer(coords[:,1], zthetax) + \
                 np.outer(coords[:,0], zthetay)
 
-        return zernikes
+        return zernikes_out
 
     def adjust_center(self, x, y, zernikes):
         """A method for adjusting z2 and z3
