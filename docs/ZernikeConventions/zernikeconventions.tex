@@ -1,0 +1,351 @@
+% -----------------------------*- LaTeX -*------------------------------
+\documentclass[aas_macros,preprint]{aastex}%preprint2]{aastex}
+% ------------------------------------------------------------------------
+% Packages
+% ------------------------------------------------------------------------
+\usepackage{amsmath,amssymb,graphicx,nicefrac,mathtools}
+%\usepackage{scribe}
+%\usepackage{amsfonts}
+\usepackage{apjfonts}
+%\usepackage{mathpazo}
+\usepackage{geometry}%[body={7in, 9in},left=1in,right=1in]{geometry}
+\usepackage{enumitem}
+
+%~~~~~~~~~~~~~~~
+% Things I have added
+%~~~~~~~~~~~~~~~
+\usepackage{hyperref}
+
+\usepackage{biblatex}
+% http://tex.stackexchange.com/questions/5091/what-to-do-to-switch-to-biblatex
+\addbibresource{/Users/cpd/Dropbox/Papers/database.bib}
+
+\usepackage[textsize=\Small]{todonotes}
+\setlength{\marginparwidth}{2cm} % fix in todonotes doc for oddly placed todos
+\reversemarginpar % put todonotes on left side of page
+
+% ------------------------------------------------------------------------
+% Macros
+% ------------------------------------------------------------------------
+%~~~~~~~~~~~~~~~
+% Environment shortcuts
+%~~~~~~~~~~~~~~~
+\def\balign#1\ealign{\begin{align}#1\end{align}}
+\def\baligns#1\ealigns{\begin{align*}#1\end{align*}}
+\def\bitemize#1\eitemize{\begin{itemize}#1\end{itemize}}
+\def\benumerate#1\eenumerate{\begin{enumerate}#1\end{enumerate}}
+%~~~~~~~~~~~~~~~
+% Text with quads around it
+%~~~~~~~~~~~~~~~
+\newcommand{\qtext}[1]{\quad\text{#1}\quad}
+%~~~~~~~~~~~~~~~
+% Shorthand for math formatting
+%~~~~~~~~~~~~~~~
+\def\mbb#1{\mathbb{#1}}
+\def\mbi#1{\boldsymbol{#1}} % Bold and italic (math bold italic)
+\def\mbf#1{\mathbf{#1}}
+\def\mc#1{\mathcal{#1}}
+\def\mrm#1{\mathrm{#1}}
+\def\tbf#1{\textbf{#1}}
+\def\tsc#1{\textsc{#1}}
+%~~~~~~~~~~~~~~~
+% Common sets
+%~~~~~~~~~~~~~~~
+\def\reals{\mathbb{R}} % Real number symbol
+\def\integers{\mathbb{Z}} % Integer symbol
+\def\rationals{\mathbb{Q}} % Rational numbers
+\def\naturals{\mathbb{N}} % Natural numbers
+\def\complex{\mathbb{C}} % Complex numbers
+%~~~~~~~~~~~~~~~
+% Common functions
+%~~~~~~~~~~~~~~~
+\renewcommand{\exp}[1]{\operatorname{exp}\left(#1\right)} % Exponential
+\def\indic#1{\mbb{I}\left({#1}\right)} % Indicator function
+\providecommand{\argmax}{\mathop\mathrm{arg max}} % Defining math symbols
+\providecommand{\argmin}{\mathop\mathrm{arg min}}
+\providecommand{\arccos}{\mathop\mathrm{arccos}}
+\providecommand{\dom}{\mathop\mathrm{dom}} % Domain
+\providecommand{\range}{\mathop\mathrm{range}} % Range
+\providecommand{\diag}{\mathop\mathrm{diag}}
+\providecommand{\tr}{\mathop\mathrm{tr}}
+\providecommand{\abs}{\mathop\mathrm{abs}}
+\providecommand{\card}{\mathop\mathrm{card}}
+\providecommand{\sign}{\mathop\mathrm{sign}}
+\def\rank#1{\mathrm{rank}({#1})}
+\def\supp#1{\mathrm{supp}({#1})}
+%~~~~~~~~~~~~~~~
+% Common probability symbols
+%~~~~~~~~~~~~~~~
+\def\E{\mathbb{E}} % Expectation symbol
+\def\Earg#1{\E\left[{#1}\right]}
+\def\Esubarg#1#2{\E_{#1}\left[{#2}\right]}
+\def\P{\mathbb{P}} % Probability symbol
+\def\Parg#1{\P\left({#1}\right)}
+\def\Psubarg#1#2{\P_{#1}\left[{#2}\right]}
+\def\Cov{\mrm{Cov}} % Covariance symbol
+\def\Covarg#1{\Cov\left[{#1}\right]}
+\def\Covsubarg#1#2{\Cov_{#1}\left[{#2}\right]}
+\newcommand{\family}{\mathcal{P}} % probability family / statistical model
+\newcommand{\iid}{\stackrel{\mathrm{iid}}{\sim}}
+\newcommand{\ind}{\stackrel{\mathrm{ind}}{\sim}}
+\def\E{\mathbb{E}} % Expectation symbol
+\def\Earg#1{\E\left[{#1}\right]}
+\def\Esubarg#1#2{\E_{#1}\left[{#2}\right]}
+\def\P{\mathbb{P}} % Probability symbol
+\def\Parg#1{\P\left({#1}\right)}
+\def\Psubarg#1#2{\P_{#1}\left[{#2}\right]}
+\def\Cov{\mrm{Cov}} % Covariance symbol
+\def\Covarg#1{\Cov\left[{#1}\right]}
+\def\Covsubarg#1#2{\Cov_{#1}\left[{#2}\right]}
+\newcommand{\model}{\mathcal{P}} % probability family / statistical model
+%~~~~~~~~~~~~~~~
+% Distributions
+%~~~~~~~~~~~~~~~
+\def\Gsn{\mathcal{N}}
+\def\Ber{\textnormal{Ber}}
+\def\Bin{\textnormal{Bin}}
+\def\Unif{\textnormal{Unif}}
+\def\Mult{\textnormal{Mult}}
+\def\NegMult{\textnormal{NegMult}}
+\def\Dir{\textnormal{Dir}}
+\def\Bet{\textnormal{Beta}}
+\def\Gam{\textnormal{Gamma}}
+\def\Poi{\textnormal{Poi}}
+\def\HypGeo{\textnormal{HypGeo}}
+\def\GEM{\textnormal{GEM}}
+\def\BP{\textnormal{BP}}
+\def\DP{\textnormal{DP}}
+\def\BeP{\textnormal{BeP}}
+\def\Exp{\textnormal{Exp}}
+%~~~~~~~~~~~~~~~
+% Theorem-like environments
+%~~~~~~~~~~~~~~~
+%\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\newtheorem{example}{Example}
+\newtheorem{problem}{Problem}
+
+%~~~~~~~~~~~~~~~
+% My Macros
+%~~~~~~~~~~~~~~~
+
+% New definition of square root: it renames \sqrt as \oldsqrt
+\let\oldsqrt\sqrt
+% it defines the new \sqrt in terms of the old one
+\def\sqrt{\mathpalette\DHLhksqrt} \def\DHLhksqrt#1#2{%
+  \setbox0=\hbox{$#1\oldsqrt{#2\,}$}\dimen0=\ht0
+  \advance\dimen0-0.2\ht0 \setbox2=\hbox{\vrule height\ht0 depth
+    -\dimen0}%
+  {\box0\lower0.4pt\box2}}
+\newcommand{\figfig}[3]{
+    \begin{figure}
+      \begin{center}
+        \includegraphics[width=0.9\textwidth,height=0.35\textheight,keepaspectratio]
+        {Figures/{#1}}
+      \end{center}
+      \caption{{#2}}
+      \label{#3}
+    \end{figure}}
+
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\arcsec}{\mathrm{arcsec}} \newcommand
+{\fig}[1]{Figure~\ref{#1}} \newcommand {\sect}[1]{Section~\ref{#1}}
+\newcommand {\eq}[1]{Equation~\eqref{#1}}
+\newcommand{\tab}[1]{Table~\ref{#1}}
+
+\newcommand*{\DOT}{.}
+
+\newcommand{\average}[1]{\ensuremath{\langle {#1} \rangle}}
+
+% ----------------------------------------------------------------------
+% Header information
+% ------------------------------------------------------------------------
+\begin{document}
+\title{ Zernike Conventions }
+\author{ Christopher Davis }
+\affil{}
+\email{}
+\date{ \today }
+
+\maketitle
+
+\begin{abstract}
+  Abstract
+\end{abstract}
+\keywords{Zernike Polynomials}
+
+\tableofcontents
+
+% scribe package header stuff
+% \course{}
+% \coursetitle{}
+% \semester{}
+% \lecturer{}
+% \scribe{}         % your name
+% \lecturenumber{}               % lecture number
+% \lecturedate{}       % month and day of lecture (omit year)
+
+% todo stuff
+\todototoc
+\listoftodos
+
+
+
+% ----------------------------------------------------------------------
+% Body of the document
+% ------------------------------------------------------------------------
+
+\section{Wavefront Model}
+
+  The basic model for light propagation is Fresnel Diffraction:
+  \begin{equation}
+    \Psi(x, y, z, t) = \exp{\frac{\imath 2 \pi}{\lambda} (z - t)}
+    u_z(x, y) \ ,
+  \end{equation}
+  where we take the initial wavefront $u_{z=0}$ to be
+  \begin{equation}
+    u_0(x,y) \propto \exp{P(x, y)} \exp{\imath \Phi(x, y))} \ ,
+  \end{equation}
+  where $r$ is the two-dimensional radial coordinate, $P$ is the pupil
+  function, and $\Phi$ are the aberrations. $u_0$ is convolved with an
+  atmospheric seeing kernel (Kolmogorov), then propagated to the focal plane.
+  We measure $| u_z(x,y)|^2$. Aberrations in the wavefront ($\Phi \neq 0$)
+  can introduce spurious shapes.
+
+
+  \subsection{alt:}
+
+
+The basic model for light propagation is Fresnel Diffraction:
+\begin{equation}
+  \Psi(x, y, z, t) = \exp{\frac{\imath 2 \pi}{\lambda} (z - t)}
+  u_z(x, y) \ ,
+\end{equation}
+where we take the initial wavefront $u_{z=0}$ to be
+\begin{equation}
+  u_0(x,y) \propto \exp{P(x, y)} \exp{\imath \Phi(x, y))} \ ,
+\end{equation}
+where $r$ is the two-dimensional radial coordinate, $P$ is the pupil
+function, and $\Phi$ are the aberrations.
+
+$u_0$ is convolved with an atmospheric seeing kernel (Kolmogorov), then
+propagated to the focal plane:
+\begin{equation}
+  \label{eq:u}
+  u_z = \frac{\exp{\imath \pi r^2 / \lambda z}}{\imath \lambda z} \mathrm{FT}\left[
+  \exp{\frac{\imath \pi r^2}{\lambda z}} u_0 (x, y) \right] \ .
+\end{equation}
+What we measure is the irradiance:
+\begin{equation}
+  I_z(x, y) = | u_z (x, y) |^2 .
+\end{equation}
+Aberrations in the wavefront ($\Phi \neq 0$) can introduce spurious shapes.
+
+
+  These aberrations vary across the focal plane; $d, a \dots$
+  are really $d(x, y)$, functions of focal plane location. Call $d_0, a_0
+  \dots$ the `normal' optics contribution to wavefront aberrations. Defocus and
+  misalignment of the focal plane can be characterized by linear shifts and
+  tilts of the normal wavefront, so that for some exposure $i$ the defocus $d$
+  is:
+  \begin{equation}
+    \label{eq:deviation}
+    d_i(x, y) = (1 + \Delta_d + \theta_{y,d} x + \theta_{x,d} y)d_0(x, y) \ .
+  \end{equation}
+  Measurements of these variations using the focus chips is how the active
+  optics system works.
+
+  We would like to obtain this same information for the focal plane, not just
+  the alignment chips. But because the focal plane is near focus, directly
+  modeling $\Phi$ is difficult.  Instead, parameterize the shape into a sum of
+  moments:
+  \begin{equation}
+    \label{eq:moments}
+    M_{pq, z} = \frac{\int \dd A \ w(x,y) I_z(x,y) (x-\bar{x})^p
+    (y-\bar{y})^q}{\int \dd A \ w(x,y) I_z(x,y)} \ ,
+  \end{equation}
+  where $\bar{x}$ and $\bar{y}$ are the centroids of the image and $w$ is a
+  weighting function.
+
+  We measure the moments here using the \textit{hsm} weighting scheme, an
+  iterative weighting optimized for measuring second moments used in galsim.
+
+\section{Zernikes -- Noll, Complex Number}
+
+Want table like one from cpd2014MayCollaboration but also including azimuthal
+etc degree and form as a complex number $z$ and $x + \imath y$
+
+also astigmatism -x and y as well as trefoil need to be renamed
+
+\begin{center}
+\begin{tabular}{ l l l r l }
+  Type & Noll & $(n,\ m)$ & Variable & Polar Polynomial \\
+  \hline \hline
+  Piston            & $1$  & $(0,\ 0)$ & $0$      & $1$                                 \\
+  Tilt-$0$          & $2$  & $(0,\ 1)$ & $0$      & $2 r \cos \theta$                   \\
+  Tilt-$90$          & $3$  & $(0,\ 1)$ & $0$      & $2 r \sin \theta$                   \\
+  Defocus           & $4$  & $(2,\ 0)$ & $d$      & $\sqrt{3} (2 r^2 - 1)$              \\
+  Astigmatism-$45$   & $5$  & $(2,\ 2)$ & $\Im[a]$ & $\sqrt{6} r^2 \sin 2 \theta$        \\
+  Astigmatism-$0$   & $6$  & $(2,\ 2)$ & $\Re[a]$ & $\sqrt{6} r^2 \cos 2 \theta$        \\
+  Coma-$90$          & $7$  & $(3,\ 1)$ & $\Im[c]$ & $\sqrt{8} (3 r^3 - 2r) \sin \theta$ \\
+  Coma-$0$          & $8$  & $(3,\ 1)$ & $\Re[c]$ & $\sqrt{8} (3 r^3 - 2r) \cos \theta$ \\
+  Trefoil-$30$       & $9$  & $(3,\ 3)$ & $\Im[t]$ & $\sqrt{8} r^3 \sin 3 \theta$        \\
+  Trefoil-$0$       & $10$ & $(3,\ 3)$ & $\Re[t]$ & $\sqrt{8} r^3 \cos 3 \theta$        \\
+  Spherical Defocus & $11$ & $(4,\ 0)$ & $s$      & $\sqrt{5} (6 r^4 - 6 r^2 + 1)$      \\
+\end{tabular}
+\end{center}
+
+\section{Moments and Adaptive Moments}
+
+both the conventional definition and talk about how I use Hirata and Seljak
+adaptive moments.
+
+\section{Whisker Conventions}
+Lift from whiskerconvention for $w$?
+
+\section{Higher Order Moments}
+
+  In analogy with
+  gravitational shear and flexion, these moments can be decomposed into
+  linear combinations with convenient rotational symmetries:
+  \begin{align}
+    e_{0} &= M_{20} + M_{02} \\
+    e_{1} &= M_{20} - M_{02} \\
+    e_{2} &= 2 M_{11} \\
+    \zeta_{1} &= M_{30} + M_{12} \\
+    \zeta_{2} &= M_{03} + M_{21} \\
+   \delta_{1} &= M_{30} - 3 M_{12} \\
+   \delta_{2} &= -M_{03} + 3 M_{21} \\
+  \end{align}
+  $\boldsymbol{\epsilon} = (e_1 + \imath e_2) / e_0$ is one of the common definitions for
+  ellipticity, while $\zeta$ and $\delta$ correspond to unnormalized F-1 and
+  F-3 flexion, respectively.\todo{Is it $\epsilon$ or $\chi$?}
+
+
+  Wavefront aberrations lead to measurable moments.
+  Plugging \eqref{eq:u} into \eqref{eq:moments} and carrying out the math for
+  the Zernike aberrations defocus, astigmatism, coma, trefoil, and spherical
+  defocus ($d, a, c, t, s$) we find analytically:
+  \begin{align*}
+    e_0 &=&&24 d^2 + 16 \sqrt{15} ds + 120 s^2 + 12 |a|^2 + 56 |c|^2 + 24 |t|^2 \\
+    \bold{e} = e_1 + \imath e_2 &=&&8 \sqrt{2} (3 d + \sqrt{15} s) a + 32 c^2 +
+      45 \bar{c} t \\
+      \boldsymbol{\zeta} = \zeta_1 + \imath \zeta_2 &=&&
+      64(3 d + 2 \sqrt{15}s) (2 a \bar{c} + \bar{a} t)+ \\
+    &&&16 \sqrt{2} (18 d^2 + 22 \sqrt{15} ds + 120 s^2 + 6 |a|^2 + 25 |c|^2 + 15 |t|^2) c \\
+    &&&+ 48 \sqrt{2} a^2 \bar{t} + 240 \sqrt{2} \bar{c}^2 t \\
+      \boldsymbol{\delta} = \delta_1 + \imath \delta_2 &=&&192 (3d + 2 \sqrt{15}
+      s) a c \\
+      &&&+144 \sqrt{2} (2 d^2 + 2\sqrt{15} ds + 12 s^2 + 5 |c|^2)t \\
+      &&&+144 \sqrt{2} a^2
+      \bar{c} + 160 \sqrt{2} c^3 \\
+  \end{align*}
+
+\section{Zernike v Seidel}
+
+maybe work out the field aberration stuff with seidel first and then with
+zernike (the maths certainly will be at least a /little/ simpler...)
+
+\end{document}
+
+

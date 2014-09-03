@@ -1,0 +1,221 @@
+% -----------------------------*- LaTeX -*------------------------------
+\documentclass[aas_macros,preprint]{aastex}%preprint2]{aastex}
+% ------------------------------------------------------------------------
+% Packages
+% ------------------------------------------------------------------------
+\usepackage{amsmath,amssymb,graphicx,nicefrac,mathtools}
+%\usepackage{scribe}
+%\usepackage{amsfonts}
+\usepackage{apjfonts}
+%\usepackage{mathpazo}
+\usepackage{geometry}%[body={7in, 9in},left=1in,right=1in]{geometry}
+\usepackage{enumitem}
+
+%~~~~~~~~~~~~~~~
+% Things I have added
+%~~~~~~~~~~~~~~~
+\usepackage{hyperref}
+
+\usepackage{biblatex}
+% http://tex.stackexchange.com/questions/5091/what-to-do-to-switch-to-biblatex
+\addbibresource{/Users/cpd/Dropbox/Papers/database.bib}
+
+\usepackage[textsize=\Small]{todonotes}
+\setlength{\marginparwidth}{2cm} % fix in todonotes doc for oddly placed todos
+\reversemarginpar % put todonotes on left side of page
+
+% ------------------------------------------------------------------------
+% Macros
+% ------------------------------------------------------------------------
+%~~~~~~~~~~~~~~~
+% Environment shortcuts
+%~~~~~~~~~~~~~~~
+\def\balign#1\ealign{\begin{align}#1\end{align}}
+\def\baligns#1\ealigns{\begin{align*}#1\end{align*}}
+\def\bitemize#1\eitemize{\begin{itemize}#1\end{itemize}}
+\def\benumerate#1\eenumerate{\begin{enumerate}#1\end{enumerate}}
+%~~~~~~~~~~~~~~~
+% Text with quads around it
+%~~~~~~~~~~~~~~~
+\newcommand{\qtext}[1]{\quad\text{#1}\quad}
+%~~~~~~~~~~~~~~~
+% Shorthand for math formatting
+%~~~~~~~~~~~~~~~
+\def\mbb#1{\mathbb{#1}}
+\def\mbi#1{\boldsymbol{#1}} % Bold and italic (math bold italic)
+\def\mbf#1{\mathbf{#1}}
+\def\mc#1{\mathcal{#1}}
+\def\mrm#1{\mathrm{#1}}
+\def\tbf#1{\textbf{#1}}
+\def\tsc#1{\textsc{#1}}
+%~~~~~~~~~~~~~~~
+% Common sets
+%~~~~~~~~~~~~~~~
+\def\reals{\mathbb{R}} % Real number symbol
+\def\integers{\mathbb{Z}} % Integer symbol
+\def\rationals{\mathbb{Q}} % Rational numbers
+\def\naturals{\mathbb{N}} % Natural numbers
+\def\complex{\mathbb{C}} % Complex numbers
+%~~~~~~~~~~~~~~~
+% Common functions
+%~~~~~~~~~~~~~~~
+\renewcommand{\exp}[1]{\operatorname{exp}\left(#1\right)} % Exponential
+\def\indic#1{\mbb{I}\left({#1}\right)} % Indicator function
+\providecommand{\argmax}{\mathop\mathrm{arg max}} % Defining math symbols
+\providecommand{\argmin}{\mathop\mathrm{arg min}}
+\providecommand{\arccos}{\mathop\mathrm{arccos}}
+\providecommand{\dom}{\mathop\mathrm{dom}} % Domain
+\providecommand{\range}{\mathop\mathrm{range}} % Range
+\providecommand{\diag}{\mathop\mathrm{diag}}
+\providecommand{\tr}{\mathop\mathrm{tr}}
+\providecommand{\abs}{\mathop\mathrm{abs}}
+\providecommand{\card}{\mathop\mathrm{card}}
+\providecommand{\sign}{\mathop\mathrm{sign}}
+\def\rank#1{\mathrm{rank}({#1})}
+\def\supp#1{\mathrm{supp}({#1})}
+%~~~~~~~~~~~~~~~
+% Common probability symbols
+%~~~~~~~~~~~~~~~
+\def\E{\mathbb{E}} % Expectation symbol
+\def\Earg#1{\E\left[{#1}\right]}
+\def\Esubarg#1#2{\E_{#1}\left[{#2}\right]}
+\def\P{\mathbb{P}} % Probability symbol
+\def\Parg#1{\P\left({#1}\right)}
+\def\Psubarg#1#2{\P_{#1}\left[{#2}\right]}
+\def\Cov{\mrm{Cov}} % Covariance symbol
+\def\Covarg#1{\Cov\left[{#1}\right]}
+\def\Covsubarg#1#2{\Cov_{#1}\left[{#2}\right]}
+\newcommand{\family}{\mathcal{P}} % probability family / statistical model
+\newcommand{\iid}{\stackrel{\mathrm{iid}}{\sim}}
+\newcommand{\ind}{\stackrel{\mathrm{ind}}{\sim}}
+\def\E{\mathbb{E}} % Expectation symbol
+\def\Earg#1{\E\left[{#1}\right]}
+\def\Esubarg#1#2{\E_{#1}\left[{#2}\right]}
+\def\P{\mathbb{P}} % Probability symbol
+\def\Parg#1{\P\left({#1}\right)}
+\def\Psubarg#1#2{\P_{#1}\left[{#2}\right]}
+\def\Cov{\mrm{Cov}} % Covariance symbol
+\def\Covarg#1{\Cov\left[{#1}\right]}
+\def\Covsubarg#1#2{\Cov_{#1}\left[{#2}\right]}
+\newcommand{\model}{\mathcal{P}} % probability family / statistical model
+%~~~~~~~~~~~~~~~
+% Distributions
+%~~~~~~~~~~~~~~~
+\def\Gsn{\mathcal{N}}
+\def\Ber{\textnormal{Ber}}
+\def\Bin{\textnormal{Bin}}
+\def\Unif{\textnormal{Unif}}
+\def\Mult{\textnormal{Mult}}
+\def\NegMult{\textnormal{NegMult}}
+\def\Dir{\textnormal{Dir}}
+\def\Bet{\textnormal{Beta}}
+\def\Gam{\textnormal{Gamma}}
+\def\Poi{\textnormal{Poi}}
+\def\HypGeo{\textnormal{HypGeo}}
+\def\GEM{\textnormal{GEM}}
+\def\BP{\textnormal{BP}}
+\def\DP{\textnormal{DP}}
+\def\BeP{\textnormal{BeP}}
+\def\Exp{\textnormal{Exp}}
+%~~~~~~~~~~~~~~~
+% Theorem-like environments
+%~~~~~~~~~~~~~~~
+%\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\newtheorem{example}{Example}
+\newtheorem{problem}{Problem}
+
+%~~~~~~~~~~~~~~~
+% My Macros
+%~~~~~~~~~~~~~~~
+
+% New definition of square root: it renames \sqrt as \oldsqrt
+\let\oldsqrt\sqrt
+% it defines the new \sqrt in terms of the old one
+\def\sqrt{\mathpalette\DHLhksqrt} \def\DHLhksqrt#1#2{%
+  \setbox0=\hbox{$#1\oldsqrt{#2\,}$}\dimen0=\ht0
+  \advance\dimen0-0.2\ht0 \setbox2=\hbox{\vrule height\ht0 depth
+    -\dimen0}%
+  {\box0\lower0.4pt\box2}}
+\newcommand{\figfig}[3]{
+    \begin{figure}
+      \begin{center}
+        \includegraphics[width=0.9\textwidth,height=0.35\textheight,keepaspectratio]
+        {Figures/{#1}}
+      \end{center}
+      \caption{{#2}}
+      \label{#3}
+    \end{figure}}
+
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\arcsec}{\mathrm{arcsec}} \newcommand
+{\fig}[1]{Figure~\ref{#1}} \newcommand {\sect}[1]{Section~\ref{#1}}
+\newcommand {\eq}[1]{Equation~\eqref{#1}}
+\newcommand{\tab}[1]{Table~\ref{#1}}
+
+\newcommand*{\DOT}{.}
+
+\newcommand{\average}[1]{\ensuremath{\langle {#1} \rangle}}
+
+% ----------------------------------------------------------------------
+% Header information
+% ------------------------------------------------------------------------
+\begin{document}
+\title{ Toward a Physical PSF: WavefrontPSF }
+\author{ Christopher Davis }
+\affil{}
+\email{}
+\date{ \today }
+
+\maketitle
+
+\begin{abstract}
+  Abstract
+\end{abstract}
+\keywords{Zernike Polynomials}
+
+\tableofcontents
+
+% scribe package header stuff
+% \course{}
+% \coursetitle{}
+% \semester{}
+% \lecturer{}
+% \scribe{}         % your name
+% \lecturenumber{}               % lecture number
+% \lecturedate{}       % month and day of lecture (omit year)
+
+% todo stuff
+\todototoc
+\listoftodos
+
+\section{Introduction}
+
+\section{Aberration Formalism}
+
+\section{Mapping FA System to Aberration}
+
+\section{Wavefront based PSF}
+
+\subsection{Analytic vs full convolution}
+
+\section{Improving the FA system}
+
+\section{Improvement Metrics}
+
+
+
+
+\section{Data and Methods}
+
+\section{}
+
+\section{Discussion}
+
+\section{Conclusions}
+
+\section*{Acknowledgements}
+
+\section*{References}
+
+\end{document}
