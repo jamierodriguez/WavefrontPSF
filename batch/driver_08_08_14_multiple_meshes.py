@@ -405,7 +405,7 @@ if driver == 'merge_results':
     ## use_rungroup = False
 
 
-    ## fitname_list = ['all_moments_07_08_14_marchmesh', 'all_moments_28_07_14',
+    ## fitname_list = ['all_moments_28_07_14',
     ##                 'all_moments_06_08_14']
     ## use_rungroup = True
 
@@ -423,7 +423,8 @@ if driver == 'merge_results':
         for expid in expids:
             catalog_directory = catalog_directory_func(expid, use_rungroup=use_rungroup)
             fits_directory = catalog_directory.replace('psfcat', fitname)
-            if path.exists(fits_directory + 'minuit_results.npy'):
+            if path.exists(fits_directory + 'minuit_results.npy') * \
+                    path.exists(fits_directory + 'plane_fit.npy'):
                 fits_dict['expid'].append(expid)
                 minuit_results_i = np.load(fits_directory + 'minuit_results.npy').item()
 
