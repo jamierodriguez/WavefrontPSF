@@ -388,11 +388,14 @@ def do_fit(args):
     in_dict = minuit_results['args']
     poles_i = plane_func(in_dict)
 
-    np.save(fits_directory + 'plane_fit', poles_i)
-    np.save(fits_directory + 'plane_compare', data_compare)
-
     # save the zernikes too
     np.save(fits_directory + 'zernikes', zernikes)
+
+    np.save(fits_directory + 'plane_fit', poles_i)
+    # pop vignet it's fucking huge
+    _ = data_compare.pop('vignet')
+    np.save(fits_directory + 'plane_compare', data_compare)
+
 
     if verbose:
         for key in sorted(minuit_results['args']):

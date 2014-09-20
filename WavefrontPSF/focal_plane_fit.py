@@ -84,7 +84,7 @@ class FocalPlaneFit(Wavefront):
     """
 
     def __init__(self,
-                 path_mesh='/u/ec/roodman/Astrophysics/Donuts/ComboMeshes/',
+                 path_mesh='/nfs/slac/g/ki/ki18/cpd/code/WavefrontPSF_Meshes/',
                  mesh_name='Science-20130325s1-v1i2_All',
                  methodVal=(),
                  verbosity=['history'],
@@ -95,14 +95,18 @@ class FocalPlaneFit(Wavefront):
 
         if path.exists(path_mesh):
             self.path_mesh = path_mesh
-        elif path.exists('/u/ec/roodman/Astrophysics/Donuts/Meshes/'):
+        elif path.exists('/u/ec/roodman/Astrophysics/Donuts/ComboMeshes/'):
+            self.path_mesh = '/u/ec/roodman/Astrophysics/Donuts/ComboMeshes/'
             print('Your path_mesh is incorrect! Trying default ki-ls at',
-                    '/u/ec/roodman/Astrophysics/Donuts/Meshes/')
+                    self.path_mesh)
+        elif path.exists('/u/ec/roodman/Astrophysics/Donuts/Meshes/'):
             self.path_mesh = '/u/ec/roodman/Astrophysics/Donuts/Meshes/'
+            print('Your path_mesh is incorrect! Trying default ki-ls at',
+                    self.path_mesh)
         elif path.exists('/Users/cpd/Desktop/Meshes/'):
-            print('Your path_mesh is incorrect! Trying your computer at',
-                    '/Users/cpd/Desktop/Meshes/')
             self.path_mesh = '/Users/cpd/Desktop/Meshes/'
+            print('Your path_mesh is incorrect! Trying default ki-ls at',
+                    self.path_mesh)
 
         self.mesh_name = mesh_name
         self.methodVal = methodVal

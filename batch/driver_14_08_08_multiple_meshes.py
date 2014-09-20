@@ -405,15 +405,16 @@ if driver == 'merge_results':
     ## use_rungroup = False
 
 
-    ## fitname_list = ['all_moments_28_07_14',
-    ##                 'all_moments_06_08_14']
-    ## use_rungroup = True
-
-
-    fitname_list = ['fits' + daycode + '_' + mesh_name_dict[mesh_name_i]
-                    for mesh_name_i in mesh_name_dict.keys()
-                    if len(mesh_name_i) > 0]
+    expids = np.load('/nfs/slac/g/ki/ki18/cpd/catalogs/sva1-list.npy')['expid']
+    fitname_list = ['all_moments_28_07_14',
+                    'all_moments_06_08_14']
     use_rungroup = True
+
+
+    ## fitname_list = ['fits' + daycode + '_' + mesh_name_dict[mesh_name_i]
+    ##                 for mesh_name_i in mesh_name_dict.keys()
+    ##                 if len(mesh_name_i) > 0]
+    ## use_rungroup = True
 
 
     for fitname in fitname_list:
