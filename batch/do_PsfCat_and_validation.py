@@ -12,9 +12,9 @@ import argparse
 import subprocess
 import numpy
 import astropy.io.fits as pyfits
-from wavefront import Wavefront
-from routines_moments import convert_moments
-from routines_files import download_desdm
+from WavefrontPSF.wavefront import Wavefront
+from WavefrontPSF.routines_moments import convert_moments
+from WavefrontPSF.routines_files import download_desdm
 import pdb
 
 parser = argparse.ArgumentParser(prog='selectPsfCat_and_validation')

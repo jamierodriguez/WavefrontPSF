@@ -18,13 +18,13 @@ matplotlib.use('Agg')
 import numpy as np
 import argparse
 
-from focal_plane import FocalPlane
-from focal_plane_fit import FocalPlaneFit
-from minuit_fit import Minuit_Fit
-from routines import minuit_dictionary
-from routines_moments import convert_moments
-from routines_files import make_directory
-from decamutil_cpd import decaminfo
+from WavefrontPSF.focal_plane import FocalPlane
+from WavefrontPSF.focal_plane_fit import FocalPlaneFit
+from WavefrontPSF.minuit_fit import Minuit_Fit
+from WavefrontPSF.routines import minuit_dictionary
+from WavefrontPSF.routines_moments import convert_moments
+from WavefrontPSF.routines_files import make_directory
+from WavefrontPSF.decamutil_cpd import decaminfo
 
 ##############################################################################
 # argparse
