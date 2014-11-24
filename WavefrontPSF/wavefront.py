@@ -515,3 +515,86 @@ class Wavefront(object):
 
         return coords_focal
 
+    def plot(self, x='x', y='y', z='e0', bins=25, ax=None,
+            vmax=None, vmin=None):
+        """Create plot
+
+        Parameters
+        ----------
+        x, y, z : strings or arrays
+            If strings, goes to self.data[x]
+            else, use them directly.
+
+        bins : int
+            If less than 10, uses decaminfo.getEdges
+            Otherwise is the number of bins to use.
+
+        Returns
+        -------
+        fig, ax : figure and axis
+            The plot!
+
+        Notes
+        -----
+        stuff
+
+        See Also
+        --------
+        other function: brief description
+
+        References
+        ----------
+        stuff
+
+        Examples
+        --------
+        >>> example code where
+        ...     it goes over multiple lines
+
+        for more doc help, see https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt
+        """
+
+        from routines_plot import focal_graph, focal_graph_axis
+        from colors import blue_red, shiftedColorMap
+
+        if type(x) == str:
+            x = self.data[x]
+        if type(y) == str:
+            y = self.data[y]
+        if type(z) == str:
+            z = self.data[param]
+
+        if bins < 10:
+            bins = self.decaminfo.getEdges(boxdiv=bins)
+
+        counts, xedges, yedges = np.histogram2d(x, y, bins=bins)
+        weighted_counts, xedges, yedges = np.histogram2d(x, y,
+                bins=[xedges, yedges], weights=z)
+        C = np.ma.masked_invalid(weighted_counts.T / counts.T)
+        if not vmax:
+            vmax = C.max()
+        if not vmin:
+            vmin = C.min()
+
+        if np.ma.all(C <= 0):
+            cmap = plt.get_cmap('Blues_r')
+        elif np.ma.all(C >= 0):
+            cmap = plt.get_cmap('Reds')
+        else:
+            midpoint = 1 - vmax/(vmax + abs(vmin))
+            cmap = shiftedColorMap(blue_red, midpoint=midpoint, name='shifted')
+
+        return_fig = False
+        if ax:
+            ax = focal_graph_axis(ax)
+        else:
+            fig, ax = focal_graph()
+            return_fig = True
+        Image = ax.pcolor(xedges, yedges, C,
+                          cmap=cmap, vmin=vmin, vmax=vmax)
+        CB = fig.colorbar(Image, ax=ax)
+
+        if return_fig:
+            return fig, ax
+        else:
+            return ax
