@@ -43,7 +43,7 @@ print('{0} images, {1} directories'.format(len(psf_expids), len(directories)))
 
 # once you have the expids and directories, call them!
 for directory in directories[:1]:
-    expid = int(directory[-9:1])
+    expid = int(directory[-9:-1])
     compute_time_str = '30'  # TODO: fix this too
     logfile = out_dir + '/logs/{0:08d}.log'.format(expid)
     jobname = str(expid)
