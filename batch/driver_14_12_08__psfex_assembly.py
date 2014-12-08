@@ -42,18 +42,20 @@ print('{0} images, {1} directories'.format(len(psf_expids), len(directories)))
 ## print('{0} images'.format(len(psf_expids.keys())))
 
 # once you have the expids and directories, call them!
-for directory in directories[:1]:
+for directory in directories:
     expid = int(directory[-9:-1])
-    compute_time_str = '30'  # TODO: fix this too
+    compute_time_str = '5'
     logfile = out_dir + '/logs/{0:08d}.log'.format(expid)
     jobname = str(expid)
-    requirements = 'rhel60&&linux64'  # TODO: add memory usage
+    mem_use = '1000'
+    requirements = 'rhel60&&linux64 rusage[mem={0}] span[hosts=1]'.format(mem_use)
     code_path = '/nfs/slac/g/ki/ki18/cpd/code/WavefrontPSF/batch/assemble_data_psfex.py'
     command = ['bsub',
                '-W', compute_time_str,
                '-o', logfile,
                '-R', requirements,
                '-J', jobname,
+               '-M', mem_use,
                'python', code_path,
                '--expid', str(expid),
                '--directory', directory]

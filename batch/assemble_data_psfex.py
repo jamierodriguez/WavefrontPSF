@@ -94,10 +94,7 @@ def assemble_data_psfex(expid, directory):
     # note that __repr__ will fail for df some reason,
     # but columns won't?! (e.g. df['x'] is fine)
     # should happen first; gets us the header
-    out_dir_expid = out_dir + '/{0:08d}'.format(expid)
-    if not path.exists(out_dir_expid):
-        makedirs(out_dir_expid)
-    df.to_csv(out_dir_expid + '/collate_psf.csv')
+    df.to_csv(out_dir + '/{0:08d}.csv'.format(expid))
 
 if __name__ == '__main__':
     import argparse
