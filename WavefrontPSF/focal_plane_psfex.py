@@ -8,7 +8,8 @@ Description: Class for creating wavefronts on a generic focal plane.
 from __future__ import print_function, division
 import numpy as np
 from wavefront import Wavefront
-from routines import average_dictionary, convert_moments
+from routines import average_dictionary
+from routines_moments import convert_moments
 
 from psfex import PSFEx
 

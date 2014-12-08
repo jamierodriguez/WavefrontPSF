@@ -529,6 +529,9 @@ class Wavefront(object):
             If less than 10, uses decaminfo.getEdges
             Otherwise is the number of bins to use.
 
+        vmax, vmin : floats
+            Sets the lower and upper limits 
+
         Returns
         -------
         fig, ax : figure and axis

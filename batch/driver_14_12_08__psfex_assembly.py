@@ -2,6 +2,12 @@ from glob import glob
 import numpy as np
 from subprocess import call
 
+"""
+afterwards:
+http://stackoverflow.com/questions/16890582/unixmerge-multiple-csv-files-with-same-header-by-keeping-the-header-of-the-firs
+awk 'FNR==1 && NR!=1{next;}{print}' *.csv
+"""
+
 out_dir = '/nfs/slac/g/ki/ki18/des/cpd/big_psfex_rerun'
 base_psfex = '/nfs/slac/g/ki/ki21/cosmo/beckermr/DES/meds_psf_sva1/EXTRA/red'
 psfs = sorted(glob(base_psfex + '/**/psfex-rerun/v2/**/*psfcat.psf'))
@@ -37,8 +43,8 @@ print('{0} images, {1} directories'.format(len(psf_expids), len(directories)))
 
 # once you have the expids and directories, call them!
 for directory, expid in zip(directories[:1], psf_expids[:1]):
-    compute_time_str = '30'
-    logfile = out_dir + '/logs/{0:08d}'.format(expid)
+    compute_time_str = '30'  # TODO: fix this too
+    logfile = out_dir + '/logs/{0:08d}.log'.format(expid)
     jobname = str(expid)
     requirements = 'rhel60&&linux64'  # TODO: add memory usage
     code_path = '/nfs/slac/g/ki/ki18/cpd/code/WavefrontPSF/batch/assemble_data_psfex.py'
