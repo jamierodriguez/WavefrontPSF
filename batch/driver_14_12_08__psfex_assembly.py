@@ -9,7 +9,7 @@ http://stackoverflow.com/questions/16890582/unixmerge-multiple-csv-files-with-sa
 awk 'FNR==1 && NR!=1{next;}{print}' *.csv
 """
 
-out_dir = '/nfs/slac/g/ki/ki18/des/cpd/big_psfex_rerun'
+out_dir = '/nfs/slac/g/ki/ki18/des/cpd/big_psfex_rerun_v3'
 base_psfex = '/nfs/slac/g/ki/ki21/cosmo/beckermr/DES/meds_psf_sva1/EXTRA/red'
 psfs = sorted(glob(base_psfex + '/**/psfex-rerun/v3/**/*psfcat.psf'))
 print('{0} (~{1} images) psfs found!'.format(len(psfs), len(psfs) / 60))
