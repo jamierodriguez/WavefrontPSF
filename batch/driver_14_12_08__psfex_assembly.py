@@ -1,6 +1,7 @@
 from glob import glob
 import numpy as np
 from subprocess import call
+from os import path
 
 """
 afterwards:
@@ -47,7 +48,7 @@ for directory in directories:
     compute_time_str = '5'
     logfile = out_dir + '/logs/{0:08d}.log'.format(expid)
     jobname = str(expid)
-    mem_use = '1000'
+    mem_use = '5000'
     requirements = 'rhel60&&linux64 rusage[mem={0}] span[hosts=1]'.format(mem_use)
     code_path = '/nfs/slac/g/ki/ki18/cpd/code/WavefrontPSF/batch/assemble_data_psfex.py'
     command = ['bsub',
@@ -59,4 +60,6 @@ for directory in directories:
                'python', code_path,
                '--expid', str(expid),
                '--directory', directory]
-    call(command)
+    # check if file exists, if so skip
+    if not path.exists(directory + '/{0:08d}.csv'.format(expid)):
+        call(command)

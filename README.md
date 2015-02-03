@@ -3,6 +3,13 @@ Wavefront PSF
 
 Calculate the Wavefront of the DECam system and fit a PSF to an image.
 
+NOTE!
+=====
+
+I have no idea why, but I am having troubles compiling _donutengine.so on ki-ls.
+The solution was to just take the already compiled file _donutengine.so. Best be careful!
+
+
 Changelog
 ---------
 

@@ -51,23 +51,24 @@ def assemble_data_psfex(expid, directory):
     coords = np.empty([0, 3])
     for used_i, used in enumerate(list_fits_catalogs):
         # collect other info information
-        data_i = fits.getdata(used, ext=2)
+        try:
+            data_i = fits.getdata(used, ext=2)
 
-        coords_i = np.vstack((data_i['X_IMAGE'], data_i['Y_IMAGE'],
-                            [ext_list[used_i]] * len(data_i))).T
-        coords = np.vstack((coords, coords_i))
+            coords_i = np.vstack((data_i['X_IMAGE'], data_i['Y_IMAGE'],
+                                [ext_list[used_i]] * len(data_i))).T
+            coords = np.vstack((coords, coords_i))
 
-        for key in used_keys:
-            if key not in data:
-                data[key] = []
-            data[key].append(data_i[key])
+            for key in used_keys:
+                if key not in data:
+                    data[key] = []
+                data[key].append(data_i[key])
+        except:
+            print('Extension {0} failed'.format(ext_list[used_i]))
 
     moments = FP.plane(coords)
 
     expids = np.array([expid] * coords.shape[0])
     coords_focal = FP.pixel_to_position(coords)
-
-
 
     # data is empty; so let's make it!
 
