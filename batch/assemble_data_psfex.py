@@ -17,7 +17,7 @@ from WavefrontPSF.focal_plane_psfex import FocalPlanePSFEx
 from WavefrontPSF.decamutil_cpd import decaminfo
 from WavefrontPSF.routines import convert_dictionary
 
-out_dir = '/nfs/slac/g/ki/ki18/des/cpd/big_psfex_rerun'
+out_dir = '/nfs/slac/g/ki/ki18/des/cpd/big_psfex_rerun_v3'
 
 used_keys = ['DELTAX_IMAGE', 'DELTAY_IMAGE',
              'NORM_PSF', 'CHI2_PSF', 'RESI_PSF']

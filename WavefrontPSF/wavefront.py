@@ -559,6 +559,7 @@ class Wavefront(object):
 
         from routines_plot import focal_graph, focal_graph_axis
         from colors import blue_red, shiftedColorMap
+        from matplotlib.pyplot import get_cmap
 
         if type(x) == str:
             x = self.data[x]
@@ -580,9 +581,9 @@ class Wavefront(object):
             vmin = C.min()
 
         if np.ma.all(C <= 0):
-            cmap = plt.get_cmap('Blues_r')
+            cmap = get_cmap('Blues_r')
         elif np.ma.all(C >= 0):
-            cmap = plt.get_cmap('Reds')
+            cmap = get_cmap('Reds')
         else:
             midpoint = 1 - vmax/(vmax + abs(vmin))
             cmap = shiftedColorMap(blue_red, midpoint=midpoint, name='shifted')
