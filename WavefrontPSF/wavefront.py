@@ -4,90 +4,73 @@ File: wavefront.py
 Author: Chris Davis
 Description: Module for generating PSF objects and their moments.
 
-TODO: Add ability to apply shear to generated images.
+TODO: Add whisker plot capabilities.
+TODO: Add a copy capability
 """
 
 from __future__ import print_function, division
-import numpy as np
-from donutlib.makedonut import makedonut
-from adaptive_moments import adaptive_moments, centered_moment
+from decamutil import decaminfo
 from os import path, makedirs
-from scipy.ndimage.interpolation import affine_transform
-
 import pickle
-from routines_moments import convert_moments
-from decamutil_cpd import decaminfo
+import pandas as pd
+import numpy as np
+
+import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
 
 class Wavefront(object):
-    """Class with the ability to generate stars as well as their images.  Given
-    a list of positions and zernikes, generates a set of moments (to your
-    specification).
+    """Class with the ability to generate PSF image and statistics. Given a
+    list of positions, make a list of PSF images or statistics.
 
     Attributes
     ----------
-    number_electrons
-        the number of Electrons used in making the stamp (ie the normalization)
+    Wavefront_State
+        Dictionary of parameters describing the state of the wavefront.
 
-    background
-        the background value for each stamp
+    PSF Interpolator
+        Method for generating PSF image at a given location.
 
-    input_dict
-        a dictionary containing the parameters for aaron's makedonut routine
+    PSF Evaluator
+        Object that can take output from Interpolator and give PSF statistics
 
-    make_donut
-        aaron's makedonut object
+
+    Data
+        Every datapoint. Assumed to be a pandas dataframe
+
+    Field
+        Datapoints reduced to field
 
     Methods
     -------
     save
-        save this whole object, sans make_donut. Should inherit OK
+        Save the wavefront.
 
-    stamp
-        takes the zernike polynomials and creates a 2d image array
+    draw_psf
+        Given coordinates, draw psf image
 
-    moments
-        given a stamp, calculates the moments
+    get_psf_stats
+        Gets PSF statistics, perhaps by evaluating the PSF
 
-    moment_dictionary
-        given a list of zernikes, get all their moments plus useful linear
-        combinations (e.g. ellipticity)
+    plot_field
+        Makes a focal plane plot
 
     """
 
-    def __init__(self, number_electrons=1e6, background=4000, randomFlag=0,
-                 nbin=256, nPixels=32, pixelOverSample=8, scaleFactor=1.,
+    def __init__(self, model, PSF_Interpolator, PSF_Evaluator,
                  **args):
 
-        self.number_electrons = number_electrons
-        self.background = background
-        if nPixels == 32:
-            self.input_dict = {
-                "nbin": 256,  # 128,
-                "nPixels": 32,  # 32,
-                "pixelOverSample": 8,  # 4,
-                "scaleFactor": 1.,  # 2.,
-                "randomFlag": randomFlag,
-                }
-        elif nPixels == 16:
-            self.input_dict = {
-                "nbin": 64,  # 256,  # 128,
-                "nPixels": 16,  # 32,  # 32,
-                "pixelOverSample": 4,  # 8,  # 4,
-                "scaleFactor": 2.,  # 1.,  # 2.,
-                "randomFlag": randomFlag,
-                }
-        else:
-            self.input_dict = {
-                "nbin": nbin,  # 256,  # 128,
-                "nPixels": nPixels,  # 32,  # 32,
-                "pixelOverSample": pixelOverSample,  # 8,  # 4,
-                "scaleFactor": scaleFactor,  # 1.,  # 2.,
-                "randomFlag": randomFlag,
-                }
+        self.PSF_Interpolator = PSF_Interpolator
+        self.PSF_Evaluator = PSF_Evaluator
 
-        self.make_donut = makedonut(**self.input_dict)
-        # decaminfo stuff (since it's useful)
+        # this is useful
         self.decaminfo = decaminfo()
+
+        if model is not None:
+            self.data = model
+            self.field, self.bins_x, self.bins_y = self.reduce_data_to_field(self.data, np.median, 1)
+
+    def __getitem__(self, key):
+        return self.field[key]
 
     def edges(self, boxdiv):
         """Convenience wrapper for decaminfo.getEdges
@@ -95,6 +78,59 @@ class Wavefront(object):
 
         edges = self.decaminfo.getEdges(boxdiv)
         return edges
+
+    def reduce_data_to_field(self, data, reducer=np.median, num_bins=1):
+        """Take data and bin by focal plane coordinates.
+
+        Parameters
+        ----------
+        data : dataframe
+            Contains all the datapoints.
+
+        reducer : function
+            Function that takes set of data and returns a number.
+
+        num_bins : int, default 1
+            Number of bins for the focal plane. If less than six, then the
+            number of bins is a sort of proxy for the number of divisions of a
+            chip. Default is 2 bins per chip.
+
+        Returns
+        -------
+        field : dataframe
+            Dataframe binned by x and y coordinates.
+
+        bins_x, bins_y : arrays
+            Arrays of the bins used.
+
+        Notes
+        -----
+        data needs to have 'x' and 'y' keys!
+
+        """
+        x = data['x']
+        y = data['y']
+
+        if num_bins < 6:
+            bins_x, bins_y = self.edges(num_bins)
+        else:
+            bins_x = np.linspace(np.min(x), np.max(x), num_bins)
+            bins_y = np.linspace(np.min(y), np.max(y), num_bins)
+        groups = data.groupby([pd.cut(x, bins_x), pd.cut(y, bins_y)])
+        field = groups.aggregate(reducer)
+        # also get the count
+        counts = groups['z4'].aggregate('count').values
+
+        # filter out nanmins on x and y
+        field = field[field['x'].notnull() & field['y'].notnull()]
+        # counts already filtered out notnull so let's try!
+        field['N'] = counts
+
+        return field, bins_x, bins_y
+
+    def reduce(self, reducer=np.median, num_bins=1):
+        # convenience function
+        self.field, self.bins_x, self.bins_y = self.reduce_data_to_field(self.data, reducer, num_bins)
 
     def save(self, out_path):
         """Take the data and save it!
@@ -104,501 +140,147 @@ class Wavefront(object):
         out_path : string
             The location where we will dump the pickle.
 
-        Notes
-        -----
-        in order to save as a pickleable object, I need to set make_donut
-        (which is a pyswig object) to none. So when you reload this object, it
-        can have everything else /except/ the make_donut property.
-
         """
 
         if not path.exists(path.dirname(out_path)):
             makedirs(path.dirname(out_path))
-        self.make_donut = None  # this is the offender!
         with open(out_path, 'wb') as out_file:
             pickle.dump(self, out_file)
-        # give FP back its make_donut
-        self.make_donut = makedonut(**self.input_dict)
 
-    def remakedonut(self):
-        """Remake make_donut
+    def draw_psf(self, x, y, **kwargs):
+        # depending on method, you could expect something like this:
+        return self.PSF_Interpolator(x, y, **kwargs)
 
-        Notes
-        -----
-        No input or return.
+    def get_psf_stats(self, x, y, **kwargs):
+        # depending on method, you could expect something like this:
+        return self.PSF_Evaluator(self.draw_psf(x, y, **kwargs))
 
-        """
-        self.make_donut = makedonut(**self.input_dict)
-        return
-
-    def stamp(self, zernike, rzero, coord, jitter={}):
-        """Create a stamp from list of zernike parameters
+    def plot_field(self, key, fig=None, ax=None):
+        """Make a plot of the field.
 
         Parameters
         ----------
-        zernike : list
-            The coefficients to the zernike polynomials used.
+        key : string
+            What value are we trying to plot?
 
-        rzero : float
-            Kolmogorov spectrum parameter. Basically, larger means smaller PSF.
-
-        coord : list
-            [x_decam, y_decam] in mm and Aaron's coordinate convention.
-
-        jitter : dictionary
-            Jitter terms to apply to image.
-
-        Returns
-        -------
-        stamp : array
-            The image of the zernike polynomial convolved with Kolmogorov
-            spectrum.
-
-        TODO
-        ----
-
-        If shearing, consider over sampling?
-
-        """
-
-        x_decam = coord[0]
-        y_decam = coord[1]
-
-        stamp = self.make_donut.make(inputZernikeArray=zernike,
-                                     rzero=rzero,
-                                     nEle=self.number_electrons,
-                                     background=self.background,
-                                     xDECam=x_decam,
-                                     yDECam=y_decam).astype(np.float64)
-
-        if len(jitter.keys()) > 0:
-            stamp = self.jitter(stamp, jitter)
-
-        return stamp
-
-    def jitter(self, data, jitter={},
-               Mx = 15.937499,
-               My = 15.937499):
-        """Apply jitter
-
-        Parameters
-        ----------
-
-        data : array
-            2d array of image
-
-        jitter : dictionary
-            dictionary of various ellipticity or shear terms (e.g. e1, g1,
-            delta2)
-
-        Mx, My : floats
-            The centers of the object
+        fig, ax : matplotlib objects, optional
+            If given, use these plots. Else, make our own!
 
         Returns
         -------
 
-        data_jittered : array
-            2d array of image post-jitter
-
-
-        Notes
-        -----
-
-        Currently only does NORMALIZED ellip e1 and e2!!
-        Largely taken from CppShear.cpp in GalSim
+        fig, ax : matplotlib objects
+            The figure and axis of our plot!
 
         """
 
-        if ('e1' in jitter.keys()) * ('e2' in jitter.keys()):
-
-            try:
-                e1 = jitter['e1']
-            except KeyError:
-                # no e1
-                e1 = 0
-            try:
-                e2 = jitter['e2']
-            except KeyError:
-                e2 = 0
-
-            esq = e1 * e1 + e2 * e2
-
-            if esq < 1e-8:
-                A = 1 + esq / 8 + e1 * (0.5 + esq * 3 / 16)
-                B = 1 + esq / 8 - e1 * (0.5 + esq * 3 / 16)
-                C = e2 * (0.5 + esq * 3 / 16)
-            else:
-                temp = np.sqrt(1 - esq)
-                cc = np.sqrt(0.5 * (1 + 1 / temp))
-                temp = cc * (1 - temp) / esq
-                C = temp * e2
-                temp *= e1
-                A = cc + temp
-                B = cc - temp
-            matrix = np.array([[A, C], [C, B]])
-            matrix /= A * B - C * C
-            offset = (-Mx * (A + C - 1),
-                      -My * (C + B - 1))
-
-            # apply transformation
-            data = affine_transform(data, matrix, offset)
-
-        return data
-
-
-    def stamp_factory(self, zernikes, rzeros, coords, jitters=[]):
-        """Make lots of stamps
-
-        Parameters
-        ----------
-        zernikes : list of lists
-            Each entry in the list corresponds to a coordinate point and
-            contains some number of zernike polynomial coefficients to be used
-            in generating the stamp.
-
-        coords : list of lists
-            Each entry has the coordinates in [X mm, Y mm, Sensor], with the x
-            and y in aaron's coordinate convention.
-
-        rzeros : list of floats
-            Kolmogorov spectrum parameter. Basically, larger means smaller PSF.
-
-        jitter : list of dictionaries
-            Jitter terms to apply to image.
-
-
-        Returns
-        -------
-        stamps : list of array
-            The resultant stamps
-
-        """
-        stamps = []
-        for i in xrange(len(coords)):
-            coord = coords[i]
-            zernike = zernikes[i]
-            rzero = rzeros[i]
-            if len(jitters) > 0:
-                jitter = jitters[i]
-            else:
-                jitter = {}
-            # make stamp
-            stamp_i = self.stamp(zernike=zernike,
-                                 rzero=rzero,
-                                 coord=coord,
-                                 jitter=jitter)
-            stamps.append(stamp_i)
-
-        stamps = np.array(stamps)
-
-        return stamps
-
-    def moments(self, data,
-                background=0, threshold=-1e9,
-                order_dict={}):
-        """Given a stamp, create moments
-
-        Parameters
-        ----------
-        data : array
-            2d image array
-
-        threshhold : float, optional
-            Threshold value in the data array for pixels to consider in this
-            fit. If not specified, then takes all data.
-
-        background : float, optional
-            Background level to be subtracted out. If not specified, set to
-            zero.
-
-        windowed : bool, optional ; Depreciated
-            Decide whether to use a gaussian window.
-            Default to True
-
-        order_dict : dictionary, optional
-            Gives a list of the x and y orders of the moments we want to
-            calculate.
-            Defaults to x2 y2 and xy moments.
-            Ex:            {'x2': {'p': 2, 'q': 0},
-                            'y2': {'p': 0, 'q': 2},
-                            'xy': {'p': 1, 'q': 1}}
-
-        Returns
-        -------
-        return_dict : dictionary
-            Returns a dictionary of the calculated moments, centroid, fwhm.
-
-        """
-        stamp = (data - background)
-        conds = (stamp > threshold)
-        stamp = np.where(conds, stamp, 0)  # mask noise
-
-        # get moment matrix
-        Mx, My, Mxx, Mxy, Myy, A, rho4, \
-            x2, xy, y2, x3, x2y, xy2, y3 \
-            = adaptive_moments(stamp)
-
-        fwhm = np.sqrt(np.sqrt(Mxx * Myy - Mxy * Mxy))
-        whisker = np.sqrt(np.sqrt(Mxy * Mxy + 0.25 * np.square(Mxx - Myy)))
-        # 2 (1 + a4) = rho4
-        a4 = 0.5 * rho4 - 1
-        # update return_dict
-        return_dict = {
-                'Mx': Mx, 'My': My,
-                'Mxx': Mxx, 'Mxy': Mxy, 'Myy': Myy,
-                'fwhm': fwhm, 'flux': A, 'a4': a4, 'whisker': whisker,
-                'x2': x2, 'xy': xy, 'y2': y2,
-                'x3': x3, 'x2y': x2y, 'xy2': xy2, 'y3': y3,
-                }
-
-        # now go through moment_dict and create any other moments
-        for order in order_dict:
-            pq = order_dict[order]
-            p = pq['p']
-            q = pq['q']
-            return_dict.update({order: centered_moment(stamp,
-                                                       Mx=Mx, My=My,
-                                                       p=p, q=q,
-                                                       Mxx=Mxx, Mxy=Mxy,
-                                                       Myy=Myy
-                                                       )})
-        return return_dict
-
-
-    def moment_dictionary(
-            self, stamps, coords,
-            backgrounds=[], thresholds=[],
-            verbosity=[], windowed=True,
-            order_dict={}):
-
-        """create a bunch of
-
-        Parameters
-        ----------
-        stamps : list of arrays
-            All the stamps we shall analyze
-
-        coords : list of lists
-            Each entry has the coordinates in [X mm, Y mm, Sensor], with the x
-            and y in aaron's coordinate convention.
-
-        threshhold : list of floats, optional
-            Threshold value in the data array for pixels to consider in this
-            fit. If not specified, then takes all data.
-
-        background : list of floats, optional
-            Background level to be subtracted out. If not specified, set to
-            attribute background.
-
-        verbosity : list, optional
-            If 'stamp' is in verbosity, then the stamps are also saved.
-            Default is that stamps are not saved.
-
-        windowed : bool, optional
-            Decide whether to use a gaussian window.
-            Default to True
-
-        order_dict : dictionary, optional
-            Gives a list of the x and y orders of the moments we want to
-            calculate.
-            Defaults to x2 y2 and xy moments.
-
-        Returns
-        -------
-        return_dict : dictionary
-            A dictionary with the moments, xDECam, yDECam, fwhm, and zernikes.
-
-        Notes
-        -----
-        By default the moment dictionary will have fwhm and the xDECam and
-        yDECam positions in them, and stamp for verbosity dictionary with
-        'stamp', as well as every entry in order_dict
-
-        """
-
-        # create return_dict
-        return_dict = dict(x=[], y=[])
-
-        if 'stamp' in verbosity:
-            return_dict.update(dict(stamp=[]))
-        if 'zernikes' in verbosity:
-            return_dict.update(dict(zernikes=zernikes))
-        # add terms from order_dict
-        for order in order_dict:
-            return_dict.update({order: []})
-
-        for i in range(len(coords)):
-            coord = coords[i]
-            if len(backgrounds) > 0:
-                background = backgrounds[i]
-            else:
-                background = self.background
-            if len(thresholds) > 0:
-                threshold = thresholds[i]
-            else:
-                threshold = 1e-9
-            stamp = stamps[i]
-            # get moments
-            moment_dict = self.moments(
-                stamp,
-                background=background, threshold=threshold,
-                order_dict=order_dict)
-
-            if i == 0:
-                for key in moment_dict.keys():
-                    return_dict.update({key: []})
-            for key in moment_dict.keys():
-                return_dict[key].append(moment_dict[key])
-
-            # append to big list
-            return_dict['x'].append(coord[0])
-            return_dict['y'].append(coord[1])
-
-            # append the stamp if verbosity is high enough
-            if 'stamp' in verbosity:
-                return_dict['stamp'].append(stamp)
-
-        # turn all these lists into arrays
-        for key in return_dict:
-            entry = return_dict[key]
-            if type(entry) == list:
-                return_dict.update({key: np.array(entry)})
-
-        return_dict = convert_moments(return_dict)
-
-        return return_dict
-
-    def position_to_pixel(self, coords):
-        """Go from focal coordinates to pixel coordinates
-
-        Paramters
-        ---------
-        coords : array
-            Each entry has the coordinates in [X mm, Y mm, Sensor], with the x
-            and y in aaron's coordinate convention.
-
-        Returns
-        -------
-        coords_pixel: array
-            Each entry is now [ix, iy, Sensor]
-
-        """
-
-        ix, iy = self.decaminfo.getPixel_extnum(coords[:,2].astype(np.int),
-                                                coords[:,0],
-                                                coords[:,1])
-        coords_pixel = np.vstack((ix, iy, coords[:,2])).T
-
-        return coords_pixel
-
-    def pixel_to_position(self, coords):
-
-        """Go from focal coordinates to pixel coordinates
-
-        Paramters
-        ---------
-        coords : array
-            Each entry has the coordinates in [ix, iy, Sensor].
-
-        Returns
-        -------
-        coords_focal: array
-            Each entry is now [X mm, Y mm, Sensor],
-
-        """
-
-        xPos, yPos = self.decaminfo.getPosition_extnum(coords[:,2].astype(
-            np.int),
-                                                       coords[:,0],
-                                                       coords[:,1])
-        coords_focal = np.vstack((xPos, yPos, coords[:,2])).T
-
-        return coords_focal
-
-    def plot(self, x='x', y='y', z='e0', bins=25, ax=None,
-            vmax=None, vmin=None):
-        """Create plot
-
-        Parameters
-        ----------
-        x, y, z : strings or arrays
-            If strings, goes to self.data[x]
-            else, use them directly.
-
-        bins : int
-            If less than 10, uses decaminfo.getEdges
-            Otherwise is the number of bins to use.
-
-        vmax, vmin : floats
-            Sets the lower and upper limits 
-
-        Returns
-        -------
-        fig, ax : figure and axis
-            The plot!
-
-        Notes
-        -----
-        stuff
-
-        See Also
-        --------
-        other function: brief description
-
-        References
-        ----------
-        stuff
-
-        Examples
-        --------
-        >>> example code where
-        ...     it goes over multiple lines
-
-        for more doc help, see https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt
-        """
-
-        from routines_plot import focal_graph, focal_graph_axis
-        from colors import blue_red, shiftedColorMap
-        from matplotlib.pyplot import get_cmap
-
-        if type(x) == str:
-            x = self.data[x]
-        if type(y) == str:
-            y = self.data[y]
-        if type(z) == str:
-            z = self.data[param]
-
-        if bins < 10:
-            bins = self.decaminfo.getEdges(boxdiv=bins)
-
-        counts, xedges, yedges = np.histogram2d(x, y, bins=bins)
-        weighted_counts, xedges, yedges = np.histogram2d(x, y,
-                bins=[xedges, yedges], weights=z)
-        C = np.ma.masked_invalid(weighted_counts.T / counts.T)
-        if not vmax:
-            vmax = C.max()
-        if not vmin:
-            vmin = C.min()
-
-        if np.ma.all(C <= 0):
-            cmap = get_cmap('Blues_r')
-        elif np.ma.all(C >= 0):
-            cmap = get_cmap('Reds')
+        indx_x = self.field.index.labels[0].values()
+        indx_y = self.field.index.labels[1].values()
+        # here is something that is going to be irritating and cludgey:
+        # let's get the values of the different bins (for sorting purposes)
+        x_vals = np.array([np.mean(eval(ith.replace('(','['))) for
+                           ith in self.field.index.levels[0]])
+        y_vals = np.array([np.mean(eval(ith.replace('(','['))) for
+                           ith in self.field.index.levels[1]])
+        # now sort the order for the levels
+        x_vals_argsorted = np.argsort(x_vals)
+        y_vals_argsorted = np.argsort(y_vals)
+        # now this means that the 0th entry in x_vals_argsorted comes first
+        # so we want indx_x_transform to represent the sorted values
+        # so instead of indx_x representing arbitrary bin i, we want it to
+        # instead represent sorted bin j
+        indx_x_transform = np.argsort(np.arange(len(x_vals))[np.argsort(x_vals)])[indx_x]
+        indx_y_transform = np.argsort(np.arange(len(y_vals))[np.argsort(y_vals)])[indx_y]
+
+        if ax == None:
+            fig, ax = plt.subplots(figsize=(10,5))
+            ax.set_xlabel('$X$ [mm] (East)')
+            ax.set_ylabel('$Y$ [mm] (South)')
+            ax.set_xlim(-250, 250)
+            ax.set_ylim(-250, 250)
+
+        # figure out shifting the colormap
+        b = np.max(self.field[key][self.field[key].notnull()])
+        a = np.min(self.field[key][self.field[key].notnull()])
+        c = 0
+        midpoint = (c - a) / (b - a)
+        if midpoint <= 0:
+            cmap = plt.cm.Reds
         else:
-            midpoint = 1 - vmax/(vmax + abs(vmin))
-            cmap = shiftedColorMap(blue_red, midpoint=midpoint, name='shifted')
+            cmap = shiftedColorMap(plt.cm.RdBu_r, midpoint=midpoint)
+        vmin = a
+        vmax = b
 
-        return_fig = False
-        if ax:
-            ax = focal_graph_axis(ax)
-        else:
-            fig, ax = focal_graph()
-            return_fig = True
-        Image = ax.pcolor(xedges, yedges, C,
-                          cmap=cmap, vmin=vmin, vmax=vmax)
-        CB = fig.colorbar(Image, ax=ax)
+        C = np.ma.zeros((indx_x.max() + 1, indx_y.max() + 1))
+        C.mask = np.ones((indx_x.max() + 1, indx_y.max() + 1))
+        np.add.at(C, [indx_x_transform, indx_y_transform],
+                  self.field[key].values)
+        np.multiply.at(C.mask, [indx_x_transform, indx_y_transform], 0)
+        # bloops
+        C = C.T
 
-        if return_fig:
-            return fig, ax
-        else:
-            return ax
+        IM = ax.pcolor(self.bins_x, self.bins_y, C,
+                       cmap=cmap, vmin=vmin, vmax=vmax)
+        CB = fig.colorbar(IM, ax=ax)
+
+        return fig, ax
+
+def shiftedColorMap(cmap, start=0, midpoint=0.5, stop=1.0, name='shiftedcmap'):
+    '''
+Taken from
+
+https://github.com/olgabot/prettyplotlib/blob/master/prettyplotlib/colors.py
+
+which makes beautiful plots by the way
+
+
+    Function to offset the "center" of a colormap. Useful for
+    data with a negative min and positive max and you want the
+    middle of the colormap's dynamic range to be at zero
+
+    Input
+    -----
+      cmap : The matplotlib colormap to be altered
+      start : Offset from lowest point in the colormap's range.
+          Defaults to 0.0 (no lower ofset). Should be between
+          0.0 and `midpoint`.
+      midpoint : The new center of the colormap. Defaults to 
+          0.5 (no shift). Should be between 0.0 and 1.0. In
+          general, this should be  1 - vmax/(vmax + abs(vmin))
+          For example if your data range from -15.0 to +5.0 and
+          you want the center of the colormap at 0.0, `midpoint`
+          should be set to  1 - 5/(5 + 15)) or 0.75
+      stop : Offset from highets point in the colormap's range.
+          Defaults to 1.0 (no upper ofset). Should be between
+          `midpoint` and 1.0.
+    '''
+    cdict = {
+        'red': [],
+        'green': [],
+        'blue': [],
+        'alpha': []
+    }
+
+    # regular index to compute the colors
+    reg_index = np.linspace(start, stop, 257)
+
+    # shifted index to match the data
+    shift_index = np.hstack([
+        np.linspace(0.0, midpoint, 128, endpoint=False), 
+        np.linspace(midpoint, 1.0, 129, endpoint=True)
+    ])
+
+    for ri, si in zip(reg_index, shift_index):
+        r, g, b, a = cmap(ri)
+
+        cdict['red'].append((si, r, r))
+        cdict['green'].append((si, g, g))
+        cdict['blue'].append((si, b, b))
+        cdict['alpha'].append((si, a, a))
+
+    newcmap = LinearSegmentedColormap(name, cdict)
+    plt.register_cmap(cmap=newcmap)
+
+    return newcmap
+
+
