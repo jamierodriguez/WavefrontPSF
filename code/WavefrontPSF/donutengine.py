@@ -6,6 +6,8 @@ Description: Specific implimentation of WavefrontPSF using donutlib to make the
              donut images.
 
 TODO: Remove automatic overwriting of old data parameter!
+
+TODO: makedonut stuff should actually be a PSF_Interpolator object
 """
 
 import numpy as np
@@ -15,11 +17,40 @@ import pickle
 
 from wavefront import Wavefront
 from digestor import Digestor
-from psf_interpolator import kNN_Interpolator
+from psf_interpolator import kNN_Interpolator, PSF_Interpolator
 from psf_evaluator import PSF_Evaluator, Moment_Evaluator
 
-
 from donutlib.makedonut import makedonut
+
+class Generic_Donutengine_Wavefront(Wavefront):
+    """
+    Idea is you just call with a list of x, y, zernikes, and rzero and you're good to go
+    """
+
+    def __init__(self):
+        evaluator = Moment_Evaluator()
+        interpolator = PSF_Interpolator()
+        super(Generic_Donutengine_Wavefront, self).__init__(
+                PSF_Interpolator=interpolator,
+                PSF_Evaluator=evaluator,
+                model=None)
+        self.PSF_Drawer = Zernike_to_Pixel_Interpolator()
+
+    def draw_psf(self, xs, ys, zernikes, rzeros):
+        # make the donut!
+        stamps = []
+        for index, inputZernikeArray in enumerate(zernikes):
+            xi = xs[index]
+            yi = ys[index]
+            rzero = rzeros[index]
+            stamp = self.PSF_Drawer(xi, yi,
+                                    inputZernikeArray=inputZernikeArray,
+                                    rzero=rzero)
+            stamps.append(stamp)
+        stamps = np.array(stamps)
+
+        return stamps
+
 
 class DECAM_Model_Wavefront(Wavefront):
     """
@@ -34,52 +65,10 @@ class DECAM_Model_Wavefront(Wavefront):
                 PSF_Interpolator=interpolator,
                 PSF_Evaluator=evaluator,
                 model=None)
-
-        # set up makedonut
-        self.makedonut_dict = {'nbin': 256,
-                               'nPixels': 32,
-                               'pixelOverSample': 8,
-                               'scaleFactor': 1,
-                               'randomFlag': 0}
-        self.make_donut = makedonut(**self.makedonut_dict)
+        self.PSF_Drawer = Zernike_to_Pixel_Interpolator()
 
         self.input_misalignment = misalignment
         self.misalignment = self.misalign_optics(misalignment)
-
-    def save(self, out_path):
-        """Take the data and save it!
-
-        Parameters
-        ----------
-        out_path : string
-            The location where we will dump the pickle.
-
-        Notes
-        -----
-        in order to save as a pickleable object, I need to set make_donut
-        (which is a pyswig object) to none. So when you reload this object, it
-        can have everything else /except/ the make_donut property.
-
-        """
-
-        if not path.exists(path.dirname(out_path)):
-            makedirs(path.dirname(out_path))
-        self.make_donut = None  # this is the offender!
-        with open(out_path, 'wb') as out_file:
-            pickle.dump(self, out_file)
-        # give FP back its make_donut
-        self.make_donut = makedonut(**self.makedonut_dict)
-
-    def remakedonut(self):
-        """Remake make_donut
-
-        Notes
-        -----
-        No input or return.
-
-        """
-        self.make_donut = makedonut(**self.makedonut_dict)
-        return
 
     def __call__(self, misalignment, overwrite=True, **kwargs):
         if overwrite:
@@ -103,6 +92,12 @@ class DECAM_Model_Wavefront(Wavefront):
                 evaluated_psfs = None
         return evaluated_psfs
 
+    def save(self, out_path):
+        # make_donut is a nasty offender
+        self.PSF_Drawer.make_donut = None
+        super(DECAM_Model_Wavefront, self).save(out_path)
+        # now remake make_donut
+        self.PSF_Drawer.make_donut = self.PSF_Drawer.remakedonut()
 
     def zernike_corrections_from_hexapod(self, dz=0, dx=0, dy=0, xt=0, yt=0):
         """Brief Description
@@ -293,15 +288,6 @@ class DECAM_Model_Wavefront(Wavefront):
 
         return zernikes
 
-    def draw_donut(self, x, y, inputZernikeArray, rzero):
-        stamp = self.make_donut.make(inputZernikeArray=inputZernikeArray,
-                                     rzero=rzero,
-                                     nEle=1e0,
-                                     background=0,
-                                     xDECam=x,
-                                     yDECam=y).astype(np.float64)
-        return stamp
-
     def draw_psf(self, x, y,
                  **kwargs):
         # draw many PSFs from the x and y coords as well as other params
@@ -316,7 +302,9 @@ class DECAM_Model_Wavefront(Wavefront):
             inputZernikeArray = np.array([zernike['z{0}'.format(i)]
                                           for i in xrange(1, 12)])
             rzero = self.misalignment['rzero']
-            stamp = self.draw_donut(xi, yi, inputZernikeArray, rzero)
+            stamp = self.PSF_Drawer(xi, yi,
+                                    inputZernikeArray=inputZernikeArray,
+                                    rzero=rzero)
             stamps.append(stamp)
         stamps = np.array(stamps)
         # append stamps to the zernike data
@@ -414,6 +402,48 @@ def zerniketoHexapod(z05x, z05y, z06x, z06y, z07d, z08d):
     yt = hexapodVector[3][0]
 
     return dx, dy, xt, yt
+
+class Zernike_to_Pixel_Interpolator(PSF_Interpolator):
+    """PSF Interpolator that inputs zernikes, focal plane coordinates, and
+    Fried parameter and returns a pixel representation of the PSF.
+    """
+
+    def __init__(self, **kwargs):
+        # set up makedonut
+        self.makedonut_dict = {'nbin': 256,
+                               'nPixels': 32,
+                               'pixelOverSample': 8,
+                               'scaleFactor': 1,
+                               'randomFlag': 0}
+        self.makedonut_dict.update(kwargs)
+        self.make_donut = makedonut(**self.makedonut_dict)
+
+
+    def remakedonut(self):
+        """Remake make_donut
+
+        Notes
+        -----
+        No input or return.
+
+        """
+        self.make_donut = makedonut(**self.makedonut_dict)
+        return
+
+    def draw_donut(self, x, y, inputZernikeArray, rzero):
+        stamp = self.make_donut.make(inputZernikeArray=inputZernikeArray,
+                                     rzero=rzero,
+                                     nEle=1e0,
+                                     background=0,
+                                     xDECam=x,
+                                     yDECam=y).astype(np.float64)
+        return stamp
+
+    def interpolate(self, x, y, inputZernikeArray, rzero):
+        stamp = self.draw_donut(xi, yi, inputZernikeArray, rzero)
+
+        return stamp
+
 
 if __name__ == '__main__':
     # do some basic runs to demonstrate functionality

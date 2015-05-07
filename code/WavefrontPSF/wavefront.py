@@ -72,6 +72,21 @@ class Wavefront(object):
     def __getitem__(self, key):
         return self.field[key]
 
+    def save(self, out_path):
+        """Take the data and save it!
+
+        Parameters
+        ----------
+        out_path : string
+            The location where we will dump the pickle.
+
+        """
+
+        if not path.exists(path.dirname(out_path)):
+            makedirs(path.dirname(out_path))
+        with open(out_path, 'wb') as out_file:
+            pickle.dump(self, out_file)
+
     def edges(self, boxdiv):
         """Convenience wrapper for decaminfo.getEdges
         """
@@ -79,7 +94,8 @@ class Wavefront(object):
         edges = self.decaminfo.getEdges(boxdiv)
         return edges
 
-    def reduce_data_to_field(self, data, reducer=np.median, num_bins=1):
+    def reduce_data_to_field(self, data, xkey='x', ykey='y',
+            reducer=np.median, num_bins=1):
         """Take data and bin by focal plane coordinates.
 
         Parameters
@@ -108,8 +124,8 @@ class Wavefront(object):
         data needs to have 'x' and 'y' keys!
 
         """
-        x = data['x']
-        y = data['y']
+        x = data[xkey]
+        y = data[ykey]
 
         if num_bins < 6:
             bins_x, bins_y = self.edges(num_bins)
@@ -119,33 +135,20 @@ class Wavefront(object):
         groups = data.groupby([pd.cut(x, bins_x), pd.cut(y, bins_y)])
         field = groups.aggregate(reducer)
         # also get the count
-        counts = groups['z4'].aggregate('count').values
+        counts = groups[xkey].aggregate('count').values
 
         # filter out nanmins on x and y
-        field = field[field['x'].notnull() & field['y'].notnull()]
+        field = field[field[xkey].notnull() & field[xkey].notnull()]
         # counts already filtered out notnull so let's try!
         field['N'] = counts
 
         return field, bins_x, bins_y
 
-    def reduce(self, reducer=np.median, num_bins=1):
+    def reduce(self, xkey='x', ykey='y', reducer=np.median, num_bins=1):
         # convenience function
-        self.field, self.bins_x, self.bins_y = self.reduce_data_to_field(self.data, reducer, num_bins)
-
-    def save(self, out_path):
-        """Take the data and save it!
-
-        Parameters
-        ----------
-        out_path : string
-            The location where we will dump the pickle.
-
-        """
-
-        if not path.exists(path.dirname(out_path)):
-            makedirs(path.dirname(out_path))
-        with open(out_path, 'wb') as out_file:
-            pickle.dump(self, out_file)
+        self.field, self.bins_x, self.bins_y = self.reduce_data_to_field(
+                self.data, xkey=xkey, ykey=ykey, reducer=reducer,
+                num_bins=num_bins)
 
     def draw_psf(self, x, y, **kwargs):
         # depending on method, you could expect something like this:
@@ -155,7 +158,16 @@ class Wavefront(object):
         # depending on method, you could expect something like this:
         return self.PSF_Evaluator(self.draw_psf(x, y, **kwargs))
 
-    def plot_field(self, key, fig=None, ax=None):
+    def plot_colormap(self, xkey, ykey, zkey, num_bins=20, fig=None, ax=None):
+        field, bins_x, bins_y = self.reduce_data_to_field(
+                self.data, xkey=xkey, ykey=ykey, num_bins=num_bins)
+        fig, ax = plt.subplots(figsize=(10,5))
+        fig, ax = self.plot_field(zkey, field=field,
+                bins_x=bins_x, bins_y=bins_y, fig=fig, ax=ax)
+
+        return fig, ax
+
+    def plot_field(self, key, field='None', bins_x=None, bins_y=None, fig=None, ax=None):
         """Make a plot of the field.
 
         Parameters
@@ -173,15 +185,19 @@ class Wavefront(object):
             The figure and axis of our plot!
 
         """
+        if field == 'None':
+            field = self.field
+            bins_x = self.bins_x
+            bins_y = self.bins_y
 
-        indx_x = self.field.index.labels[0].values()
-        indx_y = self.field.index.labels[1].values()
+        indx_x = field.index.labels[0].values()
+        indx_y = field.index.labels[1].values()
         # here is something that is going to be irritating and cludgey:
         # let's get the values of the different bins (for sorting purposes)
         x_vals = np.array([np.mean(eval(ith.replace('(','['))) for
-                           ith in self.field.index.levels[0]])
+                           ith in field.index.levels[0]])
         y_vals = np.array([np.mean(eval(ith.replace('(','['))) for
-                           ith in self.field.index.levels[1]])
+                           ith in field.index.levels[1]])
         # now sort the order for the levels
         x_vals_argsorted = np.argsort(x_vals)
         y_vals_argsorted = np.argsort(y_vals)
@@ -200,8 +216,8 @@ class Wavefront(object):
             ax.set_ylim(-250, 250)
 
         # figure out shifting the colormap
-        b = np.max(self.field[key][self.field[key].notnull()])
-        a = np.min(self.field[key][self.field[key].notnull()])
+        b = np.max(field[key][field[key].notnull()])
+        a = np.min(field[key][field[key].notnull()])
         c = 0
         midpoint = (c - a) / (b - a)
         if midpoint <= 0:
@@ -219,7 +235,7 @@ class Wavefront(object):
         # bloops
         C = C.T
 
-        IM = ax.pcolor(self.bins_x, self.bins_y, C,
+        IM = ax.pcolor(bins_x, bins_y, C,
                        cmap=cmap, vmin=vmin, vmax=vmax)
         CB = fig.colorbar(IM, ax=ax)
 

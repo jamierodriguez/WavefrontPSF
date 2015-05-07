@@ -5,7 +5,6 @@ Author: Chris Davis
 Description: Module for taking in data and making sense of it.
 
 
-TODO: Make digested data all the same KIND of object. Let's say Pandas Dataframe!
 TODO: Incorporate digesting multiple objects
 """
 from __future__ import print_function
