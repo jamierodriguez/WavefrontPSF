@@ -440,7 +440,7 @@ class Zernike_to_Pixel_Interpolator(PSF_Interpolator):
         return stamp
 
     def interpolate(self, x, y, inputZernikeArray, rzero):
-        stamp = self.draw_donut(xi, yi, inputZernikeArray, rzero)
+        stamp = self.draw_donut(x, y, inputZernikeArray, rzero)
 
         return stamp
 
