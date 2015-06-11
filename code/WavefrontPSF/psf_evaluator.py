@@ -16,6 +16,8 @@ class PSF_Evaluator(object):
     Attributes
     ----------
 
+    keys : What properties are returned by PSF_Evaluator
+
     Methods
     -------
 
@@ -24,12 +26,12 @@ class PSF_Evaluator(object):
 
     """
 
-    def evaluate(self, psfs):
+    def evaluate(self, psfs, **kwargs):
         # by default just return whatever came in
         return psfs
 
-    def __call__(self, psfs):
-        return self.evaluate(psfs)
+    def __call__(self, psfs, **kwargs):
+        return self.evaluate(psfs, **kwargs)
 
 class Moment_Evaluator(PSF_Evaluator):
     """Class that takes a PSF image and evaluates its second and third moments.
@@ -46,11 +48,22 @@ class Moment_Evaluator(PSF_Evaluator):
             num_iter_max = 100)
         self.adaptive_moments_kwargs.update(kwargs)
 
-    def evaluate_one_psf(self, psf):
+        self.keys = ['e0', 'e1', 'e2',
+                     'delta1', 'delta2', 'zeta1', 'zeta2',
+                     'a4', 'flux', 'Mx', 'My']
+
+    def evaluate_one_psf(self, psf, background=0, threshold=-1e9, **kwargs):
+        if background != 0:
+            stamp = psf - background
+        else:
+            stamp = psf
+        if threshold != -1e9:
+            stamp = np.where(stamp > threshold, stamp, 0)
+
         # get moment matrix
         Mx, My, Mxx, Mxy, Myy, A, rho4, \
             x2, xy, y2, x3, x2y, xy2, y3 \
-            = adaptive_moments(psf, **self.adaptive_moments_kwargs)
+            = adaptive_moments(stamp, **self.adaptive_moments_kwargs)
 
         fwhm = np.sqrt(np.sqrt(Mxx * Myy - Mxy * Mxy))
         whisker = np.sqrt(np.sqrt(Mxy * Mxy + 0.25 * np.square(Mxx - Myy)))
@@ -70,7 +83,7 @@ class Moment_Evaluator(PSF_Evaluator):
 
         return return_dict
 
-    def evaluate(self, psfs):
+    def evaluate(self, psfs, **kwargs):
         shape_psfs = np.shape(psfs)
         if len(shape_psfs) == 2:
             if shape_psfs[0] != shape_psfs[1]:
@@ -80,7 +93,8 @@ class Moment_Evaluator(PSF_Evaluator):
         # now we iterate through psfs
         evaluated_psfs = []
         for psf_i, psf in enumerate(psfs):
-            evaluated_psfs.append(self.evaluate_one_psf(psf))
-        evaluated_psfs = DataFrame(evaluated_psfs)
+            evaluated_psfs.append(self.evaluate_one_psf(psf, **kwargs))
+        # convert to DataFrame but only return the keys
+        evaluated_psfs = DataFrame(evaluated_psfs)#[self.keys]
         return evaluated_psfs
 

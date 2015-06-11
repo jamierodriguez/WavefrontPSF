@@ -61,6 +61,7 @@ class Wavefront(object):
 
         self.PSF_Interpolator = PSF_Interpolator
         self.PSF_Evaluator = PSF_Evaluator
+        self.PSF_Evaluator_keys = self.PSF_Evaluator.keys
 
         # this is useful
         self.decaminfo = decaminfo()
@@ -71,6 +72,19 @@ class Wavefront(object):
 
     def __getitem__(self, key):
         return self.field[key]
+
+    def convert_lists_to_dataframe(self, values, value_names):
+        # ensure we have same number of columns as names
+        assert len(values) == len(value_names)
+        for i in xrange(len(values) - 1):
+            # make sure we have the same number of entries
+            assert len(values[i]) == len(values[i + 1])
+        # make data frame
+        df = {}
+        for i in xrange(len(values)):
+            df[value_names[i]] = values[i]
+        df = pd.DataFrame(df)
+        return df
 
     def save(self, out_path):
         """Take the data and save it!
@@ -145,22 +159,25 @@ class Wavefront(object):
         return field, bins_x, bins_y
 
     def reduce(self, xkey='x', ykey='y', reducer=np.median, num_bins=1):
-        # convenience function
+        # convenience function to do reduce_data_to_field for data attribute
         self.field, self.bins_x, self.bins_y = self.reduce_data_to_field(
                 self.data, xkey=xkey, ykey=ykey, reducer=reducer,
                 num_bins=num_bins)
 
-    def draw_psf(self, x, y, **kwargs):
-        # depending on method, you could expect something like this:
-        return self.PSF_Interpolator(x, y, **kwargs)
+    def draw_psf(self, data, **kwargs):
+        # note: PSF_Interpolator.x_keys need to be in data
+        return self.PSF_Interpolator(data, **kwargs)
 
-    def get_psf_stats(self, x, y, **kwargs):
+    def evaluate_psf(self, data, **kwargs):
         # depending on method, you could expect something like this:
-        return self.PSF_Evaluator(self.draw_psf(x, y, **kwargs))
+        evaluated_psfs = self.PSF_Evaluator(data, **kwargs)
+        # combine the results from PSF_Evaluator with your input data
+        combined_df = evaluated_psfs.combine_first(data)
+        return combined_df
 
-    def plot_colormap(self, xkey, ykey, zkey, num_bins=20, fig=None, ax=None):
+    def plot_colormap(self, data, xkey, ykey, zkey, num_bins=20, fig=None, ax=None):
         field, bins_x, bins_y = self.reduce_data_to_field(
-                self.data, xkey=xkey, ykey=ykey, num_bins=num_bins)
+                data, xkey=xkey, ykey=ykey, num_bins=num_bins)
         fig, ax = plt.subplots(figsize=(10,5))
         fig, ax = self.plot_field(zkey, field=field,
                 bins_x=bins_x, bins_y=bins_y, fig=fig, ax=ax)
@@ -185,10 +202,11 @@ class Wavefront(object):
             The figure and axis of our plot!
 
         """
-        if field == 'None':
-            field = self.field
-            bins_x = self.bins_x
-            bins_y = self.bins_y
+        if type(field) == type('None'):
+            if field == 'None':
+                field = self.field
+                bins_x = self.bins_x
+                bins_y = self.bins_y
 
         indx_x = field.index.labels[0].values()
         indx_y = field.index.labels[1].values()
@@ -220,7 +238,7 @@ class Wavefront(object):
         a = np.min(field[key][field[key].notnull()])
         c = 0
         midpoint = (c - a) / (b - a)
-        if midpoint <= 0:
+        if midpoint <= 0 or midpoint >= 1:
             cmap = plt.cm.Reds
         else:
             cmap = shiftedColorMap(plt.cm.RdBu_r, midpoint=midpoint)
@@ -230,7 +248,7 @@ class Wavefront(object):
         C = np.ma.zeros((indx_x.max() + 1, indx_y.max() + 1))
         C.mask = np.ones((indx_x.max() + 1, indx_y.max() + 1))
         np.add.at(C, [indx_x_transform, indx_y_transform],
-                  self.field[key].values)
+                  field[key].values)
         np.multiply.at(C.mask, [indx_x_transform, indx_y_transform], 0)
         # bloops
         C = C.T

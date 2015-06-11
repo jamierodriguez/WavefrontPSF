@@ -4,10 +4,6 @@ File: donutengine.py
 Author: Chris Davis
 Description: Specific implimentation of WavefrontPSF using donutlib to make the
              donut images.
-
-TODO: Remove automatic overwriting of old data parameter!
-
-TODO: makedonut stuff should actually be a PSF_Interpolator object
 """
 
 import numpy as np
@@ -15,326 +11,400 @@ import pandas as pd
 from os import path, makedirs
 import pickle
 
-from wavefront import Wavefront
-from digestor import Digestor
-from psf_interpolator import kNN_Interpolator, PSF_Interpolator
-from psf_evaluator import PSF_Evaluator, Moment_Evaluator
-
+from WavefrontPSF.wavefront import Wavefront
+from WavefrontPSF.digestor import Digestor
+from WavefrontPSF.psf_interpolator import kNN_Interpolator, PSF_Interpolator
+from WavefrontPSF.psf_evaluator import PSF_Evaluator, Moment_Evaluator
+from WavefrontPSF.decamutil import decaminfo
 from donutlib.makedonut import makedonut
 
 class Generic_Donutengine_Wavefront(Wavefront):
     """
     Idea is you just call with a list of x, y, zernikes, and rzero and you're good to go
+
+    TODO: keep track of zernikes that are not misaligned
     """
 
-    def __init__(self):
-        evaluator = Moment_Evaluator()
-        interpolator = PSF_Interpolator()
+    def __init__(self, PSF_Evaluator,
+                 PSF_Interpolator,
+                 PSF_Drawer, **kwargs):
         super(Generic_Donutengine_Wavefront, self).__init__(
-                PSF_Interpolator=interpolator,
-                PSF_Evaluator=evaluator,
+                PSF_Interpolator=PSF_Interpolator,
+                PSF_Evaluator=PSF_Evaluator,
                 model=None)
-        self.PSF_Drawer = Zernike_to_Pixel_Interpolator()
-
-    def draw_psf(self, xs, ys, zernikes, rzeros):
-        # make the donut!
-        stamps = []
-        for index, inputZernikeArray in enumerate(zernikes):
-            xi = xs[index]
-            yi = ys[index]
-            rzero = rzeros[index]
-            stamp = self.PSF_Drawer(xi, yi,
-                                    inputZernikeArray=inputZernikeArray,
-                                    rzero=rzero)
-            stamps.append(stamp)
-        stamps = np.array(stamps)
-
-        return stamps
-
-
-class DECAM_Model_Wavefront(Wavefront):
-    """
-    Interpolate zernikes, make donuts, evaluate them
-    """
-
-    def __init__(self, data, misalignment={'rzero': 0.14}, interp_kwargs={}):
-        # data here is a csv with all the zernikes
-        evaluator = Moment_Evaluator()
-        interpolator = kNN_Interpolator(data, **interp_kwargs)
-        super(DECAM_Model_Wavefront, self).__init__(
-                PSF_Interpolator=interpolator,
-                PSF_Evaluator=evaluator,
-                model=None)
-        self.PSF_Drawer = Zernike_to_Pixel_Interpolator()
-
-        self.input_misalignment = misalignment
-        self.misalignment = self.misalign_optics(misalignment)
-
-    def __call__(self, misalignment, overwrite=True, **kwargs):
-        if overwrite:
-            self.misalignment = self.misalign_optics(misalignment)
-            # check that 'rzero' is in misalignment
-            if 'rzero' not in self.misalignment:
-                print('Warning! rzero not in misalignment. Setting to 0.14')
-                self.misalignment['rzero'] = 0.14
-        else:
-            self.misalignment.update(self.misalign_optics(misalignment))
-        # make new data
-        try:
-            evaluated_psfs = self.get_psf_stats(**kwargs)
-        except:
-            try:
-                x = self.data['x']
-                y = self.data['y']
-                evaluated_psfs = self.get_psf_stats(x, y, **kwargs)
-            except:
-                print('I have no x and y coordinates, either given or in my data! Just setting the misalignment to something new.')
-                evaluated_psfs = None
-        return evaluated_psfs
+        self.PSF_Drawer = PSF_Drawer
 
     def save(self, out_path):
         # make_donut is a nasty offender
         self.PSF_Drawer.make_donut = None
-        super(DECAM_Model_Wavefront, self).save(out_path)
+        super(Generic_Donutengine_Wavefront, self).save(out_path)
         # now remake make_donut
         self.PSF_Drawer.make_donut = self.PSF_Drawer.remakedonut()
 
-    def zernike_corrections_from_hexapod(self, dz=0, dx=0, dy=0, xt=0, yt=0):
-        """Brief Description
+    def draw_psf(self, data, force_interpolation=True,
+                 **kwargs):
+        # draw many PSFs from the x and y coords as well as other params
+        # get input parameters if they are not already in the data
+        #if not np.all([key in data.columns for key in self.PSF_Drawer.x_keys]):
+        data = self.PSF_Interpolator(data,
+                force_interpolation=force_interpolation, **kwargs)
+        # for i, row in data.iterrows():
+        #     print('draw_psf', i, row)
+        # make the donut!
+        stamps, data = self.PSF_Drawer(data, **kwargs)
 
-        Parameters
-        ----------
-        hexapod : list
-            List of the five hexapod terms [dz, dx, dy, xt, yt]
+        return stamps, data
 
-        Returns
-        -------
-        zernike_corrections : array
-            A 3 x 11 array containing the corresponding zid and zix and ziy
-            terms.
-        """
+    def evaluate_psf(self, data, force_interpolation=False, **kwargs):
 
-        # get hexapod to zernike
+        stamps, data = self.draw_psf(data,
+                force_interpolation=force_interpolation, **kwargs)
 
-        hex_z5thetax, hex_z5thetay, hex_z6thetax, hex_z6thetay, \
-            hex_z7delta, hex_z8delta = \
-            hexapodtoZernike(dx, dy, xt, yt)
+        evaluated_psfs = self.PSF_Evaluator(stamps, **kwargs)
+        # this is sick:
+        combined_df = evaluated_psfs.combine_first(data)
 
-        zernike_correction = np.array([[0.0, 0.0, 0.0],
-                                       [0.0, 0.0, 0.0],
-                                       [0.0, 0.0, 0.0],
-                                       [dz, 0.0, 0.0],
-                                       [0.0, hex_z5thetax, hex_z5thetay],
-                                       [0.0, hex_z6thetax, hex_z6thetay],
-                                       [hex_z7delta, 0.0, 0.0],
-                                       [hex_z8delta, 0.0, 0.0],
-                                       [0.0, 0.0, 0.0],
-                                       [0.0, 0.0, 0.0],
-                                       [0.0, 0.0, 0.0]], dtype=np.float64)
+        return combined_df
 
-        return zernike_correction
+    def __call__(self, data, **kwargs):
+        return self.evaluate_psf(data, **kwargs)
 
-    def misalign_optics(self, misalign_dict):
-        """Take an input dictionary, come up with an array of delta and theta
-        zernike corrections.
+class DECAM_Model_Wavefront(Generic_Donutengine_Wavefront):
+    """
+    Includes misalignments. Convenience class
+    """
 
-        Parameters
-        ----------
-        in_dict : dictionary
-            A dictionary with terms like 'dz' (for hexapod) or 'z05x' (for
-            z5thetax)
+    def __init__(self, PSF_Interpolator_data=pd.read_csv('/Users/cpd/Projects/WavefrontPSF/meshes/ComboMeshes2/Mesh_Science-20140212s2-v1i2_All_train.csv', index_col=0), interp_kwargs={}, **kwargs):
+        # data here is a csv with all the zernikes
+        #TODO: make the csv here path independent
+        interp = {}
+        interp.update(interp_kwargs)
 
-        Returns
-        -------
-        zernike_correction : array
-            A 3 x 11 array of all the zernike corrections
+        # take z4 and divide by 172 to put it in waves as it should be
+        PSF_Interpolator_data['z4'] /= 172.
 
-        """
+        PSF_Interpolator = kNN_Interpolator(PSF_Interpolator_data, **interp)
+        PSF_Drawer = Zernike_to_Misalignment_to_Pixel_Interpolator()
+        PSF_Evaluator = Moment_Evaluator()
+        super(DECAM_Model_Wavefront, self).__init__(
+                PSF_Evaluator=PSF_Evaluator,
+                PSF_Interpolator=PSF_Interpolator,
+                PSF_Drawer=PSF_Drawer,
+                model=None)
 
-        hexapod = np.array([0.0, 0.0, 0.0, 0.0, 0.0], dtype=np.float64)
-        zernike_correction = np.array([[0.0, 0.0, 0.0],
-                                       [0.0, 0.0, 0.0],
-                                       [0.0, 0.0, 0.0],
-                                       [0.0, 0.0, 0.0],
-                                       [0.0, 0.0, 0.0],
-                                       [0.0, 0.0, 0.0],
-                                       [0.0, 0.0, 0.0],
-                                       [0.0, 0.0, 0.0],
-                                       [0.0, 0.0, 0.0],
-                                       [0.0, 0.0, 0.0],
-                                       [0.0, 0.0, 0.0]], dtype=np.float64)
-        ztype_dict = {'d': 0, 'x': 1, 'y': 2}
-        # go through keys and add them to zernike_correction
-        for key in misalign_dict:
-            entry = misalign_dict[key]
-            if key == 'dz':
-                hexapod[0] = hexapod[0] + entry
-            elif key == 'dx':
-                hexapod[1] = hexapod[1] + entry
-            elif key == 'dy':
-                hexapod[2] = hexapod[2] + entry
-            elif key == 'xt':
-                hexapod[3] = hexapod[3] + entry
-            elif key == 'yt':
-                hexapod[4] = hexapod[4] + entry
-            # else extract zernike correction
-            elif (key[0] == 'z') * (len(key) == 4):
-                znum = int(key[1:3]) - 1
-                ztype = key[-1]
-                ztype_num = ztype_dict[ztype]
-                zernike_correction[znum][ztype_num] = \
-                    zernike_correction[znum][ztype_num] + entry
+class Zernike_to_Pixel_Interpolator(PSF_Interpolator):
+    """PSF Interpolator that inputs zernikes, focal plane coordinates, and
+    Fried parameter and returns a pixel representation of the PSF.
 
-        hexapod_correction = \
-            self.zernike_corrections_from_hexapod(*hexapod)
-        zernike_correction = zernike_correction + hexapod_correction
+    """
 
+    def __init__(self, **kwargs):
+        y_keys = ['stamp']
+        x_keys = ['x', 'y', 'rzero',
+                  'z1', 'z2', 'z3',
+                  'z4', 'z5', 'z6',
+                  'z7', 'z8',
+                  'z9', 'z10',
+                  'z11']
+        super(Zernike_to_Pixel_Interpolator, self).__init__(
+                y_keys=y_keys, x_keys=x_keys, **kwargs)
+        # set up makedonut
+        self.makedonut_dict = {'nbin': 256,
+                               'nPixels': 32,
+                               'pixelOverSample': 8,
+                               'scaleFactor': 1,
+                               'randomFlag': 0}
+        for kwarg in kwargs:
+            if kwarg in self.makedonut_dict:
+                self.makedonut_dict[kwarg] = kwargs[kwarg]
+        self.make_donut = makedonut(**self.makedonut_dict)
 
-        # create empty dictionary
-        zernike_dictionary = dict(
-                                  z1d=0.0, z1x=0.0, z1y=0.0,
-                                  z2d=0.0, z2x=0.0, z2y=0.0,
-                                  z3d=0.0, z3x=0.0, z3y=0.0,
-                                  z4d=0.0, z4x=0.0, z4y=0.0,
-                                  z5d=0.0, z5x=0.0, z5y=0.0,
-                                  z6d=0.0, z6x=0.0, z6y=0.0,
-                                  z7d=0.0, z7x=0.0, z7y=0.0,
-                                  z8d=0.0, z8x=0.0, z8y=0.0,
-                                  z9d=0.0, z9x=0.0, z9y=0.0,
-                                  z10d=0.0, z10x=0.0, z10y=0.0,
-                                  z11d=0.0, z11x=0.0, z11y=0.0)
-        ztype_dict = {0: 'd', 1: 'x', 2: 'y'}
-        for znum in xrange(1, 11):
-            for ztype in xrange(3):
-                key = 'z{0}{1}'.format(znum, ztype_dict[ztype])
-                zernike_dictionary[key] = zernike_dictionary[key] + \
-                    zernike_correction[znum - 1][ztype]
+    def convert_zernike_floats_to_array(self, series, columns=['z{0}'.format(i) for i in range(1, 12)]):
+        zernike = []
+        for column in columns:
+            if column in series:
+                zernike.append(series[column])
+            else:
+                zernike.append(0)
+        return zernike
 
-        try:
-            zernike_dictionary['rzero'] = misalign_dict['rzero']
-        except KeyError:
-            print('Warning! No rzero found! Setting to 0.14')
-            zernike_dictionary['rzero'] = 0.14
-
-        return zernike_dictionary
-
-    def adjust_center(self, x, y, zernikes):
-        """A method for adjusting z2 and z3
-
-        Parameters
-        ----------
-        x, y : arrays
-            Arrays of the first moments that we want to make our image have
-
-        zernikes : arrays
-            Arrays of the zernikes
-
-        Returns
-        -------
-        z2, z3 : arrays
+    def remakedonut(self):
+        """Remake make_donut
 
         Notes
         -----
-        Currently hardwired; TODO: create program to automatically generate the
-        hardwired coefficients (as well as for rzero scaling!)
-
-        These basically work empirically: I varied z8 or so on and found how
-        the location of the first moment changed with them. I assume these guys
-        are independent; that should be pretty reasonable. I guess I could
-        figure these out...
+        No input or return.
 
         """
-        # now adjust z2 and z3
-        # These are currently hardwired!
-        z7 = zernikes[:, 7 - 1]
-        z8 = zernikes[:, 8 - 1]
-        z9 = zernikes[:, 9 - 1]
-        z10 = zernikes[:, 10 - 1]
-        middle_value = 15.93750
+        self.make_donut = makedonut(**self.makedonut_dict)
+        return
 
-        P_2_8 = -1.226 * z8 + 1.704e-1 * z8 ** 3
-        P_2_10 = -1.546e-2 * z10 - 4.550e-3 * z10 ** 3
-        P_3_7 = -1.19 * z7 + 1.642e-1 * z7 ** 3
-        P_3_9 = -1.671e-2 * z9 - 4.908e-3 * z9 ** 3
-        z2 = (x - P_2_8 - P_2_10 - middle_value) / -0.558
-        z3 = (y - P_3_7 - P_3_9 - middle_value) / -0.558
-
-        return z2, z3
-
-    def draw_zernikes(self, x, y):
-
-        zernikes = self.PSF_Interpolator(x, y)
-        for z in xrange(1, 12):
-            key = 'z{0}'.format(z)
-            if z != 4:
-                correction = self.misalignment[key + 'd'] + \
-                             self.misalignment[key + 'y'] * x + \
-                             self.misalignment[key + 'x'] * y
-            else:
-                # z4 needs to be in waves, too!
-                numfac = 0.0048481  # rad / arcsec um/mm
-                wavefac = 172.  # waves / mm
-                correction = self.misalignment[key + 'd'] + \
-                             self.misalignment[key + 'y'] * x * numfac + \
-                             self.misalignment[key + 'x'] * y * numfac
-            if key not in zernikes:
-                zernikes[key] = correction
-            else:
-                zernikes[key] += correction
-            if z == 4:
-                zernikes[key] /= 172.
-
-        self.data = zernikes
-
-        return zernikes
-
-    def draw_psf(self, x, y,
-                 **kwargs):
-        # draw many PSFs from the x and y coords as well as other params
-        # get input parameters
-        zernikes = self.draw_zernikes(x, y)
-
-        # make the donut!
+    def draw_donut(self, data, **kwargs):
+        # get x, y, inputzernikearray, rzero from data
         stamps = []
-        for index, zernike in zernikes.iterrows():
-            xi = zernike['x']
-            yi = zernike['y']
-            inputZernikeArray = np.array([zernike['z{0}'.format(i)]
-                                          for i in xrange(1, 12)])
-            rzero = self.misalignment['rzero']
-            stamp = self.PSF_Drawer(xi, yi,
-                                    inputZernikeArray=inputZernikeArray,
-                                    rzero=rzero)
+        for i, row in data.iterrows():
+            inputZernikeArray = self.convert_zernike_floats_to_array(row)
+            rzero = row['rzero']
+            if np.all(inputZernikeArray):
+                print('Warning! All zernikes in row {0} are missing or equal to zero!'.format(i))
+            x = row['x']
+            y = row['y']
+            stamp = self.make_donut.make(inputZernikeArray=inputZernikeArray,
+                                         rzero=rzero,
+                                         nEle=1e0,
+                                         background=0,
+                                         xDECam=x,
+                                         yDECam=y).astype(np.float64)
+            # print('draw donut', i, x, y, rzero, inputZernikeArray)
+            # print(row)
             stamps.append(stamp)
         stamps = np.array(stamps)
-        # append stamps to the zernike data
-        self.cutouts = stamps
 
-        return stamps
+        return stamps, data
 
-    def get_psf_stats(self, x, y, **kwargs):
-        evaluated_psfs = self.PSF_Evaluator(self.draw_psf(x, y, **kwargs))
-        psf_keys = ['e0', 'e1', 'e2', 'delta1', 'delta2', 'zeta1', 'zeta2',
-                    'a4', 'flux', 'Mx', 'My']
-        self.data = pd.concat([self.data, evaluated_psfs[psf_keys]], axis=1)
-        self.field, self.bins_x, self.bins_y = self.reduce_data_to_field(self.data, np.median, 1)
+    def interpolate(self, data, **kwargs):
+        # print('interpolate', data)
+        stamps, data = self.draw_donut(data, **kwargs)
+        # unfortunately, 2d data cannot go into pandas dataframes
 
-        return evaluated_psfs
+        return stamps, data
 
-class Data_Wavefront(Wavefront):
+class Zernike_to_Misalignment_to_Pixel_Interpolator(Zernike_to_Pixel_Interpolator):
+    def misalign_optics(self, misalignment):
+        return misalign_optics(misalignment)
+
+    # take set of zernikes, misalign them, then get pixel basis
+    def misalign_zernikes(self, data, misalignment={}):
+        # get the right format for the misalignment
+        misalignment = self.misalign_optics(misalignment)
+
+        # make copy of data with the misalignment information NOT modifying the
+        # base zernikes!
+        data_with_misalignments = {}
+        ones = np.ones(len(data))
+        for key in misalignment:
+            data_with_misalignments[key] = misalignment[key] * ones
+        data_with_misalignments = pd.DataFrame(data_with_misalignments).combine_first(data)
+
+        # return a copy of the data with zernikes modified by misalignments
+        # data_reduced = misalign_zernikes(data, misalignment)
+        data_reduced = misalign_zernikes(data_with_misalignments)
+        return data_reduced, data_with_misalignments
+
+    def draw_donut(self, data, misalignment={}, **kwargs):
+        # misalign zernikes
+        data_reduced, data_with_misalignments = self.misalign_zernikes(data, misalignment)
+        # for i, row in data_reduced.iterrows():
+        #     print('draw donut reduced misalignment to pixel', i, row)
+        # for i, row in data_with_misalignments.iterrows():
+        #     print('draw donut misalignment to pixel', i, row)
+        # now draw the donuts
+        stamps, data_reduced = super(Zernike_to_Misalignment_to_Pixel_Interpolator, self).draw_donut(data_reduced, **kwargs)
+
+        return stamps, data_with_misalignments
+
+def generate_random_coordinates(number):
+    x = np.random.random(number) * 2048
+    y = np.random.random(number) * 4096
+    extnum = np.random.randint(1, 62, number)
+    x, y = decaminfo().getPosition_extnum(extnum, x, y)
+    return x, y, extnum
+
+def adjust_center(self, x, y, zernikes):
+    """A method for adjusting z2 and z3
+
+    Parameters
+    ----------
+    x, y : arrays
+        Arrays of the first moments that we want to make our image have
+
+    zernikes : arrays
+        Arrays of the zernikes
+
+    Returns
+    -------
+    z2, z3 : arrays
+
+    Notes
+    -----
+    Currently hardwired; TODO: create program to automatically generate the
+    hardwired coefficients (as well as for rzero scaling!)
+
+    These basically work empirically: I varied z8 or so on and found how
+    the location of the first moment changed with them. I assume these guys
+    are independent; that should be pretty reasonable. I guess I could
+    figure these out...
+
     """
-    Take a database of PSF params and interpolate over that!
+    # now adjust z2 and z3
+    # These are currently hardwired!
+    z7 = zernikes[:, 7 - 1]
+    z8 = zernikes[:, 8 - 1]
+    z9 = zernikes[:, 9 - 1]
+    z10 = zernikes[:, 10 - 1]
+    middle_value = 15.93750
+
+    P_2_8 = -1.226 * z8 + 1.704e-1 * z8 ** 3
+    P_2_10 = -1.546e-2 * z10 - 4.550e-3 * z10 ** 3
+    P_3_7 = -1.19 * z7 + 1.642e-1 * z7 ** 3
+    P_3_9 = -1.671e-2 * z9 - 4.908e-3 * z9 ** 3
+    z2 = (x - P_2_8 - P_2_10 - middle_value) / -0.558
+    z3 = (y - P_3_7 - P_3_9 - middle_value) / -0.558
+
+    return z2, z3
+
+def zernike_corrections_from_hexapod(dz=0, dx=0, dy=0, xt=0, yt=0):
+    """Brief Description
+
+    Parameters
+    ----------
+    hexapod : list
+        List of the five hexapod terms [dz, dx, dy, xt, yt]
+
+    Returns
+    -------
+    zernike_corrections : array
+        A 3 x 11 array containing the corresponding zid and zix and ziy
+        terms.
     """
 
-    def __init__(self, data):
-        evaluator = PSF_Evaluator()
-        interpolator = kNN_Interpolator(data,
-                y_keys=['e0', 'e1', 'e2'])
-        super(Data_Wavefront, self).__init__(
-                PSF_Interpolator=interpolator,
-                PSF_Evaluator=evaluator,
-                model=data)
+    # get hexapod to zernike
 
+    hex_z5thetax, hex_z5thetay, hex_z6thetax, hex_z6thetay, \
+        hex_z7delta, hex_z8delta = \
+        hexapodtoZernike(dx, dy, xt, yt)
+
+    zernike_correction = np.array([[0.0, 0.0, 0.0],
+                                   [0.0, 0.0, 0.0],
+                                   [0.0, 0.0, 0.0],
+                                   [dz, 0.0, 0.0],
+                                   [0.0, hex_z5thetax, hex_z5thetay],
+                                   [0.0, hex_z6thetax, hex_z6thetay],
+                                   [hex_z7delta, 0.0, 0.0],
+                                   [hex_z8delta, 0.0, 0.0],
+                                   [0.0, 0.0, 0.0],
+                                   [0.0, 0.0, 0.0],
+                                   [0.0, 0.0, 0.0]], dtype=np.float64)
+
+    return zernike_correction
+
+def misalign_optics(misalign_dict):
+    """Take an input dictionary, come up with an array of delta and theta
+    zernike corrections.
+
+    Parameters
+    ----------
+    in_dict : dictionary
+        A dictionary with terms like 'dz' (for hexapod) or 'z05x' (for
+        z5thetax)
+
+    Returns
+    -------
+    zernike_correction : array
+        A 3 x 11 array of all the zernike corrections
+
+    """
+
+    hexapod = np.array([0.0, 0.0, 0.0, 0.0, 0.0], dtype=np.float64)
+    zernike_correction = np.array([[0.0, 0.0, 0.0],
+                                   [0.0, 0.0, 0.0],
+                                   [0.0, 0.0, 0.0],
+                                   [0.0, 0.0, 0.0],
+                                   [0.0, 0.0, 0.0],
+                                   [0.0, 0.0, 0.0],
+                                   [0.0, 0.0, 0.0],
+                                   [0.0, 0.0, 0.0],
+                                   [0.0, 0.0, 0.0],
+                                   [0.0, 0.0, 0.0],
+                                   [0.0, 0.0, 0.0]], dtype=np.float64)
+    ztype_dict = {'d': 0, 'x': 1, 'y': 2}
+    # go through keys and add them to zernike_correction
+    for key in misalign_dict:
+        entry = misalign_dict[key]
+        if key == 'dz':
+            hexapod[0] = hexapod[0] + entry
+        elif key == 'dx':
+            hexapod[1] = hexapod[1] + entry
+        elif key == 'dy':
+            hexapod[2] = hexapod[2] + entry
+        elif key == 'xt':
+            hexapod[3] = hexapod[3] + entry
+        elif key == 'yt':
+            hexapod[4] = hexapod[4] + entry
+        # else extract zernike correction
+        elif (key[0] == 'z'):
+            znum = int(key[1:].split('d')[0].split('x')[0].split('y')[0]) - 1
+            ztype = key[-1]
+            ztype_num = ztype_dict[ztype]
+            zernike_correction[znum][ztype_num] = \
+                zernike_correction[znum][ztype_num] + entry
+
+    hexapod_correction = \
+        zernike_corrections_from_hexapod(*hexapod)
+    zernike_correction = zernike_correction + hexapod_correction
+
+
+    # create empty dictionary
+    zernike_dictionary = dict(
+                              z1d=0.0, z1x=0.0, z1y=0.0,
+                              z2d=0.0, z2x=0.0, z2y=0.0,
+                              z3d=0.0, z3x=0.0, z3y=0.0,
+                              z4d=0.0, z4x=0.0, z4y=0.0,
+                              z5d=0.0, z5x=0.0, z5y=0.0,
+                              z6d=0.0, z6x=0.0, z6y=0.0,
+                              z7d=0.0, z7x=0.0, z7y=0.0,
+                              z8d=0.0, z8x=0.0, z8y=0.0,
+                              z9d=0.0, z9x=0.0, z9y=0.0,
+                              z10d=0.0, z10x=0.0, z10y=0.0,
+                              z11d=0.0, z11x=0.0, z11y=0.0)
+    ztype_dict = {0: 'd', 1: 'x', 2: 'y'}
+    for znum in xrange(1, 11):
+        for ztype in xrange(3):
+            key = 'z{0}{1}'.format(znum, ztype_dict[ztype])
+            zernike_dictionary[key] = zernike_dictionary[key] + \
+                zernike_correction[znum - 1][ztype]
+
+    return zernike_dictionary
+
+def misalign_zernikes(data, misalignment={}):
+    # returns COPY of data with ONLY the following keys:
+    # [x, y, rzero, z1, z2, ... z11]
+    keys = ['x', 'y', 'rzero'] + ['z{0}'.format(i) for i in xrange(1, 12)]
+    # filter out keys not present
+    keys = [key for key in keys if key in data.keys()]
+
+    # if misalignment is empty trust that the keys are in data
+    if len(misalignment) == 0:
+        misalignment = data
+
+    # make copy of data so we don't modify in place
+    x = data['x']
+    y = data['y']
+    rzero = data['rzero']
+    df = {'x': x, 'y': y, 'rzero': rzero}
+
+    # modify the zernikes
+    for z in xrange(1, 12):
+        key = 'z{0}'.format(z)
+        correction = misalignment[key + 'd'] + \
+                     misalignment[key + 'y'] * x + \
+                     misalignment[key + 'x'] * y
+
+        if key not in data:
+            df[key] = correction
+        else:
+            df[key] = data[key] + correction
+
+    return pd.DataFrame(df)
+
+def correct_dz(dz):
+    wavefac = 172.  # waves / mm
+    return dz / wavefac
+
+def correct_dz_theta(dz):
+    numfac = 0.0048481  # rad / arcsec um/mm
+    wavefac = 172.  # waves / mm
+    return dz * numfac / wavefac
 
 def hexapodtoZernike(dx,dy,xt,yt):
 
@@ -402,47 +472,6 @@ def zerniketoHexapod(z05x, z05y, z06x, z06y, z07d, z08d):
     yt = hexapodVector[3][0]
 
     return dx, dy, xt, yt
-
-class Zernike_to_Pixel_Interpolator(PSF_Interpolator):
-    """PSF Interpolator that inputs zernikes, focal plane coordinates, and
-    Fried parameter and returns a pixel representation of the PSF.
-    """
-
-    def __init__(self, **kwargs):
-        # set up makedonut
-        self.makedonut_dict = {'nbin': 256,
-                               'nPixels': 32,
-                               'pixelOverSample': 8,
-                               'scaleFactor': 1,
-                               'randomFlag': 0}
-        self.makedonut_dict.update(kwargs)
-        self.make_donut = makedonut(**self.makedonut_dict)
-
-
-    def remakedonut(self):
-        """Remake make_donut
-
-        Notes
-        -----
-        No input or return.
-
-        """
-        self.make_donut = makedonut(**self.makedonut_dict)
-        return
-
-    def draw_donut(self, x, y, inputZernikeArray, rzero):
-        stamp = self.make_donut.make(inputZernikeArray=inputZernikeArray,
-                                     rzero=rzero,
-                                     nEle=1e0,
-                                     background=0,
-                                     xDECam=x,
-                                     yDECam=y).astype(np.float64)
-        return stamp
-
-    def interpolate(self, x, y, inputZernikeArray, rzero):
-        stamp = self.draw_donut(x, y, inputZernikeArray, rzero)
-
-        return stamp
 
 
 if __name__ == '__main__':
