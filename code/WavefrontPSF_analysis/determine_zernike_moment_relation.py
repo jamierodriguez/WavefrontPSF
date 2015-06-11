@@ -17,10 +17,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sympy as sp
 from sklearn.cross_validation import train_test_split
+from sklearn.linear_model import Lasso, LassoLars, Ridge, LinearRegression
 
-# Define some functions
-from WavefrontPSF.donutengine import Zernike_to_Pixel_Interpolator
-from WavefrontPSF.psf_evaluator import Moment_Evaluator
 
 # this part taken from https://github.com/mrocklin/multipolyfit/blob/master/multipolyfit/core.py
 from numpy import linalg, zeros, ones, hstack, asarray
@@ -67,110 +65,160 @@ def power_selector(zi, zj, powers, beta):
     ith = np.array([np.all(power == powers_desired) for power in powers])
     return beta[ith]
 
-# Create PSF Data
-PSF_Drawer = Zernike_to_Pixel_Interpolator()
-PSF_Evaluator = Moment_Evaluator()
-def evaluate_psf(data):
-    stamps, data = PSF_Drawer(data)
-    evaluated_psfs = PSF_Evaluator(stamps)
-    # this is sick:
-    combined_df = evaluated_psfs.combine_first(data)
+def mk_pretty_function(beta, powers):
+    num_covariates = len(powers[0]) - 1
+    xs = ['', 'r0'] + ['z{0}'.format(i) for i in xrange(4, 12)]
+    terms = []
+    for ith in xrange(len(beta)):
+        coef = beta[ith]
+        power = powers[ith]
+        term = '{0:.2e}'.format(coef)
+        if term.count('0') == 5:
+            continue
+        term += ' '
+        for power_ith in xrange(len(power)):
+            term_power = xs[power_ith]
+            number_terms = power[power_ith]
+            for j in xrange(number_terms):
+                term += term_power
+        if len(term) > 0:
+            terms.append(term)
+    # print the terms
+    string = ''
+    for term in terms:
+        string += term
+        string += ' + '
+    return terms, string
 
-    return combined_df
 
-rzero = 0.14
-x = 0
-y = 0
+"""
+# # Define some functions
+# from WavefrontPSF.donutengine import Zernike_to_Pixel_Interpolator
+# from WavefrontPSF.psf_evaluator import Moment_Evaluator
+# 
+# # Create PSF Data
+# PSF_Drawer = Zernike_to_Pixel_Interpolator()
+# PSF_Evaluator = Moment_Evaluator()
+# def evaluate_psf(data):
+#     stamps, data = PSF_Drawer(data)
+#     evaluated_psfs = PSF_Evaluator(stamps)
+#     # this is sick:
+#     combined_df = evaluated_psfs.combine_first(data)
+# 
+#     return combined_df
+# 
+# rzero = 0.14
+# x = 0
+# y = 0
+# 
+# # y goes from -221 to 221
+# # x goes fro -200 to 200
+# # rzero goes from 0.1 to 0.25
+# 
+# Ndim = 8  # z4 through 11
+# Nsample = 10000
+# zmax = 0.5
+# 
+# # zernikes = np.meshgrid(*[np.linspace(-zmax, zmax, Nsample) for i in xrange(Ndim)])
+# # # z4 = zernikes[0], z5 = zernikes[1], etc
+# # N = zernikes[0].size
+# 
+# zernikes = np.random.random(size=(Ndim, Nsample)) * (zmax + zmax) - zmax
+# 
+# data = {'rzero': np.ones(Nsample) * rzero,
+#         'x': np.ones(Nsample) * x,
+#         'y': np.ones(Nsample) * y}
+# 
+# x_keys = []
+# for zi, zernike in enumerate(zernikes):
+#     zkey = 'z{0}'.format(zi + 4)
+#     data[zkey] = zernike.flatten()
+#     x_keys.append(zkey)
+# df = pd.DataFrame(data)
+# df = evaluate_psf(df)
 
-# y goes from -221 to 221
-# x goes fro -200 to 200
-# rzero goes from 0.1 to 0.25
+df_in = pd.read_csv('/Users/cpd/Projects/WavefrontPSF/meshes/donuts_fixed_rzeros.csv', index_col=0)
 
-Ndim = 8  # z4 through 11
-Nsample = 10000
-zmax = 0.5
-
-# zernikes = np.meshgrid(*[np.linspace(-zmax, zmax, Nsample) for i in xrange(Ndim)])
-# # z4 = zernikes[0], z5 = zernikes[1], etc
-# N = zernikes[0].size
-
-zernikes = np.random.random(size=(Ndim, Nsample)) * (zmax + zmax) - zmax
-
-data = {'rzero': np.ones(Nsample) * rzero,
-        'x': np.ones(Nsample) * x,
-        'y': np.ones(Nsample) * y}
 
 x_keys = []
-for zi, zernike in enumerate(zernikes):
-    zkey = 'z{0}'.format(zi + 4)
-    data[zkey] = zernike.flatten()
+for zi in xrange(4, 12):
+    zkey = 'z{0}'.format(zi)
     x_keys.append(zkey)
-df = pd.DataFrame(data)
-df = evaluate_psf(df)
 
-y_keys = ['flux', 'e0prime', 'e0', 'e1', 'e2',
+y_keys = ['flux', 'Mx', 'My', 'e0prime', 'e0', 'e1', 'e2',
           'delta1', 'delta2', 'zeta1', 'zeta2']
 
 # stack xs
-yith = 2  # e0
-deg = 2  # want 2d polynomial
-
+deg = 4  # want 2d polynomial
+selection = np.isclose(df_in['x'], 10) * np.isclose(df_in['y'], 0)
+df = df_in[selection]
 xs = df[x_keys].values
-ys = df[y_keys[yith]].values
-
+ys = df[y_keys].values
 x_powers, powers = stack_x(xs, deg)
-
-# normalize the data
-x_powers_std = x_powers.std(axis=0)
-print(x_powers_std)
-x_powers[:, 1:] /= x_powers_std[1:]
-
 # split dataset. 0.6 train, 0.2 val, 0.2 test
-x_powers_train, x_powers_test, ys_train, ys_test = train_test_split(x_powers, ys, test_size=0.4)
-x_powers_test, x_powers_val, ys_test, ys_val = train_test_split(x_powers_test, ys_test, test_size=0.5)
+x_powers_train, x_powers_test, ys_train, ys_test = train_test_split(x_powers, ys, test_size=0.2)
+#x_powers_test, x_powers_val, ys_test, ys_val = train_test_split(x_powers_test, ys_test, test_size=0.5)
 
+
+# select rzero near 0.10, x near 10, y near 0
+from sklearn.linear_model import Lasso, LassoLars, Ridge, LinearRegression
+models = []
+for rzero in [0.10, 0.12, 0.14, 0.16, 0.18, 0.20]:
+    selection = np.isclose(df['rzero'], rzero)
+
+    # perform fit and compare for hyperparameters
+    #regressor = LinearRegression(fit_intercept=False, normalize=False)
+    regressor = Lasso(alpha=1e-3, normalize=False, fit_intercept=False, tol=1e-8)
+    regressor.fit(x_powers_train[selection], ys_train[selection])
+
+    models.append([regressor.coef_.copy(), powers])
+
+models = np.array(models)
+# cool we have a model. now we try to fit a linear regression for each sample
+# across rzero
+"""
+donut_dir = '/Users/cpd/Projects/WavefrontPSF/meshes'
+donut_dir = '/nfs/slac/g/ki/ki18/des/cpd/donuts'
+df = pd.read_csv(donut_dir + '/donuts_fixed_rzeros.csv', index_col=0)
+
+x_keys = ['rzero']
+
+for zi in xrange(4, 12):
+    zkey = 'z{0}'.format(zi)
+    x_keys.append(zkey)
+
+y_keys = ['flux', 'Mx', 'My', 'e0prime', 'e0', 'e1', 'e2',
+          'delta1', 'delta2', 'zeta1', 'zeta2']
+# stack xs
+deg = 4  # want 2d polynomial
+xs = df[x_keys].values
+ys = df[y_keys].values
+x_powers, powers = stack_x(xs, deg)
+# split dataset. 0.6 train, 0.2 val, 0.2 test
+x_powers_train, x_powers_test, ys_train, ys_test = train_test_split(x_powers, ys, test_size=0.2)
+
+
+print('training linear')
+regressor = LinearRegression(fit_intercept=False, normalize=False)
+regressor.fit(x_powers_train, ys_train)
+ys_pred = regressor.predict(x_powers_test)
+for yith in xrange(len(y_keys)):
+    print(y_keys[yith], np.mean(np.sqrt(np.square(ys_pred[:, yith] - ys_test[:, yith]))))
+    terms, string = mk_pretty_function(regressor.coef_[yith], powers)
+    print(string)
+np.save(donut_dir + '/coeffs_linear.npy', regressor.coef_)
+
+
+print('training lasso')
 # perform fit and compare for hyperparameters
-
-from sklearn.linear_model import Lasso, LassoLars, Ridge
-best_model = None
-best_score = -10000
-for alpha in [0.001, 0.01, 0.1, 1, 10, 100]:
-    lasso = Lasso(alpha=alpha, normalize=True, positive=True,
-                  fit_intercept=False,
-                  max_iter=10000)
-    lasso.fit(x_powers_train, ys_train)
-    print('lasso', lasso.get_params(), lasso.score(x_powers_test, ys_test))
-    if lasso.score(x_powers_test, ys_test) > best_score:
-        best_score = lasso.score(x_powers_test, ys_test)
-        best_model = lasso
-    lassolars = LassoLars(alpha=alpha, normalize=True, max_iter=10000, fit_intercept=False)
-    lassolars.fit(x_powers_train, ys_train)
-    if lassolars.score(x_powers_test, ys_test) > best_score:
-        best_score = lassolars.score(x_powers_test, ys_test)
-        best_model = lassolars
-    print('lassolars', lassolars.get_params(), lassolars.score(x_powers_test, ys_test))
-    ridge = Ridge(alpha=alpha, fit_intercept=False)
-    ridge.fit(x_powers_train, ys_train)
-    print('ridge', ridge.get_params(), ridge.score(x_powers_test, ys_test))
-    if ridge.score(x_powers_test, ys_test) > best_score:
-        best_score = ridge.score(x_powers_test, ys_test)
-        best_model = ridge
-
-plt.figure()
-plt.plot(best_model.predict(x_powers_val), ys_val, '.')
-plt.show()
-import ipdb; ipdb.set_trace()
-
-# this is what a simple least squares (unweighted) is:
-
-y = ys[:, yith]
-beta = np.linalg.lstsq(x_powers_train, y_train)
-
-# look at results, do feature selection.
-
-
-
-# now do rzero
-
+#regressor = LinearRegression(fit_intercept=False, normalize=False)
+regressor = Lasso(alpha=1e-3, normalize=False, fit_intercept=False, tol=1e-8)
+regressor.fit(x_powers_train, ys_train)
+ys_pred = regressor.predict(x_powers_test)
+for yith in xrange(len(y_keys)):
+    print(y_keys[yith], np.mean(np.sqrt(np.square(ys_pred[:, yith] - ys_test[:, yith]))))
+    terms, string = mk_pretty_function(regressor.coef_[yith], powers)
+    print(string)
+np.save(donut_dir + '/coeffs_lasso.npy', regressor.coef_)
 
 
