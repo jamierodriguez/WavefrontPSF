@@ -22,7 +22,7 @@ def evaluate_psf(data):
 
 
 out_dir = '/Volumes/Seagate/DES/donut_correspondance/'
-
+out_dir = '/nfs/slac/g/ki/ki18/des/cpd/donuts/'
 rzero = 0.14
 x = 10
 y = 0
@@ -73,7 +73,6 @@ for rzero_i, rzero in enumerate([0.10, 0.12, 0.14, 0.16, 0.18, 0.20]):
 
 # combine all the donuts together
 from glob import glob
-out_dir = '/Volumes/Seagate/DES/donut_correspondance/'
 csvs = glob(out_dir + '*.csv')
 df = pd.read_csv(csvs[0], index_col=0)
 for csv in csvs[1:]:

@@ -74,9 +74,11 @@ class DECAM_Model_Wavefront(Generic_Donutengine_Wavefront):
     Includes misalignments. Convenience class
     """
 
-    def __init__(self, PSF_Interpolator_data=pd.read_csv('/Users/cpd/Projects/WavefrontPSF/meshes/ComboMeshes2/Mesh_Science-20140212s2-v1i2_All_train.csv', index_col=0), interp_kwargs={}, **kwargs):
+    def __init__(self, PSF_Interpolator_data=None, interp_kwargs={}, **kwargs):
         # data here is a csv with all the zernikes
         #TODO: make the csv here path independent
+        if type(PSF_Interpolator_data) == type(None):
+            PSF_Interpolator_data=pd.read_csv('/Users/cpd/Projects/WavefrontPSF/meshes/ComboMeshes2/Mesh_Science-20140212s2-v1i2_All_train.csv', index_col=0)
         interp = {}
         interp.update(interp_kwargs)
 
