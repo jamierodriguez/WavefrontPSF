@@ -175,10 +175,12 @@ class Wavefront(object):
         combined_df = evaluated_psfs.combine_first(data)
         return combined_df
 
-    def plot_colormap(self, data, xkey, ykey, zkey, num_bins=20, fig=None, ax=None):
+    def plot_colormap(self, data, xkey, ykey, zkey, num_bins=20, fig=None, ax=None, reducer=np.median):
         field, bins_x, bins_y = self.reduce_data_to_field(
-                data, xkey=xkey, ykey=ykey, num_bins=num_bins)
-        fig, ax = plt.subplots(figsize=(10,5))
+                data, xkey=xkey, ykey=ykey, num_bins=num_bins,
+                reducer=reducer)
+        if type(fig) == type(None):
+            fig, ax = plt.subplots(figsize=(10,5))
         fig, ax = self.plot_field(zkey, field=field,
                 bins_x=bins_x, bins_y=bins_y, fig=fig, ax=ax)
 
