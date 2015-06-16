@@ -22,7 +22,7 @@ def evaluate_psf(data):
 
 
 out_dir = '/Volumes/Seagate/DES/donut_correspondance/'
-out_dir = '/nfs/slac/g/ki/ki18/des/cpd/donuts/'
+out_dir = '/nfs/slac/g/ki/ki18/des/cpd/donuts/indivi/'
 rzero = 0.14
 x = 10
 y = 0
@@ -39,7 +39,8 @@ zmax = 1.0
 zernikes = np.random.random(size=(Ndim, Nsample)) * (zmax + zmax) - zmax
 x, y, ext = generate_random_coordinates(Nsample)
 
-for rzero_i, rzero in enumerate([0.10, 0.12, 0.14, 0.16, 0.18, 0.20]):
+rzeros = [0.08 + 0.01 * i for i in xrange(15)]
+for rzero_i, rzero in enumerate(rzeros):
 
     # do batch with constant coordinates
     data = {'rzero': np.ones(Nsample) * rzero,
