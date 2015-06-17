@@ -5,8 +5,6 @@ Author: Chris Davis
 Description: Module that takes focal plane coordinates and other relevant data
              and returns some kind of representation of the basis.
 
-TODO: I broke something here in the kNN_Interpolator?
-
 """
 
 from pandas import DataFrame

@@ -26,6 +26,9 @@ class PSF_Evaluator(object):
 
     """
 
+    def __init__(self, **kwargs):
+        pass
+
     def evaluate(self, psfs, **kwargs):
         # by default just return whatever came in
         return psfs

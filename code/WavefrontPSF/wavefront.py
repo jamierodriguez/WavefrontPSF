@@ -57,7 +57,7 @@ class Wavefront(object):
     """
 
     def __init__(self, model, PSF_Interpolator, PSF_Evaluator,
-                 **args):
+                 **kwargs):
 
         self.PSF_Interpolator = PSF_Interpolator
         self.PSF_Evaluator = PSF_Evaluator
@@ -261,6 +261,17 @@ class Wavefront(object):
 
         return fig, ax
 
+    def plot_hist(self, data, xkey, zkey, num_bins=20, fig=None, ax=None, reducer=np.median):
+        if type(fig) == type(None):
+            fig, ax = plt.subplots(figsize=(10,5))
+        bins = np.linspace(np.min(data[xkey]), np.max(data[xkey]), num_bins)
+        centers = 0.5 * (bins[1:] + bins[:-1])
+        groups = data.groupby(pd.cut(data[xkey], bins))
+        agg = groups.aggregate(reducer)
+        ax.set_xlabel(xkey)
+        ax.plot(centers, agg[zkey])
+        return fig, ax
+
 def shiftedColorMap(cmap, start=0, midpoint=0.5, stop=1.0, name='shiftedcmap'):
     '''
 Taken from
@@ -319,4 +330,13 @@ which makes beautiful plots by the way
 
     return newcmap
 
+def shift_cmap(data, cmap=plt.cm.RdBu_r):
+    b = np.max(data)
+    a = np.min(data)
+    c = 0
+    midpoint = (c - a) / (b - a)
+    if midpoint <= 0 or midpoint >= 1:
+        return cmap
+    else:
+        return shiftedColorMap(cmap, midpoint=midpoint)
 
