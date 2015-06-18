@@ -105,7 +105,7 @@ def do_fit(WF, misalignment, weights={}, do_limits=True, num_bins=-1,
         test['zeta1'] += zeta1
         test['zeta2'] += zeta2
 
-        return test
+        return test, wf_misalignment
 
     def chi2(rzero,
              z04d, z04x, z04y,
@@ -120,7 +120,7 @@ def do_fit(WF, misalignment, weights={}, do_limits=True, num_bins=-1,
              delta1, delta2,
              zeta1, zeta2):
 
-        test = plane(rzero,
+        test, wf_misalignment = plane(rzero,
              z04d, z04x, z04y,
              z05d, z05x, z05y,
              z06d, z06x, z06y,
