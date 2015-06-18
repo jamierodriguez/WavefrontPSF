@@ -223,7 +223,8 @@ def drive_fit(expid, params={}):
         PSF_Evaluator = Zernike_Evaluator(*np.load(params['analytic_coeffs']).item()[rzero_key])
         WF = DECAM_Analytic_Wavefront(rzero=rzero,
                 PSF_Interpolator=PSF_Interpolator,
-                PSF_Evaluator=PSF_Evaluator)
+                PSF_Evaluator=PSF_Evaluator,
+                num_bins=1, model=model)
     else:
         WF = DECAM_Model_Wavefront(PSF_Interpolator=PSF_Interpolator,
                                    num_bins=1,
