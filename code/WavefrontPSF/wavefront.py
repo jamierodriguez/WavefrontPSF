@@ -56,7 +56,7 @@ class Wavefront(object):
 
     """
 
-    def __init__(self, model, PSF_Interpolator, PSF_Evaluator,
+    def __init__(self, PSF_Interpolator, PSF_Evaluator, model=None,
                  **kwargs):
 
         self.PSF_Interpolator = PSF_Interpolator
@@ -68,7 +68,7 @@ class Wavefront(object):
 
         if model is not None:
             self.data = model
-            self.field, self.bins_x, self.bins_y = self.reduce_data_to_field(self.data, np.median, 1)
+            self.field, self.bins_x, self.bins_y = self.reduce_data_to_field(self.data, **kwargs)
 
     def __getitem__(self, key):
         return self.field[key]
@@ -109,7 +109,7 @@ class Wavefront(object):
         return edges
 
     def reduce_data_to_field(self, data, xkey='x', ykey='y',
-            reducer=np.median, num_bins=1):
+            reducer=np.median, num_bins=1, **kwargs):
         """Take data and bin by focal plane coordinates.
 
         Parameters
@@ -175,7 +175,7 @@ class Wavefront(object):
         combined_df = evaluated_psfs.combine_first(data)
         return combined_df
 
-    def plot_colormap(self, data, xkey, ykey, zkey, num_bins=20, fig=None, ax=None, reducer=np.median):
+    def plot_colormap(self, data, xkey='x', ykey='y', zkey='N', num_bins=20, fig=None, ax=None, reducer=np.median):
         field, bins_x, bins_y = self.reduce_data_to_field(
                 data, xkey=xkey, ykey=ykey, num_bins=num_bins,
                 reducer=reducer)

@@ -7,8 +7,9 @@ Description: Module that takes focal plane coordinates and other relevant data
 
 """
 
-from pandas import DataFrame
-from numpy import vstack
+from pandas import DataFrame, read_csv
+from numpy import vstack, float64
+from WavefrontPSF.decamutil import decaminfo
 
 class PSF_Interpolator(object):
     """Class that returns some sort of PSF representation.
@@ -127,4 +128,110 @@ class kNN_Interpolator(PSF_Interpolator):
     def __call__(self, X, **kwargs):
         return self.interpolate(X, **kwargs)
 
+class Mesh_Interpolator(kNN_Interpolator):
 
+    def __init__(self, mesh_name, directory, **kwargs):
+        self.dec = decaminfo()
+        y_keys = ['z{0}'.format(i) for i in range(4, 12)]
+        x_keys = ['x', 'y']
+
+        # ingest the data here
+        data = self.digest_mesh(directory=directory, mesh_name=mesh_name)
+
+        super(Mesh_Interpolator, self).__init__(data=data, y_keys=y_keys, x_keys=x_keys, **kwargs)
+
+    def digest_mesh(self, mesh_name, directory):
+        for z in range(4, 12):
+            fileTitle = 'z{0}'.format(z) + 'Mesh_' + mesh_name
+            fileName = directory + '/' + fileTitle + '.dat'
+            zkey = 'z{0}'.format(z)
+            wkey = 'w{0}'.format(z)
+
+            dataPoints = read_csv(fileName, delim_whitespace=True,
+                    header=None,
+                    dtype={'Sensor': '|S3', 'x': float64, 'y': float64,
+                           zkey: float64, wkey: float64},
+                    names=['Sensor', 'x', 'y', zkey, wkey])
+
+            if z == 4:
+                ccdnum = [self.dec.infoDict[sensor_i]['CCDNUM']
+                          for sensor_i in dataPoints['Sensor']]
+                # data['x'] = dataPoints['x']
+                # data['y'] = dataPoints['y']
+                data = dataPoints
+                data['ccdnum'] = ccdnum
+
+            data[zkey] = dataPoints[zkey]
+            data[wkey] = dataPoints[wkey]
+        # take z4 and divide by 172 to put it in waves as it should be
+        data['z4'] /= 172.
+        return data
+
+
+if __name__ == '__main__':
+    import matplotlib.pyplot as plt
+    from WavefrontPSF.wavefront import Wavefront
+    from WavefrontPSF.psf_evaluator import Moment_Evaluator
+
+    PSF_Evaluator = Moment_Evaluator()
+
+    directory = '/Users/cpd/Projects/WavefrontPSF/meshes/Science-20140212s2-v1i2'
+    mesh_name = 'Science-20140212s2-v1i2_All'
+    PSF_Interpolator = Mesh_Interpolator(mesh_name=mesh_name, directory=directory)
+    WF = Wavefront(PSF_Interpolator=PSF_Interpolator,
+                   PSF_Evaluator=PSF_Evaluator,
+                   model=PSF_Interpolator.data,
+                   num_bins=3)
+
+    """ compare timings of my digestion vs donutana
+    %timeit WF.PSF_Interpolator.digest_mesh(mesh_name, directory)
+
+    from donutlib.donutana import donutana
+    sensorSet = "ScienceOnly"
+    method = "idw"
+    nInterpGrid = 32
+    methodVal = (4, 1.0)
+
+    in_dict = {"sensorSet": sensorSet,
+              "doTrefoil": True,
+              "doSpherical": True,
+              "doQuadrefoil": False,
+              "unVignettedOnly": False,
+              "interpMethod": method,
+              "methodVal": methodVal,
+              "nInterpGrid": nInterpGrid,
+              "histFlag": False,  # True,
+              "debugFlag": True,  # True,
+              "donutCutString": ""}
+
+    for zi in range(4, 12):
+        try:
+            in_dict.update({'z{0}PointsFile'.format(zi):
+                           directory + '/z{0}Mesh_'.format(zi) +
+                           mesh_name + '.dat'})
+        except IOError:
+            continue
+
+    da = donutana(**in_dict)
+
+    %timeit da = donutana(**in_dict)
+
+    """
+
+    directory = '/Users/cpd/Projects/WavefrontPSF/meshes/Science-20130325s1-v1i2'
+    mesh_name = 'Science-20130325s1-v1i2_All'
+    PSF_Interpolator = Mesh_Interpolator(mesh_name=mesh_name, directory=directory)
+    WF_old = Wavefront(PSF_Interpolator=PSF_Interpolator,
+                   PSF_Evaluator=PSF_Evaluator,
+                   model=PSF_Interpolator.data,
+                   num_bins=3)
+
+    for z in range(4, 12):
+        WF.field['z{0}_diff'.format(z)] = WF['z{0}'.format(z)] - WF_old['z{0}'.format(z)]
+        fig, ax = WF.plot_field('z{0}_diff'.format(z))
+        ax.set_title('z{0}_diff'.format(z))
+        fig, ax = WF.plot_field('z{0}'.format(z))
+        ax.set_title('z{0}'.format(z))
+    plt.show()
+
+    import ipdb; ipdb.set_trace()

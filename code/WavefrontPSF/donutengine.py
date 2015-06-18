@@ -31,7 +31,7 @@ class Generic_Donutengine_Wavefront(Wavefront):
         super(Generic_Donutengine_Wavefront, self).__init__(
                 PSF_Interpolator=PSF_Interpolator,
                 PSF_Evaluator=PSF_Evaluator,
-                model=None)
+                **kwargs)
         self.PSF_Drawer = PSF_Drawer
 
     def save(self, out_path):
@@ -74,25 +74,24 @@ class DECAM_Model_Wavefront(Generic_Donutengine_Wavefront):
     Includes misalignments. Convenience class
     """
 
-    def __init__(self, PSF_Interpolator_data=None, interp_kwargs={}, **kwargs):
+    def __init__(self, PSF_Interpolator=None, interp_kwargs={}, **kwargs):
         # data here is a csv with all the zernikes
         #TODO: make the csv here path independent
-        if type(PSF_Interpolator_data) == type(None):
+        if type(PSF_Interpolator) == type(None):
             PSF_Interpolator_data=pd.read_csv('/Users/cpd/Projects/WavefrontPSF/meshes/ComboMeshes2/Mesh_Science-20140212s2-v1i2_All_train.csv', index_col=0)
-        interp = {}
-        interp.update(interp_kwargs)
+            interp = {}
+            interp.update(interp_kwargs)
+            # take z4 and divide by 172 to put it in waves as it should be
+            PSF_Interpolator_data['z4'] /= 172.
+            PSF_Interpolator = kNN_Interpolator(PSF_Interpolator_data, **interp)
 
-        # take z4 and divide by 172 to put it in waves as it should be
-        PSF_Interpolator_data['z4'] /= 172.
-
-        PSF_Interpolator = kNN_Interpolator(PSF_Interpolator_data, **interp)
         PSF_Drawer = Zernike_to_Misalignment_to_Pixel_Interpolator()
         PSF_Evaluator = Moment_Evaluator()
         super(DECAM_Model_Wavefront, self).__init__(
                 PSF_Evaluator=PSF_Evaluator,
                 PSF_Interpolator=PSF_Interpolator,
                 PSF_Drawer=PSF_Drawer,
-                model=None)
+                **kwargs)
 
 class Zernike_to_Pixel_Interpolator(PSF_Interpolator):
     """PSF Interpolator that inputs zernikes, focal plane coordinates, and
@@ -212,6 +211,8 @@ def generate_random_coordinates(number):
     x, y = decaminfo().getPosition_extnum(extnum, x, y)
     return x, y, extnum
 
+
+# TODO: This can be eliminated?
 def adjust_center(self, x, y, zernikes):
     """A method for adjusting z2 and z3
 

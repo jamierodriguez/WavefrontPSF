@@ -22,21 +22,8 @@ class DECAM_Analytic_Wavefront(Generic_Donutengine_Wavefront):
     Translates r0 to coefficients
     """
 
-    def __init__(self, rzero, PSF_Interpolator_data=None,
-            PSF_Evaluator_data=None):
-
-        #TODO: make the csv here path independent
-        if type(PSF_Interpolator_data) == type(None):
-            PSF_Interpolator_data=pd.read_csv('/Users/cpd/Projects/WavefrontPSF/meshes/ComboMeshes2/Mesh_Science-20140212s2-v1i2_All_train.csv', index_col=0)
-        if type(PSF_Evaluator_data) == type(None):
-            PSF_Evaluator_data=np.load('/Users/cpd/Projects/WavefrontPSF/meshes/Analytic_Coeffs/model.npy').item()
-
-        # take z4 and divide by 172 to put it in waves as it should be
-        PSF_Interpolator_data['z4'] /= 172.
-        PSF_Interpolator = kNN_Interpolator(PSF_Interpolator_data)
-
-        # set the drawer
-        PSF_Drawer = Zernike_to_Misalignment_to_Pixel_Interpolator()
+    def __init__(self, rzero, PSF_Interpolator,
+                 PSF_Evaluator, **kwargs):
 
         # translate rzero to coefficients
         rzeros_float = np.array([0.08 + 0.01 * i for i in xrange(15)])
@@ -46,13 +33,26 @@ class DECAM_Analytic_Wavefront(Generic_Donutengine_Wavefront):
         # addition to e1 and e2
         rzero_i = np.searchsorted(rzeros_float, rzero)
         rzero_key = rzeros[rzero_i]
-        PSF_Evaluator = Zernike_Evaluator(*PSF_Evaluator_data[rzero_key])
+
+        #TODO: make the csv here path independent
+        if type(PSF_Interpolator) == type(None):
+            PSF_Interpolator_data=pd.read_csv('/Users/cpd/Projects/WavefrontPSF/meshes/ComboMeshes2/Mesh_Science-20140212s2-v1i2_All_train.csv', index_col=0)
+            # take z4 and divide by 172 to put it in waves as it should be
+            PSF_Interpolator_data['z4'] /= 172.
+            PSF_Interpolator = kNN_Interpolator(PSF_Interpolator_data)
+        if type(PSF_Evaluator) == type(None):
+            PSF_Evaluator_data=np.load('/Users/cpd/Projects/WavefrontPSF/meshes/Analytic_Coeffs/model.npy').item()
+            PSF_Evaluator = Zernike_Evaluator(*PSF_Evaluator_data[rzero_key])
+
+        # set the drawer
+        PSF_Drawer = Zernike_to_Misalignment_to_Pixel_Interpolator()
+
 
         super(DECAM_Analytic_Wavefront, self).__init__(
                 PSF_Evaluator=PSF_Evaluator,
                 PSF_Interpolator=PSF_Interpolator,
                 PSF_Drawer=PSF_Drawer,
-                model=None)
+                **kwargs)
 
 
     def evaluate_psf(self, data, misalignment={}, force_interpolation=False, **kwargs):
@@ -81,9 +81,11 @@ class Zernike_Evaluator(PSF_Evaluator):
         self.x_keys = x_keys
         self.keys = y_keys
 
+        self.powers = stack_powers(len(x_keys), deg, y_keys)
+
     def evaluate(self, psfs, **kwargs):
         # stack psfs
-        psfs_stacked, _ = stack_x(psfs[self.x_keys].values, self.deg)
+        psfs_stacked, _ = stack_x(psfs[self.x_keys].values, self.deg, self.x_keys, powers=self.powers)
         # evaluate from regressor
         ydata = self.regressor.predict(psfs_stacked)
         # add to evaluated psf
@@ -120,16 +122,48 @@ def as_tall(x):
     """ Turns a row vector into a column vector """
     return x.reshape(x.shape + (1,))
 
-def stack_x(xs, deg):
-
-    num_covariates = xs.shape[1]
-    xs = hstack((ones((xs.shape[0], 1), dtype=xs.dtype) , xs))
-
+def stack_powers(num_covariates, deg, keys):
     generators = [basis_vector(num_covariates+1, i)
                   for i in range(num_covariates+1)]
 
     # All combinations of degrees
     powers = map(sum, combinations_with_replacement(generators, deg))
+
+    # remove some powers we don't like
+    # first find the index corresponding to our rzero-like term
+    # the plus 1 is because the first term in the column is 1s
+    if 'one_over_rzero' in keys:
+        indx = keys.index('one_over_rzero') + 1
+    elif 'rzero' in keys:
+        indx = keys.index('rzero') + 1
+    else:
+        # skip and move on
+        indx = -1
+    if indx > -1:
+        # we want to cut anything with rzero dep > 2
+        powers_temp = []
+        for p in powers:
+            # any combo of variable dep > 4 and no rzero
+            if sum(p) - p[0] - p[indx] > 4:
+                continue
+            # rzero dep > 2 and not another variable
+            if p[indx] > 2 and p[indx] + p[0] != sum(p):
+                continue
+            # if rzero is by itself and > 3
+            if p[indx] > 3 and sum(p) - p[0] - p[indx] == 0:
+                continue
+            powers_temp.append(p)
+        powers = powers_temp
+
+    return powers
+
+def stack_x(xs, deg, keys, powers=None):
+
+    num_covariates = xs.shape[1]
+    xs = hstack((ones((xs.shape[0], 1), dtype=xs.dtype) , xs))
+
+    if type(powers) == type(None):
+        powers = stack_powers(num_covariates, deg, keys)
 
     # Raise data to specified degree pattern, stack in order
     A = hstack(asarray([as_tall((xs**p).prod(1)) for p in powers]))

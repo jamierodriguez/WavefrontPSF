@@ -55,6 +55,8 @@ class Moment_Evaluator(PSF_Evaluator):
                      'delta1', 'delta2', 'zeta1', 'zeta2',
                      'a4', 'flux', 'Mx', 'My']
 
+        super(Moment_Evaluator, self).__init__(**kwargs)
+
     def evaluate_one_psf(self, psf, background=0, threshold=-1e9, **kwargs):
         if background != 0:
             stamp = psf - background

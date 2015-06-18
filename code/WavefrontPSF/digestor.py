@@ -29,7 +29,7 @@ class Digestor(object):
 
     """
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         pass
 
     def digest_fits(self, file_name, columns=None, exclude=['VIGNET', 'FLUX_APER', 'FLUXERR_APER', 'MAG_APER', 'MAGERR_APER'], ext=2, **kwargs):
@@ -137,5 +137,6 @@ class Digestor(object):
         """
 
         return self.digest(file_name, **kwargs)
+
 
 
