@@ -18,7 +18,7 @@ import numpy as np
 def do_fit(WF, misalignment, weights={}, do_limits=True, num_bins=-1,
            verbose=True):
 
-    weights_default = {'e0': 1, 'e1': 1, 'e2': 1,
+    weights_default = {'e0': 0.5, 'e1': 1, 'e2': 1,
                'delta1': 0, 'delta2': 0,
                'zeta1': 0, 'zeta2': 0}
     weights_default.update(weights)
@@ -33,6 +33,9 @@ def do_fit(WF, misalignment, weights={}, do_limits=True, num_bins=-1,
                  'z09d': 0, 'z09x': 0, 'z09y': 0,
                  'z10d': 0, 'z10x': 0, 'z10y': 0,
                  'z11d': 0, 'z11x': 0, 'z11y': 0,
+                 'dz': 0,
+                 'dx': 0, 'dy': 0,
+                 'xt': 0, 'yt': 0,
                  'rzero': 0.15, 'e0': 0,
                  'e1': 0, 'e2': 0,
                  'delta1': 0, 'delta2': 0,
@@ -40,29 +43,45 @@ def do_fit(WF, misalignment, weights={}, do_limits=True, num_bins=-1,
     arguments.update(misalignment)
     minuit_kwargs = {'errordef': 1}
     for arg in arguments.keys():
+        limit_key = 'limit_{0}'.format(arg)
+        error_key = 'error_{0}'.format(arg)
         minuit_kwargs[arg] = arguments[arg]
         # do limits
         if arg[0] == 'z' and arg[-1] == 'd':
             if do_limits:
-                minuit_kwargs['limit_{0}'.format(arg)] = (-2, 2)
-            minuit_kwargs['error_{0}'.format(arg)] = 1e-3
+                minuit_kwargs[limit_key] = (-2, 2)
+            minuit_kwargs[error_key] = 1e-2
         elif arg[0] == 'z' and arg[-1] in ['x', 'y']:
             if do_limits:
-                minuit_kwargs['limit_{0}'.format(arg)] = (-2, 2)
-            minuit_kwargs['error_{0}'.format(arg)] = 1e-5
+                minuit_kwargs[limit_key] = (-2, 2)
+            minuit_kwargs[error_key] = 1e-4
         elif arg == 'rzero':
-            if do_limits:
-                minuit_kwargs['limit_{0}'.format(arg)] = (0.08, 0.25)
-            minuit_kwargs['error_{0}'.format(arg)] = 1e-3
+            # always do rzero limits
+            minuit_kwargs[limit_key] = (0.08, 0.25)
+            minuit_kwargs[error_key] = 1e-2
         elif arg in ['e0', 'e1', 'e2', 'delta1', 'delta2', 'zeta1', 'zeta2']:
             if do_limits:
-                minuit_kwargs['limit_{0}'.format(arg)] = (-0.5, 0.5)
+                minuit_kwargs[limit_key] = (-0.5, 0.5)
             if 'delta' in arg:
-                minuit_kwargs['error_{0}'.format(arg)] = 1e-5
+                minuit_kwargs[error_key] = 1e-4
             elif 'zeta' in arg:
-                minuit_kwargs['error_{0}'.format(arg)] = 1e-5
+                minuit_kwargs[error_key] = 1e-4
             else:
-                minuit_kwargs['error_{0}'.format(arg)] = 1e-3
+                minuit_kwargs[error_key] = 1e-2
+        elif arg == 'dz':
+            if do_limits:
+                minuit_kwargs[limit_key] = (-500, 500)
+            minuit_kwargs[error_key] = 20
+        elif arg in ['dx', 'dy']:
+            if do_limits:
+                minuit_kwargs[limit_key] = (-4500, 4500)
+            minuit_kwargs[error_key] = 100
+        elif arg in ['xt', 'yt']:
+            if do_limits:
+                minuit_kwargs[limit_key] = (-1000, 1000)
+            minuit_kwargs[error_key] = 50
+
+        # do fixing
         if arg not in misalignment.keys():
             minuit_kwargs['fix_{0}'.format(arg)] = True
         else:
@@ -81,6 +100,7 @@ def do_fit(WF, misalignment, weights={}, do_limits=True, num_bins=-1,
              z09d, z09x, z09y,
              z10d, z10x, z10y,
              z11d, z11x, z11y,
+             dz, dx, dy, xt, yt,
              e0, e1, e2,
              delta1, delta2,
              zeta1, zeta2):
@@ -91,7 +111,8 @@ def do_fit(WF, misalignment, weights={}, do_limits=True, num_bins=-1,
                         'z08d': z08d, 'z08x': z08x, 'z08y': z08y,
                         'z09d': z09d, 'z09x': z09x, 'z09y': z09y,
                         'z10d': z10d, 'z10x': z10x, 'z10y': z10y,
-                        'z11d': z11d, 'z11x': z11x, 'z11y': z11y}
+                        'z11d': z11d, 'z11x': z11x, 'z11y': z11y,
+                        'dz': dz, 'dx': dx, 'dy': dy, 'xt': xt, 'yt': yt}
         WF.data['rzero'] = rzero
         # get evaluated PSFs
         test = WF(WF.data, misalignment=wf_misalignment)
@@ -107,6 +128,8 @@ def do_fit(WF, misalignment, weights={}, do_limits=True, num_bins=-1,
 
         return test, wf_misalignment
 
+    # attach to class to let this float through namespaces...
+    WF.num_execute = 0
     def chi2(rzero,
              z04d, z04x, z04y,
              z05d, z05x, z05y,
@@ -116,6 +139,7 @@ def do_fit(WF, misalignment, weights={}, do_limits=True, num_bins=-1,
              z09d, z09x, z09y,
              z10d, z10x, z10y,
              z11d, z11x, z11y,
+             dz, dx, dy, xt, yt,
              e0, e1, e2,
              delta1, delta2,
              zeta1, zeta2):
@@ -129,6 +153,7 @@ def do_fit(WF, misalignment, weights={}, do_limits=True, num_bins=-1,
              z09d, z09x, z09y,
              z10d, z10x, z10y,
              z11d, z11x, z11y,
+             dz, dx, dy, xt, yt,
              e0, e1, e2,
              delta1, delta2,
              zeta1, zeta2)
@@ -143,32 +168,36 @@ def do_fit(WF, misalignment, weights={}, do_limits=True, num_bins=-1,
             Y = WF.data
 
         if verbose:
-            print_misalignment = {}
-            print_misalignment.update(wf_misalignment)
-            print_misalignment['rzero'] = rzero
-            print_misalignment['e0'] = e0
-            print_misalignment['e1'] = e1
-            print_misalignment['e2'] = e2
-            print_misalignment['delta1'] = delta1
-            print_misalignment['delta2'] = delta2
-            print_misalignment['zeta1'] = zeta1
-            print_misalignment['zeta2'] = zeta2
-            # filter out misalignment entries
-            bad_keys = [key for key in print_misalignment if key not in misalignment]
-            for key in bad_keys:
-                _ = print_misalignment.pop(key)
-            print(print_misalignment)
+            if WF.num_execute%50 == 0:
+                print_misalignment = {}
+                print_misalignment.update(wf_misalignment)
+                print_misalignment['rzero'] = rzero
+                print_misalignment['e0'] = e0
+                print_misalignment['e1'] = e1
+                print_misalignment['e2'] = e2
+                print_misalignment['delta1'] = delta1
+                print_misalignment['delta2'] = delta2
+                print_misalignment['zeta1'] = zeta1
+                print_misalignment['zeta2'] = zeta2
+                # filter out misalignment entries
+                bad_keys = [key for key in print_misalignment if key not in misalignment]
+                for key in bad_keys:
+                    _ = print_misalignment.pop(key)
+                print(WF.num_execute, print_misalignment)
         for key in weights:
             chi2_w = np.mean(np.square(X[key] - Y[key]))
             if verbose:
-                print(key, chi2_w, weights[key])
+                if WF.num_execute%50 == 0:
+                    print(key, chi2_w, weights[key])
             chi2 += chi2_w * weights[key]
             weight_sum += weights[key]
         chi2 /= weight_sum
         if verbose:
-            print(chi2)
-            print('================================================\n\n')
+            if WF.num_execute%50 == 0:
+                print(chi2)
+                print('================================================\n\n')
 
+        WF.num_execute += 1
         return chi2
 
     if verbose:
@@ -181,7 +210,55 @@ def do_fit(WF, misalignment, weights={}, do_limits=True, num_bins=-1,
 
     return minuit, chi2, plane
 
-def drive_fit(expid, params={}):
+def plot_results(WF, plane, minuit, num_bins=2):
+    keys = ['e0', 'e1', 'e2', 'delta1', 'delta2', 'zeta1', 'zeta2']
+
+    fig, axs = plt.subplots(nrows=len(keys), ncols=3,
+                            figsize=(4 * 3, 3 * len(keys)))
+
+    comp, misalignment = plane(**minuit.values)
+    for key_i, key in enumerate(keys):
+        comp['true_{0}'.format(key)] = WF.data[key]
+        comp['diff_{0}'.format(key)] = comp[key] - WF.data[key]
+
+        ax = axs[key_i, 0]
+        zkey = 'true_{0}'.format(key)
+        fig, ax = WF.plot_colormap(comp, zkey=zkey,
+            fig=fig, ax=ax, num_bins=num_bins)
+        ax.set_title(zkey)
+        ax = axs[key_i, 1]
+        zkey = '{0}'.format(key)
+        fig, ax = WF.plot_colormap(comp, zkey=zkey,
+            fig=fig, ax=ax, num_bins=num_bins)
+        ax.set_title(zkey)
+        ax = axs[key_i, 2]
+        zkey = 'diff_{0}'.format(key)
+        fig, ax = WF.plot_colormap(comp, zkey=zkey,
+            fig=fig, ax=ax, num_bins=num_bins)
+        ax.set_title(zkey)
+    return comp, fig, ax
+
+def param_default_cpd(expid):
+    # params are configged for ki-ls. This gives some for my laptop
+    """
+from WavefrontPSF.fitter import param_default_cpd, drive_fit, do_fit, plot_results
+expid = 174000
+params = param_default_cpd(expid)
+WF = drive_fit(expid, params=params, skip_fit=True)
+minuit, chi2, plane = drive_fit(expid, params=params)
+
+comp, fig, ax = plot_results(WF, plane, minuit, num_bins=2)
+
+misalignment={'e0':0, 'e1':0, 'e2': 0, 'z04d':0, 'z05d':0, 'z06d':0, 'z07d':0, 'z08d':0}
+    """
+    expid_path = '{0:08d}/{1:08d}'.format(expid - expid % 1000, expid)
+
+    params = {'mesh_directory': '/Users/cpd/Projects/WavefrontPSF/meshes/Science-20140212s2-v1i2',
+              'data_directory': '/Users/cpd/Projects/WavefrontPSF/meshes/obsevations/' + expid_path,
+              'analytic_coeffs': '/Users/cpd/Projects/WavefrontPSF/meshes/Analytic_Coeffs/model.npy'}
+    return params
+
+def drive_fit(expid, params={}, skip_fit=False):
 
     expid_path = '{0:08d}/{1:08d}'.format(expid - expid % 1000, expid)
 
@@ -236,6 +313,9 @@ def drive_fit(expid, params={}):
     for pop_key in pop_keys:
         _ = misalignment.pop(pop_key)
 
+    if skip_fit:
+        return WF
+
     minuit, chi2, plane = do_fit(WF, misalignment=misalignment, verbose=params['verbose'])
 
     return minuit, chi2, plane, WF
@@ -250,6 +330,7 @@ def translate_misalignment_to_arguments(misalignment={}):
                  'z09d': 0, 'z09x': 0, 'z09y': 0,
                  'z10d': 0, 'z10x': 0, 'z10y': 0,
                  'z11d': 0, 'z11x': 0, 'z11y': 0,
+                 'dz': 0, 'dx': 0, 'dy': 0, 'xt': 0, 'yt': 0,
                  'rzero': 0.15, 'e0': 0,
                  'e1': 0, 'e2': 0,
                  'delta1': 0, 'delta2': 0,

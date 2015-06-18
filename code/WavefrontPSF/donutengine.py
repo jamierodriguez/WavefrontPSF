@@ -277,10 +277,12 @@ def zernike_corrections_from_hexapod(dz=0, dx=0, dy=0, xt=0, yt=0):
         hex_z7delta, hex_z8delta = \
         hexapodtoZernike(dx, dy, xt, yt)
 
+
+    # dz correction is to put it into waves
     zernike_correction = np.array([[0.0, 0.0, 0.0],
                                    [0.0, 0.0, 0.0],
                                    [0.0, 0.0, 0.0],
-                                   [dz, 0.0, 0.0],
+                                   [dz / 172., 0.0, 0.0],
                                    [0.0, hex_z5thetax, hex_z5thetay],
                                    [0.0, hex_z6thetax, hex_z6thetay],
                                    [hex_z7delta, 0.0, 0.0],
