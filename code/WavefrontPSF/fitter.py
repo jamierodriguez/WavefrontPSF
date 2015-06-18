@@ -191,7 +191,8 @@ def drive_fit(expid, params={}):
                       'data_name': '_selpsfcat.fits',
                       'analytic': True,
                       'analytic_coeffs':'/nfs/slac/g/ki/ki18/cpd/Projects/WavefrontPSF/meshes/Analytic_Coeffs/model.npy',
-                      'number_sample': 0}
+                      'number_sample': 0,
+                      'verbose': True}
     params_default.update(params)
     params = params_default
 
@@ -205,6 +206,13 @@ def drive_fit(expid, params={}):
 
     # guess rzero
     rzero = r0_guess(model['e0'].min())
+    rzeros_float = np.array([0.08 + 0.01 * i for i in xrange(15)])
+    rzeros = ['{0:.2f}'.format(0.08 + 0.01 * i) for i in xrange(15)]
+    # always want the rzero one above so that we underestimate it
+    # note that this also implies that we want a dc component for e0 in
+    # addition to e1 and e2
+    rzero_i = np.searchsorted(rzeros_float, rzero)
+    rzero_key = rzeros[rzero_i]
     model['rzero'] = rzero
 
     # get the PSF_Interpolator
@@ -212,7 +220,7 @@ def drive_fit(expid, params={}):
             directory=params['mesh_directory'])
 
     if params['analytic']:
-        PSF_Evaluator = Zernike_Evaluator(*np.load(params['analytic_coeffs']).item())
+        PSF_Evaluator = Zernike_Evaluator(*np.load(params['analytic_coeffs']).item()[rzero_key])
         WF = DECAM_Analytic_Wavefront(rzero=rzero,
                 PSF_Interpolator=PSF_Interpolator,
                 PSF_Evaluator=PSF_Evaluator)
@@ -227,7 +235,7 @@ def drive_fit(expid, params={}):
     for pop_key in pop_keys:
         _ = misalignment.pop(pop_key)
 
-    minuit, chi2, plane = do_fit(WF, misalignment)
+    minuit, chi2, plane = do_fit(WF, misalignment=misalignment, verbose=params['verbose'])
 
     return minuit, chi2, plane, WF
 
