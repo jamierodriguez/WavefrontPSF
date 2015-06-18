@@ -12,6 +12,7 @@ from WavefrontPSF.digestor import Digestor
 from WavefrontPSF.analytic_interpolator import DECAM_Analytic_Wavefront, r0_guess, Zernike_Evaluator
 from WavefrontPSF.donutengine import DECAM_Model_Wavefront
 
+import numpy as np
 
 
 def do_fit(WF, misalignment, weights={}, do_limits=True, num_bins=-1,
