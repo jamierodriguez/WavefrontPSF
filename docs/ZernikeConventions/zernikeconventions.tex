@@ -16,9 +16,9 @@
 %~~~~~~~~~~~~~~~
 \usepackage{hyperref}
 
-\usepackage{biblatex}
+%\usepackage{biblatex}
 % http://tex.stackexchange.com/questions/5091/what-to-do-to-switch-to-biblatex
-\addbibresource{/Users/cpd/Dropbox/Papers/database.bib}
+%\addbibresource{/Users/cpd/Dropbox/Papers/database.bib}
 
 \usepackage[textsize=\Small]{todonotes}
 \setlength{\marginparwidth}{2cm} % fix in todonotes doc for oddly placed todos
@@ -185,9 +185,6 @@
 % \lecturenumber{}               % lecture number
 % \lecturedate{}       % month and day of lecture (omit year)
 
-% todo stuff
-\todototoc
-\listoftodos
 
 
 
@@ -195,7 +192,7 @@
 % Body of the document
 % ------------------------------------------------------------------------
 
-\section{Wavefront Model}
+\section{Old Wavefront Model}
 
   The basic model for light propagation is Fresnel Diffraction:
   \begin{equation}
@@ -345,6 +342,126 @@ Lift from whiskerconvention for $w$?
 
 maybe work out the field aberration stuff with seidel first and then with
 zernike (the maths certainly will be at least a /little/ simpler...)
+
+
+
+\section{Everything before here is kinda poopish.}
+
+
+\section{Wavefront Model}
+
+Define our pupil function to be in the $(u,v)$ pupil plane coordinates as:
+\begin{equation}
+  \exp{\imath \Phi(u, v)}
+\end{equation}
+This equation includes both the pupil function from the spider and any annulus,
+and the aberrations to the wavefront, which go as polynomial terms in $\Phi$.
+Up to some set of constants, we can represent the Point Spread Function (PSF)
+as follows\footnote{I will play extremely fast and loose with Fourier Transform
+conventions and will also assume everything is properly normalized.}:
+\begin{equation}
+  \mathrm{PSF}(x, y) = \left| \int \dd u \dd v \exp{\imath \Phi(u, v) - \imath x u -
+  \imath y v} \right| ^2
+\end{equation}
+A useful other term is the Optical Transfer Function (OTF), which is the
+Fourier Transform of the PSF and hence the autocorrelation of the pupil function.
+
+One thing I have seen used is that we can represent the measured moments as
+integrals over the derivatives of the wavefront, ie:
+\begin{equation}
+  \int \dd x \dd y x^p y^q \mathrm{PSF}(x,y) = \int \dd u \dd v (\partial_u \Phi)^p
+  (\partial_v \Phi)^q
+\end{equation}
+Or at least I think it is that, and not the following:
+\begin{equation}
+  \int \dd x \dd y x^p y^q \mathrm{PSF}(x,y) = \int \dd u \dd v (\partial_u^p \Phi)
+  (\partial_v^q \Phi)
+\end{equation}
+Anyways let us proceed with the lefthand side of the expression. The PSF is the
+Inverse Fourier Transform of the OTF, which is a convolution of the pupil
+function with its complex conjugate (note that $\bar{\Phi} = \Phi$):
+\begin{equation}
+  \int \dd x \dd y x^p y^q \mathrm{PSF}(x,y) = \int \dd x \dd y x^p y^q \int
+  \dd u \dd v \exp{\imath xu + \imath yv} \int \dd u' \dd v' \exp{\imath
+  \Phi(u', v') + -\imath \Phi(u' - u, v' - v)}
+\end{equation}
+(Note: it may be $u + u'$ instead of $u - u'$. I keep alternating the answer
+each time I check it!)
+
+(actually I just looked it up. It looks like I got the IFT right, but I flipped
+the signs so that in the barred part it is $u' - u$ instead of the other way.
+Also the pupil function is $exp{\imath \Phi}$ and not the inverse of that. It
+is worth pointing out that $\Phi$ (phase aberration = $\frac{2\pi}{\lambda} W$)
+is real-valued. This combined with the proper sign of $u' - u$ means that the
+phase cancels.  Also, a property of the cross-correlation )
+
+
+Let us flip the order of integration and integrate over $x$ and $y$. Doing so
+yields (modulo some set of $(-1)$'s and $\imath$'s):
+\begin{equation}
+  \int \dd u \dd v \dd u' \dd v' e^{\imath \Phi(u', v')} e^{-\imath
+  \Phi(u' - u, v' - v)} \delta^{(p)}(u) \delta^{(q)}(v)
+\end{equation}
+where $\delta^{(p)}(u)$ is the $p$-th derivative of the Dirac delta
+distribution function. We then proceed with the integration over the unprimed
+variables (again prefactors are ignored because I'm lazy):
+\begin{equation}
+  \int \dd u' \dd v' e^{\imath \Phi(u', v')} \left[
+    \left(\frac{\partial}{\partial u} \right)^p \left(\frac{\partial}{\partial
+  v} \right)^q e^{-\imath \Phi(u' - u, v' - v)} \right ]_{(u,v) = (0,0)}
+\end{equation}
+Conveniently, after the derivatives are taken, the phase aberration cancels.
+Let's give a couple examples of what the terms are for each moment (constants
+in front arbitrary and complex):
+\begin{align}
+  sum(p,q)=1 &\propto \Phi_a \\
+  sum(p,q)=2 &\propto \alpha \Phi_{ab} + \beta \Phi_a \Phi_b \\
+  sum(p,q)=3 &\propto \alpha \Phi_{abc} + \beta \left( \Phi_{ab} \Phi_c +
+\Phi_{ac} \Phi_b + \Phi_{bc} \Phi_a \right) + \gamma \Phi_a \Phi_b \Phi_c
+\end{align}
+where subscripts refer to derivative with respect to arbitrary $u$ or $v$. In
+other words, we need to make a call about the relative magnitude of multiplying
+first derivatives together compared with a second derivative in the wavefront.
+
+Finally note that we measure moments over time (so there is an implicit
+integration over and dependency on time) and from a fixed center that is
+usually taken to be the centroid of the final (time-integrated) object. Shaking
+in the telescope can take a wavefront that is circular and produce an
+ellipticity. One can model this as a variation in the tilt Zernikes with time.
+
+\section{Zernikes}
+
+\begin{center}
+\begin{tabular}{ l l l r l l}
+  Type & Noll & $(n,\ m)$ & Coef & Polar Polynomial &
+  Complex Polynomial \\
+  \hline \hline
+  Piston & $1$ & $(0,\ 0)$ & $0$ & $1$ & $1$ \\
+  Tilt-$0$ & $2$ & $(0,\ 1)$ & $0$ & $2 r \cos \theta$ & $z + \bar{z}$ \\
+  Tilt-$90$ & $3$ & $(0,\ 1)$ & $0$ & $2 r \sin \theta$ & $-\imath (z - \bar{z})$ \\
+  Defocus & $4$ & $(2,\ 0)$ & $d$ & $\sqrt{3} (2 r^2 - 1)$ & $\sqrt{3} (2 z \bar{z} - 1)$ \\
+  Astigmatism-$45$ & $5$ & $(2,\ 2)$ & $\Im[a]$ & $\sqrt{6} r^2 \sin 2 \theta$ & $-\frac{\imath \sqrt{6}}{2} (z^2 - \bar{z}^2)$ \\
+  Astigmatism-$0$ & $6$ & $(2,\ 2)$ & $\Re[a]$ & $\sqrt{6} r^2 \cos 2 \theta$ & $\frac{\sqrt{6}}{2} (z^2 + \bar{z}^2)$ \\
+  Coma-$90$ & $7$ & $(3,\ 1)$ & $\Im[c]$ & $\sqrt{8} (3 r^3 - 2r) \sin \theta$ & $-\frac{\imath \sqrt{8}}{2} (3 z \bar{z} - 2) (z - \bar{z})$ \\
+  Coma-$0$ & $8$ & $(3,\ 1)$ & $\Re[c]$ & $\sqrt{8} (3 r^3 - 2r) \cos \theta$ & $\frac{\sqrt{8}}{2} (3 z \bar{z} - 2)(z + \bar{z}) $ \\
+  Trefoil-$30$ & $9$ & $(3,\ 3)$ & $\Im[t]$ & $\sqrt{8} r^3 \sin 3 \theta$ & $ -\frac{\imath \sqrt{8}}{2} (z^3 - \bar{z}^3) $ \\
+  Trefoil-$0$ & $10$ & $(3,\ 3)$ & $\Re[t]$ & $\sqrt{8} r^3 \cos 3 \theta$ & $ \frac{\sqrt{8}}{2} (z^3 + \bar{z}^3) $ \\
+  Spherical Defocus & $11$ & $(4,\ 0)$ & $s$ & $\sqrt{5} (6 r^4 - 6 r^2 + 1)$ & $\frac{\sqrt{5}}{2} (3 (2z \bar{z} - 1)^2 - 1) $ \\
+\end{tabular}
+\end{center}
+
+\todo{Double check these rules to make sure that they are correct!}
+Once we have the format of the desired derivatives, the calculation of moments
+is then just a matter of integrating the polynomials over $u$ and $v$ using $z
+= u + \imath v$. It is convenient to use complex notation to describe the $u$
+and $v$ coordinates. Hence, the derivatives are of the form
+$\left( \frac{\partial}{\partial u} - \imath \frac{\partial}{\partial v}
+\right) = \frac{\partial}{\partial \bar{z}}$. It is also very convenient to consider the polar integration and
+realize that any resultant terms of the form $z^\alpha \bar{z}^\beta$ will
+integrate to zero if $\alpha \neq \beta$ and if they are equal than the
+integral will be $\frac{2}{\alpha + 2}$. (I might have also switched
+integration range from -1 to 1 to 0 to 1. That might have been a silly mistake.) Next also note that $\dd u \dd v =
+\frac{\imath}{2} \dd z \dd \bar{z}$ and that $\bar{z}^2 = \bar{z^2}$.
 
 \end{document}
 

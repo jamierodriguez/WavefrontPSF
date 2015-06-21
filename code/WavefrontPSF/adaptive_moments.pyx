@@ -20,6 +20,12 @@ but: that is for a weaker epsilon of 1e-3. 1e-4 makes it take much longer (hits 
 TODO: why is it that I need that /2 in my ellipticity calculations to
 recover roughly sextractor's ellipticity values? (for when I switch from
 moments to ellipticities...) BUT not in e0!
+
+
+Warning! My zernike interpolations find more e1 than I might have expected (but
+virtually no leakage into e2). This is either a function of the creation of my
+test donuts, or a function of the fitter. It seems to me to be more likely to
+be the latter!
 """
 
 DTYPE = np.float64

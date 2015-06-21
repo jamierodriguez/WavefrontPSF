@@ -25,8 +25,7 @@ class PSF_Interpolator(object):
     Methods
     -------
     interpolate
-        Returns the psf at some location. By default your basis is just
-        whatever you put in.
+        Returns the psf at some location.
 
     """
 
@@ -65,6 +64,7 @@ class PSF_Interpolator(object):
         return interpolated
 
     def __call__(self, X, **kwargs):
+        # make sure you can do X[x_key]
         return self.interpolate(X, **kwargs)
 
 class kNN_Interpolator(PSF_Interpolator):
@@ -124,9 +124,6 @@ class kNN_Interpolator(PSF_Interpolator):
             pass
 
         return X
-
-    def __call__(self, X, **kwargs):
-        return self.interpolate(X, **kwargs)
 
 class Mesh_Interpolator(kNN_Interpolator):
 

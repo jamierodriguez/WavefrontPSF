@@ -6,6 +6,7 @@ Description: Module for generating PSF objects and their moments.
 
 TODO: Add whisker plot capabilities.
 TODO: Add a copy capability
+TODO: Two Point Statistics using treecorr http://rmjarvis.github.io/TreeCorr/html/index.html
 """
 
 from __future__ import print_function, division
@@ -271,6 +272,7 @@ class Wavefront(object):
         ax.set_xlabel(xkey)
         ax.plot(centers, agg[zkey])
         return fig, ax
+
 
 def shiftedColorMap(cmap, start=0, midpoint=0.5, stop=1.0, name='shiftedcmap'):
     '''

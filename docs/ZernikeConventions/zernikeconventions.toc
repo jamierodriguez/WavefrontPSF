@@ -1,17 +1,10 @@
-\boolfalse {citerequest}\boolfalse {citetracker}\boolfalse {pagetracker}\boolfalse {backtracker}\relax 
-\defcounter {refsection}{0}\relax 
-\contentsline {section}{Todo list}{1}{section*.1}
-\defcounter {refsection}{0}\relax 
-\contentsline {section}{\numberline {1}Wavefront Model}{2}{section.1}
-\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {1}Old Wavefront Model}{2}{section.1}
 \contentsline {subsection}{\numberline {1.1}alt:}{2}{subsection.1.1}
-\defcounter {refsection}{0}\relax 
 \contentsline {section}{\numberline {2}Zernikes -- Noll, Complex Number}{3}{section.2}
-\defcounter {refsection}{0}\relax 
 \contentsline {section}{\numberline {3}Moments and Adaptive Moments}{4}{section.3}
-\defcounter {refsection}{0}\relax 
 \contentsline {section}{\numberline {4}Whisker Conventions}{4}{section.4}
-\defcounter {refsection}{0}\relax 
 \contentsline {section}{\numberline {5}Higher Order Moments}{4}{section.5}
-\defcounter {refsection}{0}\relax 
 \contentsline {section}{\numberline {6}Zernike v Seidel}{5}{section.6}
+\contentsline {section}{\numberline {7}Everything before here is kinda poopish.}{5}{section.7}
+\contentsline {section}{\numberline {8}Wavefront Model}{5}{section.8}
+\contentsline {section}{\numberline {9}Zernikes}{7}{section.9}
