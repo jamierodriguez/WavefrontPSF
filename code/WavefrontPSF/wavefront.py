@@ -337,8 +337,9 @@ class Wavefront(object):
 
         if ax == None:
             fig, ax = plt.subplots(figsize=(10,5))
-            ax.set_xlabel('$X$ [mm] (East)')
-            ax.set_ylabel('$Y$ [mm] (South)')
+            # TODO: this is giving me problems on ki-ls :(
+            ax.set_xlabel('X [mm] (East)')
+            ax.set_ylabel('Y [mm] (South)')
             ax.set_xlim(-250, 250)
             ax.set_ylim(-250, 250)
 

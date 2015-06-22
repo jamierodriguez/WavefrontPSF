@@ -162,6 +162,7 @@ def do_fit(WF, misalignment, weights={}, do_limits=True, num_bins=-1,
         chi2 = 0
         weight_sum = 0
         if num_bins > -1:
+            # do chi2 on the num_bins
             Y = WF
             X, _, _ = WF.reduce_data_to_field(test, num_bins=num_bins)
         else:
@@ -240,9 +241,10 @@ def plot_results(WF, plane, minuit, num_bins=2):
     return comp, fig, ax
 
 
-def drive_fit(expid, params={}, skip_fit=False):
+def drive_fit(expid, params={}, weights={}, skip_fit=False):
 
-    params_default = {'analytic': True, 'number_sample': 0, 'verbose': True}
+    params_default = {'analytic': True, 'number_sample': 0, 'verbose': True,
+                      'num_bins': 1}
     params_default.update(param_default_kils(expid))
     params_default.update(params)
     params = params_default
@@ -275,10 +277,10 @@ def drive_fit(expid, params={}, skip_fit=False):
         WF = DECAM_Analytic_Wavefront(rzero=rzero,
                 PSF_Interpolator=PSF_Interpolator,
                 PSF_Evaluator=PSF_Evaluator,
-                num_bins=1, model=model)
+                num_bins=params['num_bins'], model=model)
     else:
         WF = DECAM_Model_Wavefront(PSF_Interpolator=PSF_Interpolator,
-                                   num_bins=1,
+                                   num_bins=params['num_bins'],
                                    model=model)
 
     misalignment = translate_misalignment_to_arguments({})
@@ -290,7 +292,7 @@ def drive_fit(expid, params={}, skip_fit=False):
     if skip_fit:
         return WF
 
-    minuit, chi2, plane = do_fit(WF, misalignment=misalignment, verbose=params['verbose'])
+    minuit, chi2, plane = do_fit(WF, misalignment=misalignment, verbose=params['verbose'], weights=weights)
 
     return minuit, chi2, plane, WF
 
