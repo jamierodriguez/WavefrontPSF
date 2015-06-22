@@ -231,7 +231,6 @@ class Wavefront(object):
     def evaluate_psf(self, data, **kwargs):
         # depending on method, you could expect something like this:
         evaluated_psfs = self.PSF_Evaluator(data, **kwargs)
-
         return evaluated_psfs
 
     def draw_and_evaluate_psf(self, data, **kwargs):

@@ -72,7 +72,7 @@ class Generic_Donutengine_Wavefront(Wavefront):
         stamps, eval_data = self.draw_psf(data, force_interpolation=force_interpolation, **kwargs)
         evaluated_psfs = self.evaluate_psf(stamps, **kwargs)
         # combine the results from PSF_Evaluator with your input data
-        combined_df = evaluated_psfs.combine_first(data)
+        combined_df = evaluated_psfs.combine_first(eval_data)
         return combined_df
 
 class DECAM_Model_Wavefront(Generic_Donutengine_Wavefront):
