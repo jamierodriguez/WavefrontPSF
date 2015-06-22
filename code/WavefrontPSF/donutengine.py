@@ -4,6 +4,9 @@ File: donutengine.py
 Author: Chris Davis
 Description: Specific implimentation of WavefrontPSF using donutlib to make the
              donut images.
+
+TODO: Make default data paths here be for ki-ls.
+TODO: Modify drawing of PSF 
 """
 
 import numpy as np
@@ -13,16 +16,22 @@ import pickle
 
 from WavefrontPSF.wavefront import Wavefront
 from WavefrontPSF.digestor import Digestor
-from WavefrontPSF.psf_interpolator import kNN_Interpolator, PSF_Interpolator
+from WavefrontPSF.psf_interpolator import Mesh_Interpolator, kNN_Interpolator, PSF_Interpolator
 from WavefrontPSF.psf_evaluator import PSF_Evaluator, Moment_Evaluator
 from WavefrontPSF.decamutil import decaminfo
 from donutlib.makedonut import makedonut
 
 class Generic_Donutengine_Wavefront(Wavefront):
     """
-    Idea is you just call with a list of x, y, zernikes, and rzero and you're good to go
+    Idea is you just call with a list of x, y, zernikes, and rzero and you're
+    good to go.
 
-    TODO: keep track of zernikes that are not misaligned
+    The key difference is that here we split the PSF_Interpolator into the
+    PSF_Interpolator and PSF_Drawer. The former takes input coordinates and
+    returns parameters that go into the PSF, while the latter then takes those
+    input psf parameters (typically zernike polynomial coefficients and fried
+    parameter) and actually draws the PSF.
+
     """
 
     def __init__(self, PSF_Evaluator,
@@ -43,6 +52,8 @@ class Generic_Donutengine_Wavefront(Wavefront):
 
     def draw_psf(self, data, force_interpolation=True,
                  **kwargs):
+        # override old draw_psf to return stamps AND data
+
         # draw many PSFs from the x and y coords as well as other params
         # get input parameters if they are not already in the data
         #if not np.all([key in data.columns for key in self.PSF_Drawer.x_keys]):
@@ -55,35 +66,25 @@ class Generic_Donutengine_Wavefront(Wavefront):
 
         return stamps, data
 
-    def evaluate_psf(self, data, force_interpolation=False, **kwargs):
-
-        stamps, data = self.draw_psf(data,
-                force_interpolation=force_interpolation, **kwargs)
-
-        evaluated_psfs = self.PSF_Evaluator(stamps, **kwargs)
-        # this is sick:
-        combined_df = evaluated_psfs.combine_first(data)
-
+    def draw_and_evaluate_psf(self, data, force_interpolation=False, **kwargs):
+        # override old draw_and_evaluate so that evaluate portion takes in
+        # stamps from draw_psf
+        stamps, eval_data = self.draw_psf(data, force_interpolation=force_interpolation, **kwargs)
+        combined_df = self.evaluate_psf(stamps, **kwargs)
         return combined_df
-
-    def __call__(self, data, **kwargs):
-        return self.evaluate_psf(data, **kwargs)
 
 class DECAM_Model_Wavefront(Generic_Donutengine_Wavefront):
     """
     Includes misalignments. Convenience class
     """
 
-    def __init__(self, PSF_Interpolator=None, interp_kwargs={}, **kwargs):
+    def __init__(self, PSF_Interpolator=None, **kwargs):
         # data here is a csv with all the zernikes
-        #TODO: make the csv here path independent
         if type(PSF_Interpolator) == type(None):
-            PSF_Interpolator_data=pd.read_csv('/Users/cpd/Projects/WavefrontPSF/meshes/ComboMeshes2/Mesh_Science-20140212s2-v1i2_All_train.csv', index_col=0)
-            interp = {}
-            interp.update(interp_kwargs)
-            # take z4 and divide by 172 to put it in waves as it should be
-            PSF_Interpolator_data['z4'] /= 172.
-            PSF_Interpolator = kNN_Interpolator(PSF_Interpolator_data, **interp)
+            from WavefrontPSF.defaults import param_default_kils
+            params = param_default_kils()
+            PSF_Interpolator = Mesh_Interpolator(mesh_name=params['mesh_name'],
+                directory=params['mesh_directory'])
 
         PSF_Drawer = Zernike_to_Misalignment_to_Pixel_Interpolator()
         PSF_Evaluator = Moment_Evaluator()

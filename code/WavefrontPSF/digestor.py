@@ -32,7 +32,7 @@ class Digestor(object):
     def __init__(self, **kwargs):
         pass
 
-    def digest_fits(self, file_name, columns=None, exclude=['VIGNET', 'FLUX_APER', 'FLUXERR_APER', 'MAG_APER', 'MAGERR_APER'], ext=2, **kwargs):
+    def digest_fits(self, file_name, columns=None, exclude=['VIGNET', 'FLUX_APER', 'FLUXERR_APER', 'MAG_APER', 'MAGERR_APER'], ext=2, do_exclude=False, **kwargs):
         try:
             #from astropy.table import Table
             from astropy.io import fits
@@ -43,7 +43,11 @@ class Digestor(object):
             except Exception:
                 raise ImportError('Astropy and Pyfits both missing!')
 
-        df = DataFrame.from_records(fits.getdata(file_name, ext=ext), exclude=exclude, columns=columns)
+        data = fits.getdata(file_name, ext=ext)
+        df = DataFrame.from_records(data, exclude=exclude, columns=columns)
+        if 'MAG_APER' in exclude:
+            for i in xrange(data['MAG_APER'].shape[1]):
+                df['MAG_APER_{0}'.format(i)] = data['MAG_APER'][:, i]
         if 'x' not in df.keys() and 'XWIN_IMAGE' in df.keys() and 'ext' in df.keys():
             decaminf = decaminfo()
             # get focal plane coordinates
@@ -59,7 +63,11 @@ class Digestor(object):
         # astropy release 1.1
         df = df.astype('<f8')
 
-        return df
+        if do_exclude:
+            # return the df and the excluded
+            return df, data[exclude]
+        else:
+            return df
 
         #return Table(file_name, hdu=ext).to_pandas()
 
@@ -79,7 +87,7 @@ class Digestor(object):
 
         return DataFrame.from_records(load(file_name))
 
-    def digest_directory(self, file_directory, file_type='.fits'):
+    def digest_directory(self, file_directory, file_type='.fits', **kwargs):
         # another example file_type = _selpsfcat.fits
         from glob import glob
         files = glob(file_directory + '/*{0}'.format(file_type))

@@ -13,7 +13,7 @@ from sklearn.linear_model import LinearRegression
 from WavefrontPSF.psf_evaluator import PSF_Evaluator
 from WavefrontPSF.wavefront import Wavefront
 from WavefrontPSF.donutengine import Generic_Donutengine_Wavefront, Zernike_to_Misalignment_to_Pixel_Interpolator
-from WavefrontPSF.psf_interpolator import kNN_Interpolator, PSF_Interpolator
+from WavefrontPSF.psf_interpolator import Mesh_Interpolator
 
 class DECAM_Analytic_Wavefront(Generic_Donutengine_Wavefront):
     """
@@ -22,8 +22,8 @@ class DECAM_Analytic_Wavefront(Generic_Donutengine_Wavefront):
     Translates r0 to coefficients
     """
 
-    def __init__(self, rzero, PSF_Interpolator,
-                 PSF_Evaluator, **kwargs):
+    def __init__(self, rzero, PSF_Interpolator=None,
+                 PSF_Evaluator=None, **kwargs):
 
         # translate rzero to coefficients
         rzeros_float = np.array([0.08 + 0.01 * i for i in xrange(15)])
@@ -34,15 +34,15 @@ class DECAM_Analytic_Wavefront(Generic_Donutengine_Wavefront):
         rzero_i = np.searchsorted(rzeros_float, rzero)
         rzero_key = rzeros[rzero_i]
 
-        #TODO: make the csv here path independent
         if type(PSF_Interpolator) == type(None):
-            PSF_Interpolator_data=pd.read_csv('/Users/cpd/Projects/WavefrontPSF/meshes/ComboMeshes2/Mesh_Science-20140212s2-v1i2_All_train.csv', index_col=0)
-            # take z4 and divide by 172 to put it in waves as it should be
-            PSF_Interpolator_data['z4'] /= 172.
-            PSF_Interpolator = kNN_Interpolator(PSF_Interpolator_data)
+            from WavefrontPSF.defaults import param_default_kils
+            params = param_default_kils()
+            PSF_Interpolator = Mesh_Interpolator(mesh_name=params['mesh_name'],
+                directory=params['mesh_directory'])
         if type(PSF_Evaluator) == type(None):
-            PSF_Evaluator_data=np.load('/Users/cpd/Projects/WavefrontPSF/meshes/Analytic_Coeffs/model.npy').item()
-            PSF_Evaluator = Zernike_Evaluator(*PSF_Evaluator_data[rzero_key])
+            from WavefrontPSF.defaults import param_default_kils
+            params = param_default_kils()
+            PSF_Evaluator = Zernike_Evaluator(*np.load(params['analytic_coeffs']).item()[rzero_key])
 
         # set the drawer
         PSF_Drawer = Zernike_to_Misalignment_to_Pixel_Interpolator()
@@ -54,19 +54,15 @@ class DECAM_Analytic_Wavefront(Generic_Donutengine_Wavefront):
                 PSF_Drawer=PSF_Drawer,
                 **kwargs)
 
-
-    def evaluate_psf(self, data, misalignment={}, force_interpolation=False, **kwargs):
-        # cut out the actual stamp drawing in evaluate_psf
+    def draw_and_evaluate_psf(self, data, misalignment={}, force_interpolation=False, **kwargs):
+        # cut out the actual stamp drawing for evaluate_psf
         data = self.PSF_Interpolator(data,
                 force_interpolation=force_interpolation, **kwargs)
         # but still use the misaligning of zernikes from the PSF Drawer
         data_reduced, data_with_misalignments = self.PSF_Drawer.misalign_zernikes(data, misalignment)
-        # evaluate
-        evaluated_psfs = self.PSF_Evaluator(data_reduced, **kwargs)
-        # this is sick:
-        combined_df = evaluated_psfs.combine_first(data_with_misalignments)
-
+        combined_df = self.evaluate_psf(data_reduced, **kwargs)
         return combined_df
+
 
 class Zernike_Evaluator(PSF_Evaluator):
     """Takes zernikes and coordinates and returns moments given coefficients"""

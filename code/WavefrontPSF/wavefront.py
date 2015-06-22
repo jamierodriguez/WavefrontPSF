@@ -19,6 +19,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 
+from WavefrontPSF.psf_evaluator import Moment_Evaluator
+from WavefrontPSF.psf_interpolator import PSF_Interpolator
+
 class Wavefront(object):
     """Class with the ability to generate PSF image and statistics. Given a
     list of positions, make a list of PSF images or statistics.
@@ -57,8 +60,26 @@ class Wavefront(object):
 
     """
 
-    def __init__(self, PSF_Interpolator, PSF_Evaluator, model=None,
+    def __init__(self, PSF_Interpolator=PSF_Interpolator(),
+                 PSF_Evaluator=Moment_Evaluator(), model=None,
                  **kwargs):
+        """
+
+        Parameters
+        ----------
+        PSF_Interpolator : PSF_Interpolator object
+            This is the object that gives you PSF properties at a given
+            location on the focal plane.
+
+        PSF_Evaluator : PSF_Evaluator object
+            This is the object that evaluates stamps and gives you psf
+            properties.
+
+        model : dataframe
+            This is the data of a wavefront. So then this becomes the thing
+            against which we compare.
+
+        """
 
         self.PSF_Interpolator = PSF_Interpolator
         self.PSF_Evaluator = PSF_Evaluator
@@ -72,9 +93,36 @@ class Wavefront(object):
             self.field, self.bins_x, self.bins_y = self.reduce_data_to_field(self.data, **kwargs)
 
     def __getitem__(self, key):
-        return self.field[key]
+        return self.data[key]
+
+    def __setitem__(self, key, other):
+        self.data[key] = other
+        # this might make this slow...
+        self.reduce()
+        return
 
     def convert_lists_to_dataframe(self, values, value_names):
+        """Take a list of lists and convert it to a pandas dataframe.
+
+        Parameters
+        ----------
+        values : list of lists
+            Each entry in the list should have the same number of values.
+
+        value_names : list of strings
+            The names of each values list.
+
+        Returns
+        -------
+        df : pandas dataframe
+            Dataframe.
+
+        Notes
+        -----
+        If one has a dictionary of lists instead of a list of lists, one can
+        directly create a pandas dataframe by going pd.DataFrame(dict)
+
+        """
         # ensure we have same number of columns as names
         assert len(values) == len(value_names)
         for i in xrange(len(values) - 1):
@@ -111,20 +159,29 @@ class Wavefront(object):
 
     def reduce_data_to_field(self, data, xkey='x', ykey='y',
             reducer=np.median, num_bins=1, **kwargs):
-        """Take data and bin by focal plane coordinates.
+        """Take data and bin by two of its coordinates (default focal plane
+        coordinates x and y). Then, in each bin, apply the reducer function.
 
         Parameters
         ----------
         data : dataframe
-            Contains all the datapoints.
+            Pandas dataframe that has xkey and ykey columns.
+
+        xkey, ykey : strings, default 'x' and 'y'
+            Keys by which the data are binned. These keys must be in the data,
+            or else problems will arise!
 
         reducer : function
-            Function that takes set of data and returns a number.
+            Function that takes set of data and returns a number. After the
+            data is binned, one applies this function to the data in a bin. So
+            if one sets reducer=np.mean, then the resultant data is a two
+            dimensional histogram.
 
         num_bins : int, default 1
             Number of bins for the focal plane. If less than six, then the
             number of bins is a sort of proxy for the number of divisions of a
-            chip. Default is 2 bins per chip.
+            chip. Default is 2 bins per chip. This implies that num_bins < 6
+            does not really make sense for xkey,ykey neq x,y
 
         Returns
         -------
@@ -160,14 +217,16 @@ class Wavefront(object):
         return field, bins_x, bins_y
 
     def reduce(self, xkey='x', ykey='y', reducer=np.median, num_bins=1):
-        # convenience function to do reduce_data_to_field for data attribute
+        """convenience function to do reduce_data_to_field for data attribute
+        """
         self.field, self.bins_x, self.bins_y = self.reduce_data_to_field(
                 self.data, xkey=xkey, ykey=ykey, reducer=reducer,
                 num_bins=num_bins)
 
     def draw_psf(self, data, **kwargs):
         # note: PSF_Interpolator.x_keys need to be in data
-        return self.PSF_Interpolator(data, **kwargs)
+        interp_data = self.PSF_Interpolator(data, **kwargs)
+        return interp_data
 
     def evaluate_psf(self, data, **kwargs):
         # depending on method, you could expect something like this:
@@ -176,7 +235,52 @@ class Wavefront(object):
         combined_df = evaluated_psfs.combine_first(data)
         return combined_df
 
+    def draw_and_evaluate_psf(self, data, **kwargs):
+        eval_data = self.draw_psf(data, **kwargs)
+        combined_df = self.evaluate_psf(eval_data, **kwargs)
+        return combined_df
+
+    def __call__(self, data, **kwargs):
+        return self.draw_and_evaluate_psf(data, **kwargs)
+
     def plot_colormap(self, data, xkey='x', ykey='y', zkey='N', num_bins=20, fig=None, ax=None, reducer=np.median):
+        """Take dataframe and make a wavefront colormap plot of it.
+
+        Parameters
+        ----------
+        data : dataframe
+
+        xkey, ykey : string, default 'x' and 'y'
+            Keys by which the data are binned. These keys must be in the data,
+            or else problems will arise!
+
+        zkey : string, default 'N'
+            Color dimension of colormap. If none provided, defaults to the
+            number of objects in each bin. Else, color will be the result of
+            applying reducer to the zkey of binned data.
+
+        num_bins : int, default 20
+            Number of bins for the focal plane. If less than six, then the
+            number of bins is a sort of proxy for the number of divisions of a
+            chip. Default is 20 bins. This implies that num_bins < 6
+            does not really make sense for xkey,ykey neq x,y
+
+        fig, ax : matplotlib objects, optional
+            If given, use these plots. Else, make our own!
+
+        reducer : function
+            Function that takes set of data and returns a number. After the
+            data is binned, one applies this function to the data in a bin. So
+            if one sets reducer=np.mean, then the resultant data is a two
+            dimensional histogram.
+
+
+        Returns
+        -------
+        fig, ax : matplotlib objects
+            The figure and axis of our plot!
+
+        """
         field, bins_x, bins_y = self.reduce_data_to_field(
                 data, xkey=xkey, ykey=ykey, num_bins=num_bins,
                 reducer=reducer)
@@ -195,12 +299,14 @@ class Wavefront(object):
         key : string
             What value are we trying to plot?
 
+        field : field object or 'None'
+            A pandas dataframe that is binned in a two dimensional histogram
+
         fig, ax : matplotlib objects, optional
             If given, use these plots. Else, make our own!
 
         Returns
         -------
-
         fig, ax : matplotlib objects
             The figure and axis of our plot!
 
