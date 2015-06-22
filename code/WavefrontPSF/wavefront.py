@@ -231,13 +231,14 @@ class Wavefront(object):
     def evaluate_psf(self, data, **kwargs):
         # depending on method, you could expect something like this:
         evaluated_psfs = self.PSF_Evaluator(data, **kwargs)
-        # combine the results from PSF_Evaluator with your input data
-        combined_df = evaluated_psfs.combine_first(data)
-        return combined_df
+
+        return evaluated_psfs
 
     def draw_and_evaluate_psf(self, data, **kwargs):
         eval_data = self.draw_psf(data, **kwargs)
-        combined_df = self.evaluate_psf(eval_data, **kwargs)
+        evaluated_psfs = self.evaluate_psf(eval_data, **kwargs)
+        # combine the results from PSF_Evaluator with your input data
+        combined_df = evaluated_psfs.combine_first(data)
         return combined_df
 
     def __call__(self, data, **kwargs):

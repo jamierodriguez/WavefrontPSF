@@ -60,7 +60,9 @@ class DECAM_Analytic_Wavefront(Generic_Donutengine_Wavefront):
                 force_interpolation=force_interpolation, **kwargs)
         # but still use the misaligning of zernikes from the PSF Drawer
         data_reduced, data_with_misalignments = self.PSF_Drawer.misalign_zernikes(data, misalignment)
-        combined_df = self.evaluate_psf(data_reduced, **kwargs)
+        evaluated_psfs = self.evaluate_psf(data_reduced, **kwargs)
+        # combine the results from PSF_Evaluator with your input data
+        combined_df = evaluated_psfs.combine_first(data_with_misalignments)
         return combined_df
 
 
